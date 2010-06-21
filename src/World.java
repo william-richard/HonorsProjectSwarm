@@ -1,12 +1,15 @@
-import java.awt.Rectangle;
+import java.awt.geom.Rectangle2D;
 import java.util.List;
+import java.util.Random;
 
 
-public class World extends Rectangle {
+public class World extends Rectangle2D.Double {
 
-	/**
-	 * 
-	 */
+	/***************************************************************************
+	 * CONSTANTS
+	 **************************************************************************/
+	public static final Random RAMOM_GENERATOR = new Random();
+
 	private static final long serialVersionUID = 1L;
 
 	/** VARIABLES */
