@@ -1,3 +1,5 @@
+import java.util.ArrayList;
+
 
 public class BotInfo {
 	
@@ -37,6 +39,10 @@ public class BotInfo {
 		return centerY;
 	}
 	
+	public static void updateBotInfoInArrayList(ArrayList<BotInfo> botInfos, int botNum, double newCenterX, double newCenterY) {
+		BotInfo currInfo = botInfos.get(botNum);
+		currInfo.update(newCenterX, newCenterY);
+	}
 	
 
 }
