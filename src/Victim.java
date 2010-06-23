@@ -37,6 +37,9 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 		
 		//store the damage of this Victim
 		damage = _damage;
+		
+		//store the zone that we're in
+		currentZone = World.findZone(getCenterLocation());
 	}
 	
 	/***************************************************************************
@@ -82,6 +85,10 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 		while(keepGoing) {
 			//each time, we want to try to shout
 			shout();
+			
+			//don't need to update what zone we're in becasue we can't move
+			//this fact may change later
+			
 			//then wait a bit
 			try {
 				wait(1000);

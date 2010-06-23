@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Area;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -196,6 +197,19 @@ public class World extends JFrame {
 		//we have found all the intersecting shape
 		//return the list
 		return intersectingShapes;
+	}
+	
+	//figures out which zone the passed point is in, and returns it.
+	//zones should not overlap, so there should only be one solution
+	public static Zone findZone(Point2D point) {
+		
+		for(Zone z : allZones) {
+			if(z.contains(point)) {
+				return z;
+			}
+		}
+		
+		return null;
 	}
 	
 	

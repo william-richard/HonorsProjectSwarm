@@ -66,6 +66,8 @@ public class Bot extends Rectangle implements Runnable {
 		heardShouts = new ArrayList<Shout>();
 
 		botID = _botID;
+		
+		currentZone = World.findZone(getCenterLocation());
 	}
 
 	/***************************************************************************
@@ -507,6 +509,11 @@ public class Bot extends Rectangle implements Runnable {
 			//we shouldn't hang onto shouts for too long
 			heardShouts.clear();
 
+			//make sure we are still in the zone we think we are in
+			if(! currentZone.contains(getCenterLocation())) {
+				currentZone = World.findZone(getCenterLocation());
+			}
+			
 			try {
 				this.wait(1000);
 			} catch(InterruptedException e) {}
