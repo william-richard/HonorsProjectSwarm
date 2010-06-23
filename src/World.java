@@ -58,6 +58,13 @@ public class World extends JFrame {
 		int numBots = 10;
 		int numVic = 2;
 		
+		//initialize the zones
+		allZones = new CopyOnWriteArrayList<Zone>();
+		
+//		int[] xPoints = {100, 400, 400, 100};
+//		int[] yPoints = {100, 100, 400, 400};
+//		allZones.add(new SafeZone(xPoints, yPoints,4,1));;
+ 		
 		//initialize the bots
 		allBots = new CopyOnWriteArrayList<Bot>();
 
@@ -71,14 +78,7 @@ public class World extends JFrame {
 		
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
-		
-		//initialize the zones
-		allZones = new CopyOnWriteArrayList<Zone>();
-		
-		int[] xPoints = {100, 400, 400, 100};
-		int[] yPoints = {100, 100, 400, 400};
-		allZones.add(new SafeZone(xPoints, yPoints,4,1));;
-		
+				
 		setVisible(true);
 	}
 	

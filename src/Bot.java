@@ -510,7 +510,7 @@ public class Bot extends Rectangle implements Runnable {
 			heardShouts.clear();
 
 			//make sure we are still in the zone we think we are in
-			if(! currentZone.contains(getCenterLocation())) {
+			if(currentZone == null || ! currentZone.contains(getCenterLocation())) {
 				currentZone = World.findZone(getCenterLocation());
 			}
 			
