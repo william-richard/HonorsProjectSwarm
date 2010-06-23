@@ -24,6 +24,10 @@ public class Bot extends Rectangle implements Runnable {
 	private final double BROADCAST_RADIUS = 50;
 	private final double VISIBILITY_RADIUS = 12;
 	private final double AUDITORY_RADIUS = 30;
+	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
+	
+	private final int ZONE_SAFE = 1;
+	private final int ZONE_DANGEROUS = 2;
 
 	/***************************************************************************
 	 * VARIABLES
@@ -39,6 +43,7 @@ public class Bot extends Rectangle implements Runnable {
 	private String messageBuffer; //keep a buffer of messages from other robots
 	private boolean keepGoing; //allows us to start or stop the robots
 	private int botID;
+	private int zoneAssesment; //stores the bot's assesment of what sort of zone it is in
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -67,7 +72,9 @@ public class Bot extends Rectangle implements Runnable {
 
 		botID = _botID;
 		
+		//find out what zone we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
+		assessZone();
 	}
 
 	/***************************************************************************
@@ -456,6 +463,26 @@ public class Bot extends Rectangle implements Runnable {
 		return true;
 	}
 
+	private void assessZone() {
+		//with some probability, the bot will asses the zone correctly
+		if(numGen.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
+			if(currentZone instanceof SafeZone) {
+				zoneAssesment = ZONE_SAFE;
+			} else {
+				zoneAssesment = ZONE_DANGEROUS;
+			}
+		} else {
+			//if we don't get it right, assign the incorrect value
+			if(currentZone instanceof SafeZone) {
+				zoneAssesment = ZONE_DANGEROUS;
+			} else {
+				zoneAssesment = ZONE_SAFE;
+			}
+		}
+	}
+	
+	
+	
 	public void startBot() {
 		keepGoing = true;
 	}
@@ -512,6 +539,8 @@ public class Bot extends Rectangle implements Runnable {
 			//make sure we are still in the zone we think we are in
 			if(currentZone == null || ! currentZone.contains(getCenterLocation())) {
 				currentZone = World.findZone(getCenterLocation());
+				//reasses the zone's status if we move to a new zone
+				assessZone();
 			}
 			
 			try {
