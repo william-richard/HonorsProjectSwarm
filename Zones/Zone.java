@@ -19,12 +19,19 @@ public abstract class Zone extends Polygon {
 		zoneColor = _zoneColor;
 	}
 	
-	public Color getZoneColor() {
+	public Color getColor() {
 		return zoneColor;
 	}
 	
-	public int getZoneID() {
+	public int getID() {
 		return zoneID;
 	}
-
+	
+	public double getCenterX() {
+		return this.getBounds2D().getCenterX();
+	}
+	
+	public double getCenterY() {
+		return this.getBounds2D().getCenterY();
+	}
 }

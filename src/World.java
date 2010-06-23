@@ -32,8 +32,10 @@ public class World extends JFrame {
 	private static final Color VICTIM_COLOR = Color.red;
 	private static final Color RADAII_COLOR = Color.blue;
 	private static final Color BOT_LABEL_COLOR = Color.black;
+	private static final Color ZONE_LABEL_COLOR = Color.black;
 	
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
+	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
 	
 	private static final long serialVersionUID = 1L;
 
@@ -52,7 +54,7 @@ public class World extends JFrame {
 		setupFrame();
 		
 		//this is with default values, mostly for debugging
-		int numBots = 50;
+		int numBots = 10;
 		int numVic = 2;
 		
 		//initialize the bots
@@ -68,6 +70,13 @@ public class World extends JFrame {
 		
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+		
+		//initialize the zones
+		allZones = new CopyOnWriteArrayList<Zone>();
+		
+		int[] xPoints = {100, 400, 400, 100};
+		int[] yPoints = {100, 100, 400, 400};
+		allZones.add(new SafeZone(xPoints, yPoints,4,1));;
 		
 		setVisible(true);
 	}
@@ -112,6 +121,15 @@ public class World extends JFrame {
 		//get a snapshot of the bots and victims
 		allBotSnapshot = allBots.listIterator();
 		allVictimSnapshot = allVictims.listIterator();
+		
+		//draw the zones
+		g2d.setFont(ZONE_LABEL_FONT);
+		for(Zone z : allZones) {
+			g2d.setColor(z.getColor());
+			g2d.fill(z);
+			g2d.setColor(ZONE_LABEL_COLOR);
+			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+		}
 		
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
 		Bot firstBot = allBotSnapshot.next();
