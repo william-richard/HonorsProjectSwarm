@@ -1,27 +1,30 @@
-import java.util.ArrayList;
+import java.awt.geom.Point2D;
+import java.util.List;
 
 
 public class BotInfo {
 	
 	private int botNum;
-	private double centerX;
-	private double centerY;
+	private Point2D location;
 	
 	public BotInfo(int _botNum) {
 		botNum = _botNum;
-		centerX = Double.MAX_VALUE;
-		centerY = Double.MAX_VALUE;
+		location = new Point2D.Double(Double.MAX_VALUE, Double.MAX_VALUE);
+	}
+	
+	public BotInfo(int _botNum, double _x, double _y) {
+		this(_botNum);
+		location = new Point2D.Double(_x, _y);
 	}
 	
 	public void update(double newCenterX, double newCenterY) {
-		centerX = newCenterX;
-		centerY = newCenterY;
+		
 	}
 
 	/**
 	 * @return the botNum
 	 */
-	public int getBotNum() {
+	public int getBotID() {
 		return botNum;
 	}
 
@@ -29,17 +32,40 @@ public class BotInfo {
 	 * @return the centerX
 	 */
 	public double getCenterX() {
-		return centerX;
+		return location.getX();
 	}
 
 	/**
 	 * @return the centerY
 	 */
 	public double getCenterY() {
-		return centerY;
+		return location.getY();
 	}
 	
-	public static void updateBotInfoInArrayList(ArrayList<BotInfo> botInfos, int botNum, double newCenterX, double newCenterY) {
+	/**
+	 * @return the location
+	 */
+	public Point2D getLocation() {
+		return location;
+	}
+	
+	public void merge(BotInfo newInfo) {
+		if(newInfo.botNum != this.botNum) {
+			System.out.println("BOT INFOS DON'T MATCH");
+			return;
+		}
+		
+		if(newInfo.getCenterX() < Double.MAX_VALUE) {
+			location.setLocation(newInfo.getCenterX(), this.getCenterY());
+		}
+		
+		if(newInfo.getCenterY() < Double.MAX_VALUE) {
+			location.setLocation(this.getCenterX(), newInfo.getCenterY());
+		}
+		
+	}
+
+	public static void updateBotInfoInList(List<BotInfo> botInfos, int botNum, double newCenterX, double newCenterY) {
 		BotInfo currInfo = botInfos.get(botNum);
 		currInfo.update(newCenterX, newCenterY);
 	}

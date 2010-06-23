@@ -1,4 +1,5 @@
 import java.awt.geom.Ellipse2D;
+import java.awt.geom.Point2D;
 
 public class Shout extends Ellipse2D.Double {
 	
@@ -7,6 +8,9 @@ public class Shout extends Ellipse2D.Double {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	/***************************************************************************
+	 * CONSTRUCTORS
+	 **************************************************************************/
 	public Shout(double centerX, double centerY, double radius) {
 		super();
 		
@@ -24,4 +28,9 @@ public class Shout extends Ellipse2D.Double {
 	public double getRadius() {
 		return this.getHeight();
 	}
+	
+	public Point2D getCenterLocation() {
+		return new Point2D.Double(getCenterX(), getCenterY());
+	}
+
 }
