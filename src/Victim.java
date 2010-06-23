@@ -3,8 +3,6 @@ import java.awt.geom.Rectangle2D;
 
 
 public class Victim extends Rectangle2D.Double implements Runnable {
-
-	//TODO Vicitms need to be threaded, and their shouts need to be sent just to the Bots that are nearby
 	
 	private static final long serialVersionUID = 1L;
 	/***************************************************************************
@@ -18,7 +16,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 	 * VARIABLES
 	 **************************************************************************/
 	private double damage; //damage is a percentage of how hurt the victim is, with 1.0 being dead and 0.0 being totally healthy.
-	private Zone currentZone; //TODO: Add this functionality, when I implement Zones
+	private Zone currentZone;
 	
 	private boolean keepGoing;
 	
@@ -86,7 +84,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 			//each time, we want to try to shout
 			shout();
 			
-			//don't need to update what zone we're in becasue we can't move
+			//don't need to update what zone we're in because we can't move
 			//this fact may change later
 			
 			//then wait a bit
