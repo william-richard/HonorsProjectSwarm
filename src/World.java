@@ -5,6 +5,7 @@ import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Area;
+import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,9 +32,13 @@ public class World extends JFrame {
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color BOT_COLOR = Color.green;
 	private static final Color VICTIM_COLOR = Color.red;
-	private static final Color RADAII_COLOR = Color.blue;
+	private static final Color SHOUT_COLOR = new Color(30, 144, 255);
+	private static final Color VISIBLE_RANGE_COLOR = new Color(255,106,106);
+	private static final Color AUDIO_RANGE_COLOR = new Color(255,165,0);
+	private static final Color BROADCAST_RANGE_COLOR = Color.yellow;
 	private static final Color BOT_LABEL_COLOR = Color.black;
 	private static final Color ZONE_LABEL_COLOR = Color.black;
+	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
@@ -55,21 +60,19 @@ public class World extends JFrame {
 		setupFrame();
 		
 		//this is with default values, mostly for debugging
-		int numBots = 15;
+		int numBots = 100;
 		int numVic = 2;
 		
 		//initialize the zones
 		allZones = new CopyOnWriteArrayList<Zone>();
 		
-		int[] xPoints1 = {100, 400, 400, 100};
-		int[] yPoints1 = {100, 100, 400, 400};
-		Zone homeBase = new SafeZone(xPoints1, yPoints1, 4, 1);
+		int[] xPointsBase = {200, 300, 300, 200};
+		int[] yPointsBase = {200, 200, 300, 300};
+		Zone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
 		allZones.add(homeBase);
-
-		int[] xPoints2 = {0, 100, 100, 0};
-		int[] yPoints2 = {0, 0, 400, 400};
-		allZones.add(new DangerZone(xPoints2, yPoints2, 4, 2));
-
+		
+		fillInZones();
+		
 		checkZoneSanity();
 		
 		//initialize the bots
@@ -97,7 +100,7 @@ public class World extends JFrame {
 	}
 	
 	public void checkZoneSanity() {
-		//check each zone's area with all the rest
+		//check each zone's area with all the rest to make sure they don't overlap
 		for(int i = 0; i < allZones.size(); i++) {
 			//calculate if there are any intersections
 			List<? extends Shape> intersections = findIntersections(allZones.get(i), allZones.subList(i+1, allZones.size()));
@@ -105,9 +108,103 @@ public class World extends JFrame {
 			if(intersections.size() > 0) {
 				System.out.println("ZONES ARE NOT SANE!!!!");
 				System.exit(0);
-			}		
+			}
 		}
-	}	
+		
+		//make sure the whole area is covered
+		Area zoneArea = new Area();
+		for(Zone z : allZones) {
+			zoneArea.add(new Area(z));
+		}
+		
+		if(! zoneArea.equals(new Area(BOUNDING_BOX))) {
+			System.out.println("Zones don't cover all area");
+			System.exit(0);
+		}
+		
+		
+	}
+	
+	private void fillInZones() {
+		//first, get all unfilled zones
+		Area filledAreas = new Area();
+		for(Zone z : allZones) {
+			filledAreas.add(new Area(z));
+		}
+		
+		Area unfilledArea = new Area(BOUNDING_BOX);
+		unfilledArea.subtract(filledAreas);
+		
+		//get all the points on the edge of the unfilled area
+		PathIterator unfilledIterator = unfilledArea.getPathIterator(null);
+		
+		ArrayList<Point2D> borderPoints = new ArrayList<Point2D>();
+		
+		double[] curPoint = new double[6];
+		
+		
+		while(! unfilledIterator.isDone()) {			
+			//get that point
+			unfilledIterator.currentSegment(curPoint);
+			
+			//there shouldn't be any curves, so we just need to store the first 2 indicies
+			//so, store them
+			Point2D.Double newPoint = new Point2D.Double(curPoint[0], curPoint[1]);
+						
+			//don't want to add multiples
+			if(borderPoints.indexOf(newPoint) >= 0) {
+				unfilledIterator.next();
+				continue;
+			}
+						
+			borderPoints.add(newPoint);
+			
+			//go to the next point
+			unfilledIterator.next();
+		}
+		
+		//now, start making arbitrary triangles and see if they overlap with any existing zones
+		//if they don't, add them to the zone list
+		while(! unfilledArea.isEmpty()) {
+			//choose 3 points randomly
+			Point2D p1 = borderPoints.remove(RAMOM_GENERATOR.nextInt(borderPoints.size()));
+			Point2D p2 = borderPoints.remove(RAMOM_GENERATOR.nextInt(borderPoints.size()));
+			Point2D p3 = borderPoints.remove(RAMOM_GENERATOR.nextInt(borderPoints.size()));
+			
+			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
+			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
+			
+			//make a zone out of them
+			Zone newZone;
+			
+			switch(RAMOM_GENERATOR.nextInt(2)) {
+				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
+				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
+				default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
+			}
+			
+			//make sure it doesn't intersect any existing zones
+			if(findIntersections(newZone, allZones).size() > 0) {
+				borderPoints.add(p1);
+				borderPoints.add(p2);
+				borderPoints.add(p3);
+				continue;
+			}
+						
+			//it checks out - add it
+			allZones.add(newZone);
+			//remove it's area from the unfilled area
+			unfilledArea.subtract(new Area(newZone));
+			
+			borderPoints.add(p1);
+			borderPoints.add(p2);
+			borderPoints.add(p3);
+		}
+		
+		//should be all filled up now - check the sanity to make sure
+		checkZoneSanity();
+	}
+	
 	
 	public void go() {
 		//start all the threads
@@ -125,7 +222,7 @@ public class World extends JFrame {
 			public void run() {
 				repaint();
 			}
-		}, 0, 300);
+		}, 0, 200);
 	}
 	
 	public void paint(Graphics g) {		
@@ -149,6 +246,8 @@ public class World extends JFrame {
 			g2d.fill(z);
 			g2d.setColor(ZONE_LABEL_COLOR);
 			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+			g2d.setColor(ZONE_OUTLINE_COLOR);
+			g2d.draw(z);
 		}
 		
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
@@ -157,7 +256,7 @@ public class World extends JFrame {
 		allBotSnapshot.previous();
 		
 		//now, drow all of the shouts
-		g2d.setColor(RADAII_COLOR);
+		g2d.setColor(SHOUT_COLOR);
 		for(Shout s : firstBot.getShouts()) {
 			g2d.draw(s);
 		}
@@ -170,11 +269,13 @@ public class World extends JFrame {
 			g2d.setColor(BOT_COLOR);
 			g2d.fill(curBot);
 			
-			g2d.setColor(RADAII_COLOR);
+			g2d.setColor(AUDIO_RANGE_COLOR);
 			g2d.draw(curBot.getAuditbleRadius());
+			
+			g2d.setColor(VISIBLE_RANGE_COLOR);
 			g2d.draw(curBot.getVisibilityRadius());
 			
-			g2d.setColor(Color.yellow);
+			g2d.setColor(BROADCAST_RANGE_COLOR);
 			g2d.draw(curBot.getBroadcastRadius());
 			
 			g2d.setColor(BOT_LABEL_COLOR);

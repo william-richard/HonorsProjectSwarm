@@ -27,10 +27,10 @@ public class Bot extends Rectangle implements Runnable {
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
 
-	private boolean OVERALL_BOT_DEBUG = 	true;
+	private boolean OVERALL_BOT_DEBUG = 	false;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
-	private boolean MESSAGE_BOT_DEBUG = 	true;
+	private boolean MESSAGE_BOT_DEBUG = 	false;
 	private boolean MOVE_BOT_DEBUG = 		true;
 
 
@@ -189,7 +189,7 @@ public class Bot extends Rectangle implements Runnable {
 
 	private boolean listeningForShouts = true;
 
-	public void hearShout(Shout s) throws InterruptedException {
+	public synchronized void hearShout(Shout s) throws InterruptedException {
 		while(! listeningForShouts) {
 			wait(500);
 		}
@@ -266,7 +266,7 @@ public class Bot extends Rectangle implements Runnable {
 
 		/* 2) See if we are within broadcast range of any other robots by 
 		 * 		seeing what messages have come in since we last checked.
-		 * 	a) If there are robots nearby, try to maximize distance from them
+		 * 	a) If there are robots nearby, try to maximize distance from them and from base zones
 		 */
 
 		if(MOVE_BOT_DEBUG) {
@@ -279,8 +279,8 @@ public class Bot extends Rectangle implements Runnable {
 			//			if(numGen.nextDouble() < MOVE_RANDOMLY_PROB) {
 			//				moveRandomly();
 			//			} else {
-			int nearestBotIndex = 0;
-			double nearestBotDistSq = java.lang.Double.MAX_VALUE;
+			Point2D nearestPoint = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
+			double nearestPointDistSq = java.lang.Double.MAX_VALUE;
 
 			for(int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
@@ -290,17 +290,30 @@ public class Bot extends Rectangle implements Runnable {
 
 				double curDistSq = bi.getLocation().distanceSq(this.getCenterLocation());
 
-				if(curDistSq < nearestBotDistSq) {
-					nearestBotDistSq = curDistSq;
-					nearestBotIndex = i;
+				if(curDistSq < nearestPointDistSq) {
+					nearestPointDistSq = curDistSq;
+					nearestPoint = bi.getLocation();
 				}
 			}
+			
+			//now, also try to maximize distance from base zones
+			for(Zone z : World.allZones) {
+				if(z instanceof BaseZone) {
+					double curDistSq = z.getCenterLocation().distanceSq(this.getCenterLocation());
+					
+					if(curDistSq < nearestPointDistSq) {
+						nearestPointDistSq = curDistSq;
+						nearestPoint = z.getCenterLocation();
+					}
+				}
+			}
+			
 
-			if(MOVE_BOT_DEBUG)
-				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestBotDistSq + ") away");
+//			if(MOVE_BOT_DEBUG)
+//				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestPointDistSq + ") away");
 
 			//want to move away from the nearest bot
-			actuallyMoveAway(otherBotInfo.get(nearestBotIndex).getLocation());
+			actuallyMoveAway(nearestPoint);
 			haveMoved = true;
 			//			}
 		}
@@ -578,7 +591,7 @@ public class Bot extends Rectangle implements Runnable {
 			}
 
 			try {
-				this.wait(1000);
+				this.wait(500);
 			} catch(InterruptedException e) {}
 		}
 	}

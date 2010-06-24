@@ -8,10 +8,16 @@ public class DangerZone extends Zone {
 	
 	private static final long serialVersionUID = 1L;
 
+	private static final Color DangerZoneColor = new Color(139,37,0);
+	
 	public DangerZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID, new Color(205,0,0)); //SET THE ZONE COLOR HERE
+		super(xPoints, yPoints, numPoints, _zoneID, DangerZoneColor); //SET THE ZONE COLOR HERE
 	}
 
+//	public DangerZone(Area a, int _zoneid) {
+//		super(a, _zoneid, DangerZone.DangerZoneColor);
+//	}
+	
 	@Override
 	public Shape getAudibleRange(Point2D originator) {
 		//in this case, return a circle

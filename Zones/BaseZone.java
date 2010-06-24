@@ -4,20 +4,20 @@ import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 
 
-public class SafeZone extends Zone {
-
+public class BaseZone extends Zone {
+	
 	private static final long serialVersionUID = 1L;
-	private static final Color SafeZoneColor = new Color(34, 139, 34);
-
-	public SafeZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID, SafeZoneColor);
+	private final static Color BaseZoneColor = new Color(0, 100, 0);
+	
+	
+	public BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
+		super(xPoints, yPoints, numPoints, _zoneID, BaseZone.BaseZoneColor);
 	}
-
-//	public SafeZone(Area a, int _zoneid) {
-//		super(a, _zoneid, SafeZone.SafeZoneColor);
+	
+//	public BaseZone(Area a, int _zoneid) {
+//		super(a, _zoneid, BaseZone.BaseZoneColor);
 //	}
 
-	
 	@Override
 	public Shape getAudibleRange(Point2D originator) {
 		//in this case, return a circle
@@ -62,6 +62,5 @@ public class SafeZone extends Zone {
 		//now, make the broadcast range shape
 		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFALUT_VISIBILITY_RADIUS*2, Bot.DEFALUT_VISIBILITY_RADIUS*2);
 	}
-
 
 }
