@@ -1,6 +1,5 @@
 import java.awt.Rectangle;
 import java.awt.Shape;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -21,9 +20,9 @@ public class Bot extends Rectangle implements Runnable {
 	private final double VISUAL_ID_VICTIM_PROB = .45;
 	private final double HEAR_VICTIM_PROB = .75;
 	private final double MOVE_RANDOMLY_PROB = .25;
-	private final double BROADCAST_RADIUS = 50;
-	private final double VISIBILITY_RADIUS = 12;
-	private final double AUDITORY_RADIUS = 30;
+	public static final double DEFAULT_BROADCAST_RADIUS = 50;
+	public static final double DEFALUT_VISIBILITY_RADIUS = 12;
+	public static final double DEFAULT_AUDITORY_RADIUS = 30;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
 	
 	private final int ZONE_SAFE = 1;
@@ -84,42 +83,19 @@ public class Bot extends Rectangle implements Runnable {
 		return new Point2D.Double(getCenterX(), getCenterY());
 	}
 
-	public Ellipse2D getBroadcastRadius() {
-		//make a shape representing our broadcast range
-		//should always be a circle, but we'll see
-
-		//first, need to find the top left corner of the circle
-		double broadcastRangeCornerX = this.getCenterX() - BROADCAST_RADIUS;
-		double broadcastRangeCornerY = this.getCenterY() - BROADCAST_RADIUS;
-
-		//now, make the broadcast range shape
-		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, BROADCAST_RADIUS*2, BROADCAST_RADIUS*2);
+	public Shape getBroadcastRadius() {
+		//see how far the current zone thinks we can broadcast
+		return currentZone.getBroadcastRange(getCenterLocation());
 	}
 
-	public Ellipse2D getVisibilityRadius() {
-		//make a shape representing our view range
-		//for now, it will be a circle, but that will change later
-
-		//first, we need to figure out where the top left corner of the ellipse will be
-		double viewRangeCornerX = this.getCenterX() - VISIBILITY_RADIUS;
-		double viewRangeCornerY = this.getCenterY() - VISIBILITY_RADIUS;
-
-		//now, make the visibility range
-		return new Ellipse2D.Double(viewRangeCornerX, viewRangeCornerY, VISIBILITY_RADIUS*2, VISIBILITY_RADIUS*2);
-
+	public Shape getVisibilityRadius() {
+		//see how far the current zone thinks we can see
+		return currentZone.getVisibilityRange(getCenterLocation());
 	}
 
-	public Ellipse2D getAuditbleRadius() {
-		//make a shap representing our hearing range
-		//for now, it will be a cirle, but that will change later
-
-		//first, we need to figure out where the top left corner of the ellipse will be
-		double audibleRangeCornerX = this.getCenterX() - AUDITORY_RADIUS;
-		double audibleRangeCornerY = this.getCenterY() - AUDITORY_RADIUS;
-
-		//now, make the auditory range
-		return new Ellipse2D.Double(audibleRangeCornerX, audibleRangeCornerY, AUDITORY_RADIUS*2, AUDITORY_RADIUS*2);
-
+	public Shape getAuditbleRadius() {
+		//see how far the current zone thinks we can hear
+		return currentZone.getAudibleRange(getCenterLocation());
 	}
 
 	public List<Shout> getShouts() {
@@ -262,7 +238,12 @@ public class Bot extends Rectangle implements Runnable {
 		}
 
 		//we've now moved - broadcast location to nearby bots
-		broadcastLocation();
+		//construct the message we want to send them.
+		String outgoingMessage = botID + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
+
+		//broadcast it
+		broadcastMessage(outgoingMessage);
+
 	}
 
 	private void moveRandomly() {
@@ -334,33 +315,31 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 	@SuppressWarnings("unchecked")
-	private void broadcastLocation() {
+	private void broadcastMessage(String mes) {
 		//first, get our broadcast range
-		Ellipse2D broadcastRange = getBroadcastRadius();
+		Shape broadcastRange = getBroadcastRadius();
 
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) World.findIntersections(broadcastRange, World.allBots);
-
-		//construct the message we want to send them.
-		String outgoingMessage = botID + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
-
+		
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
 			if(b.getID() == this.getID()) {
 				continue;
 			}
 			try {
-				b.recieveMessage(outgoingMessage);
+				b.recieveMessage(mes);
 			} catch (InterruptedException e) {
 				//oh well - it didn't go through.  Don't worry about it, just go onto the next one
 			}
 		}
-	}
 
+	}
+	
 	@SuppressWarnings("unchecked")
 	private List<Victim> lookForVictims() {
 		//first, get our visibility radius
-		Ellipse2D visibilityRange = getVisibilityRadius();
+		Shape visibilityRange = getVisibilityRadius();
 
 		//see if the location of any of our victims intersects this range
 		List<Victim> visibleVictims = (List<Victim>) World.findIntersections((Shape)visibilityRange, World.allVictims);
@@ -414,7 +393,7 @@ public class Bot extends Rectangle implements Runnable {
 		listeningForShouts = false;
 
 		//first, get our auditory radius
-		Ellipse2D auditoryRange = getAuditbleRadius();
+		Shape auditoryRange = getAuditbleRadius();
 
 		//see if any of the shouts we know about intersect this range
 		List<Shout> audibleShouts = (List<Shout>) World.findIntersections((Shape) auditoryRange, heardShouts);

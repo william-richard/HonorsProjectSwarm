@@ -9,7 +9,6 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 	 * CONSTANTS
 	 **************************************************************************/
 	private final int DIMENSION = 6; //Victims are squares really, so they only need 1 dimention.
-	private final int SHOUT_DISTANCE = 20;
 	private final double SHOUT_PROB = .75; //The probability that victims will shout
 	
 	/***************************************************************************
@@ -61,7 +60,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 			//make and return a new shout
 			//TODO: Make it so that Zone sets the shout radius
 			//for now, use a constant
-			Shout ourShout = new Shout(this.getCenterX(), this.getCenterY(), SHOUT_DISTANCE);
+			Shout ourShout = currentZone.getShout(getCenterLocation());
 			
 			//send it off to all the bots - they'll determine if they can hear it or not
 			for(Bot b : World.allBots) {

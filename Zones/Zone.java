@@ -1,5 +1,7 @@
 import java.awt.Color;
 import java.awt.Polygon;
+import java.awt.Shape;
+import java.awt.geom.Point2D;
 
 
 public abstract class Zone extends Polygon {
@@ -34,4 +36,11 @@ public abstract class Zone extends Polygon {
 	public double getCenterY() {
 		return this.getBounds2D().getCenterY();
 	}
+	
+	public abstract Shape getBroadcastRange(Point2D originator);
+	public abstract Shape getVisibilityRange(Point2D originator);
+	public abstract Shape getAudibleRange(Point2D originator);
+	public abstract Shout getShout(Point2D originator);
+	
+	
 }
