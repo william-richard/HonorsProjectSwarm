@@ -61,10 +61,16 @@ public class World extends JFrame {
 		//initialize the zones
 		allZones = new CopyOnWriteArrayList<Zone>();
 		
-//		int[] xPoints = {100, 400, 400, 100};
-//		int[] yPoints = {100, 100, 400, 400};
-//		allZones.add(new SafeZone(xPoints, yPoints,4,1));;
- 		
+		int[] xPoints1 = {100, 400, 400, 100};
+		int[] yPoints1 = {100, 100, 400, 400};
+		allZones.add(new SafeZone(xPoints1, yPoints1, 4, 1));;
+
+		int[] xPoints2 = {0, 100, 100, 0};
+		int[] yPoints2 = {0, 0, 400, 400};
+		allZones.add(new DangerZone(xPoints2, yPoints2, 4, 2));
+
+		checkZoneSanity();
+		
 		//initialize the bots
 		allBots = new CopyOnWriteArrayList<Bot>();
 
@@ -89,6 +95,18 @@ public class World extends JFrame {
 		setBackground(BACKGROUND_COLOR);
 	}
 	
+	public void checkZoneSanity() {
+		//check each zone's area with all the rest
+		for(int i = 0; i < allZones.size(); i++) {
+			//calculate if there are any intersections
+			List<? extends Shape> intersections = findIntersections(allZones.get(i), allZones.subList(i+1, allZones.size()));
+			//if there are, freak out
+			if(intersections.size() > 0) {
+				System.out.println("ZONES ARE NOT SANE!!!!");
+				System.exit(0);
+			}		
+		}
+	}	
 	
 	public void go() {
 		//start all the threads
