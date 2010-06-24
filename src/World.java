@@ -55,7 +55,7 @@ public class World extends JFrame {
 		setupFrame();
 		
 		//this is with default values, mostly for debugging
-		int numBots = 10;
+		int numBots = 15;
 		int numVic = 2;
 		
 		//initialize the zones
@@ -63,7 +63,8 @@ public class World extends JFrame {
 		
 		int[] xPoints1 = {100, 400, 400, 100};
 		int[] yPoints1 = {100, 100, 400, 400};
-		allZones.add(new SafeZone(xPoints1, yPoints1, 4, 1));;
+		Zone homeBase = new SafeZone(xPoints1, yPoints1, 4, 1);
+		allZones.add(homeBase);
 
 		int[] xPoints2 = {0, 100, 100, 0};
 		int[] yPoints2 = {0, 0, 400, 400};
@@ -75,7 +76,7 @@ public class World extends JFrame {
 		allBots = new CopyOnWriteArrayList<Bot>();
 
 		for(int i = 0; i < numBots; i++) {
-			allBots.add(new Bot(FRAME_WIDTH/2, FRAME_HEIGHT/2, numBots, i));
+			allBots.add(new Bot(FRAME_WIDTH/2, FRAME_HEIGHT/2, numBots, i, homeBase));
 		}
 		
 		//initialize the victims
@@ -124,7 +125,7 @@ public class World extends JFrame {
 			public void run() {
 				repaint();
 			}
-		}, 0, 500);
+		}, 0, 300);
 	}
 	
 	public void paint(Graphics g) {		
@@ -172,6 +173,8 @@ public class World extends JFrame {
 			g2d.setColor(RADAII_COLOR);
 			g2d.draw(curBot.getAuditbleRadius());
 			g2d.draw(curBot.getVisibilityRadius());
+			
+			g2d.setColor(Color.yellow);
 			g2d.draw(curBot.getBroadcastRadius());
 			
 			g2d.setColor(BOT_LABEL_COLOR);

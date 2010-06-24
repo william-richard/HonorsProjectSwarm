@@ -1,6 +1,5 @@
 import java.awt.Rectangle;
 import java.awt.Shape;
-import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,9 +23,16 @@ public class Bot extends Rectangle implements Runnable {
 	public static final double DEFALUT_VISIBILITY_RADIUS = 12;
 	public static final double DEFAULT_AUDITORY_RADIUS = 30;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
-	
+
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
+
+	private boolean OVERALL_BOT_DEBUG = 	true;
+	private boolean LISTEN_BOT_DEBUG = 		false;
+	private boolean LOOK_BOT_DEBUG = 		false;
+	private boolean MESSAGE_BOT_DEBUG = 	true;
+	private boolean MOVE_BOT_DEBUG = 		true;
+
 
 	/***************************************************************************
 	 * VARIABLES
@@ -43,11 +49,12 @@ public class Bot extends Rectangle implements Runnable {
 	private boolean keepGoing; //allows us to start or stop the robots
 	private int botID;
 	private int zoneAssesment; //stores the bot's assesment of what sort of zone it is in
+	private Zone baseZone; //the home base zone.
 
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
-	public Bot(double centerX, double centerY, int _numBots, int _botID) {
+	public Bot(double centerX, double centerY, int _numBots, int _botID, Zone homeBase) {
 		super();
 
 		//first, in order to store our location, we need to find our top left corner
@@ -59,10 +66,10 @@ public class Bot extends Rectangle implements Runnable {
 
 		//now, set up the list of other bot information
 		otherBotInfo = new ArrayList<BotInfo>();
-		for(int i = 0; i < _numBots; i++) {
-			BotInfo newBotInfo = new BotInfo(i);
-			otherBotInfo.add(newBotInfo);
-		}
+		//		for(int i = 0; i < _numBots; i++) {
+		//			BotInfo newBotInfo = new BotInfo(i);
+		//			otherBotInfo.add(newBotInfo);
+		//		}
 
 		//set up other variables with default values
 		messageBuffer = "";
@@ -70,7 +77,9 @@ public class Bot extends Rectangle implements Runnable {
 		heardShouts = new ArrayList<Shout>();
 
 		botID = _botID;
-		
+
+		baseZone = homeBase;
+
 		//find out what zone we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
 		assessZone();
@@ -130,7 +139,7 @@ public class Bot extends Rectangle implements Runnable {
 	public void recieveMessage(String message) throws InterruptedException {
 		//bad way to do this, but it'll be OK
 		while(!recieveMessages) {
-			wait(500);
+			wait(10);
 		}
 		messageBuffer = messageBuffer + message;
 	}
@@ -152,7 +161,9 @@ public class Bot extends Rectangle implements Runnable {
 		Scanner s;
 		//go through the messages and update the stored info about the other bots
 		for(String mes : messageArray) {
-			print("Reading message '" + mes + "'");
+			if(MESSAGE_BOT_DEBUG)
+				print("Reading message '" + mes + "'");
+
 			s = new Scanner(mes);
 
 			if(! s.hasNextInt())
@@ -161,7 +172,8 @@ public class Bot extends Rectangle implements Runnable {
 			int botNum = s.nextInt();
 
 			if(botNum == botID) {
-				print("got message from myself - skip it");
+				if(MESSAGE_BOT_DEBUG)
+					print("got message from myself - skip it");
 				continue;
 			}
 
@@ -170,13 +182,14 @@ public class Bot extends Rectangle implements Runnable {
 
 			BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
 
-			otherBotInfo.get(botNum).merge(newBotInfo);
+			//			otherBotInfo.get(botNum).merge(newBotInfo);
+			otherBotInfo.add(newBotInfo);
 		}
 	}
 
 	private boolean listeningForShouts = true;
 
-	public synchronized void hearShout(Shout s) throws InterruptedException {
+	public void hearShout(Shout s) throws InterruptedException {
 		while(! listeningForShouts) {
 			wait(500);
 		}
@@ -184,51 +197,122 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 
-	private void move(Line2D.Double movementDirection) {
+	private void move() {
 		//store our current state, so we can undo it if necessary.
 		this.previousBot = (Bot) this.clone();
 
-		//really, this method finds a point we want to move towards, and then calls "actuallyMoveTowards" or "actuallyMoveAway"
 
-		//first, see if we have a direction to go in
-		if(! movementDirection.getP1().equals(movementDirection.getP2())) {
-			//assuming that the line goes from P1 -> P2
-			//so basically, we want to head towards P2
-			actuallyMoveTowards(movementDirection.getP2());
-		}
+		/*determine what actions we want to take
+		 * there are levels to what we want to do
+		 * 
+		 * 1) See if we can detect a victim, first by sight and then by sound
+		 * 		head towards them if we can
+		 * 2) See if we are within broadcast range of any other robots by 
+		 * 		seeing what messages have come in since we last checked.
+		 * 	a) If there are robots nearby, try to maximize distance from them and from the base
+		 * 	b) If there are not, try to find robots by heading back towards base.
+		 */			
 
-		else {
-			//find our nearest neighbor
-			//or with some chance, move randomly
-			//look in the array of BotInfo
+		boolean haveMoved = false; //once we have made a movement, this will be set to true
 
-			if(numGen.nextDouble() < MOVE_RANDOMLY_PROB) {
-				moveRandomly();
-			} else {
-				int nearestBotIndex = 0;
-				double nearestBotDistSq = java.lang.Double.MAX_VALUE;
+		//1) See if we can detect a victim, first by sight and then by sound head towards them if we can 
+		if(!haveMoved) {
+			List<Victim> visibleVics = lookForVictims();
+			//if we find some, go towards one of them
+			if(visibleVics.size() > 0) {
+				//want to go towards the nearest victim
+				Victim nearestVic = null;
+				double nearestDist = java.lang.Double.MAX_VALUE;
 
-				for(int i = 0; i < otherBotInfo.size(); i++) {
-					BotInfo bi = otherBotInfo.get(i);
 
-					//don't consider ourselves
-					if(bi.getBotID() == botID) continue;
-
-					double curDistSq = bi.getLocation().distanceSq(this.getCenterLocation());
-
-					print("Got that " + bi.getBotID() + " is " + curDistSq + " away");
-
-					if(curDistSq < nearestBotDistSq) {
-						nearestBotDistSq = curDistSq;
-						nearestBotIndex = i;
+				//so, we need to figure out which one is the nearest one
+				for(Victim v : visibleVics) {
+					if(v.getCenterLocation().distanceSq(this.getCenterLocation()) < nearestDist) {
+						nearestVic = v;
+						nearestDist = v.getCenterLocation().distanceSq(this.getCenterLocation());
 					}
 				}
 
+				//make a bee-line for that victim!
+				actuallyMoveTowards(nearestVic.getCenterLocation());
+
+				haveMoved = true;
+			}
+		}
+
+		if(!haveMoved) {
+			List<Shout> audibleShouts = listenForVictims();
+			//if we can hear anything, go towards one of them
+			if(audibleShouts.size() > 0) {
+				//want to go towards the nearest shout
+				Shout nearestShout = null;
+				double nearestDist = java.lang.Double.MAX_VALUE;
+
+
+				//so, we need to figure out which one is the nearest one
+				for(Shout s : audibleShouts) {
+					if(s.getCenterLocation().distanceSq(this.getCenterLocation()) < nearestDist) {
+						nearestShout = s;
+						nearestDist = s.getCenterLocation().distanceSq(this.getCenterLocation());
+					}
+				}
+
+				//make a bee-line for that victim!
+				actuallyMoveTowards(nearestShout.getCenterLocation());
+
+				haveMoved = true;
+			}
+		}
+
+		/* 2) See if we are within broadcast range of any other robots by 
+		 * 		seeing what messages have come in since we last checked.
+		 * 	a) If there are robots nearby, try to maximize distance from them
+		 */
+
+		if(MOVE_BOT_DEBUG) {
+			print("I know about " + otherBotInfo.size() + " other bots");
+		}
+
+		if( (!haveMoved) && (otherBotInfo.size() > 0)) {
+
+			//for now, just move away from nearest neighbor
+			//			if(numGen.nextDouble() < MOVE_RANDOMLY_PROB) {
+			//				moveRandomly();
+			//			} else {
+			int nearestBotIndex = 0;
+			double nearestBotDistSq = java.lang.Double.MAX_VALUE;
+
+			for(int i = 0; i < otherBotInfo.size(); i++) {
+				BotInfo bi = otherBotInfo.get(i);
+
+				//don't consider ourselves
+				if(bi.getBotID() == botID) continue;
+
+				double curDistSq = bi.getLocation().distanceSq(this.getCenterLocation());
+
+				if(curDistSq < nearestBotDistSq) {
+					nearestBotDistSq = curDistSq;
+					nearestBotIndex = i;
+				}
+			}
+
+			if(MOVE_BOT_DEBUG)
 				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestBotDistSq + ") away");
 
-				//want to move away from the nearest bot
-				actuallyMoveAway(otherBotInfo.get(nearestBotIndex).getLocation());
+			//want to move away from the nearest bot
+			actuallyMoveAway(otherBotInfo.get(nearestBotIndex).getLocation());
+			haveMoved = true;
+			//			}
+		}
+
+		if(!haveMoved) {
+			//move toward the base, hopefully finding other robots and/or getting messages about paths to follow
+			if(MOVE_BOT_DEBUG) {
+				print("No bots within broadcast distance - move back towards base\nKnow location of " + otherBotInfo.size() + " other bots");
 			}
+
+			actuallyMoveTowards(baseZone.getCenterLocation());
+			haveMoved = true;
 		}
 
 		//make sure we haven't moved off the screen
@@ -270,7 +354,15 @@ public class Bot extends Rectangle implements Runnable {
 		int xChange, yChange;
 
 		//see if our x coordinates are greater than or less than than of p
-		if(this.getCenterX() < p.getX()) {
+		if(this.getCenterX() == p.getX()) {
+			//decide randomly
+			if(numGen.nextDouble() < .5) {
+				xChange = -1*DIMENSION;
+			} else {
+				xChange = 1*DIMENSION;
+			}
+		}
+		else if(this.getCenterX() < p.getX()) {
 			//in this case, we want to move in the positive X direction
 			xChange = DIMENSION;
 		} else {
@@ -279,7 +371,15 @@ public class Bot extends Rectangle implements Runnable {
 		}
 
 		//do the same for the y coordinates
-		if(this.getCenterY() < p.getY()) {
+		if(this.getCenterY() == p.getY()) {
+			//decide randomly
+			if(numGen.nextDouble() < .5) {
+				yChange = -1*DIMENSION;
+			} else {
+				yChange = 1*DIMENSION;
+			}
+		}
+		else if(this.getCenterY() < p.getY()) {
 			//want to move in the positive Y direction
 			yChange = DIMENSION;
 		} else {
@@ -294,7 +394,15 @@ public class Bot extends Rectangle implements Runnable {
 		int xChange, yChange;
 
 		//see if our x coordinates are greater than or less than than of p
-		if(this.getCenterX() < p.getX()) {
+		if(this.getCenterX() == p.getX()) {
+			//decide randomly
+			if(numGen.nextDouble() < .5) {
+				xChange = -1*DIMENSION;
+			} else {
+				xChange = 1*DIMENSION;
+			}
+		}
+		else if(this.getCenterX() < p.getX()) {
 			//in this case, we want to move in the negative X direction
 			xChange = -1 * DIMENSION;
 		} else {
@@ -303,7 +411,15 @@ public class Bot extends Rectangle implements Runnable {
 		}
 
 		//do the same for the y coordinates
-		if(this.getCenterY() < p.getY()) {
+		if(this.getCenterY() == p.getY()) {
+			//decide randomly
+			if(numGen.nextDouble() < .5) {
+				yChange = -1*DIMENSION;
+			} else {
+				yChange = 1*DIMENSION;
+			}
+		}
+		else if(this.getCenterY() < p.getY()) {
 			//want to move in the negative Y direction
 			yChange = -1 * DIMENSION;
 		} else {
@@ -321,7 +437,7 @@ public class Bot extends Rectangle implements Runnable {
 
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) World.findIntersections(broadcastRange, World.allBots);
-		
+
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
 			if(b.getID() == this.getID()) {
@@ -329,13 +445,16 @@ public class Bot extends Rectangle implements Runnable {
 			}
 			try {
 				b.recieveMessage(mes);
+//				if(MESSAGE_BOT_DEBUG)
+//					print("Sucessfully sent message to " + b.getID());
 			} catch (InterruptedException e) {
-				//oh well - it didn't go through.  Don't worry about it, just go onto the next one
+//				if(MESSAGE_BOT_DEBUG)
+//					print("Failed to send message to " + b.getID());
 			}
 		}
 
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private List<Victim> lookForVictims() {
 		//first, get our visibility radius
@@ -344,7 +463,8 @@ public class Bot extends Rectangle implements Runnable {
 		//see if the location of any of our victims intersects this range
 		List<Victim> visibleVictims = (List<Victim>) World.findIntersections((Shape)visibilityRange, World.allVictims);
 
-		print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
+		if(LOOK_BOT_DEBUG)
+			print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
 
 		//visibileVictims is now a list of all the victims the robot could see if it was perfect
 		//but it's not, and there is some probability that it will miss some of the victims
@@ -358,35 +478,12 @@ public class Bot extends Rectangle implements Runnable {
 			}
 		}
 
-		print("Actually able to see " + visibleVictims.size() + " victims");
+		if(LOOK_BOT_DEBUG)
+			print("Actually able to see " + visibleVictims.size() + " victims");
 
 		//we have our list victims that the Bot saw - return it
 		return visibleVictims;
 	}
-
-	private boolean goTowardsAVictim(List<Victim> visibleVicitms) {
-		if(visibleVicitms.size() <= 0) {
-			return false;
-		}
-
-		//want to go towards the nearest victim
-		Victim nearestVic = null;
-		double nearestDist = java.lang.Double.MAX_VALUE;
-
-
-		//so, we need to figure out which one is the nearest one
-		for(Victim v : visibleVicitms) {
-			if(v.getCenterLocation().distanceSq(this.getCenterLocation()) < nearestDist) {
-				nearestVic = v;
-				nearestDist = v.getCenterLocation().distanceSq(this.getCenterLocation());
-			}
-		}
-
-		//make a bee-line for that victim!
-		move(new Line2D.Double(this.getCenterLocation(), nearestVic.getCenterLocation()));
-		return true;
-	}
-
 
 	@SuppressWarnings("unchecked")
 	private List<Shout> listenForVictims() {
@@ -398,7 +495,8 @@ public class Bot extends Rectangle implements Runnable {
 		//see if any of the shouts we know about intersect this range
 		List<Shout> audibleShouts = (List<Shout>) World.findIntersections((Shape) auditoryRange, heardShouts);
 
-		print("In perfect world, would have just heard " + audibleShouts.size() + " vicitms");
+		if(LISTEN_BOT_DEBUG)
+			print("In perfect world, would have just heard " + audibleShouts.size() + " vicitms");
 
 		//audible shouts is now all the shouts we could hear if the robot could hear perfectly
 		//but it can't - we're using a probability to model this fact
@@ -413,33 +511,11 @@ public class Bot extends Rectangle implements Runnable {
 
 		listeningForShouts = true;
 
-		print("Actually just heard " + audibleShouts.size() + " victims");
+		if(LOOK_BOT_DEBUG)
+			print("Actually just heard " + audibleShouts.size() + " victims");
 
 		//we have our list of shouts - return it
 		return audibleShouts;	
-	}
-
-	private boolean goTowardsAShout(List<Shout> audibleShouts) {
-		if(audibleShouts.size() <= 0) {
-			return false;
-		}
-
-		//want to go towards the nearest victim
-		Shout nearestShout = null;
-		double nearestDist = java.lang.Double.MAX_VALUE;
-
-
-		//so, we need to figure out which one is the nearest one
-		for(Shout s : audibleShouts) {
-			if(s.getCenterLocation().distanceSq(this.getCenterLocation()) < nearestDist) {
-				nearestShout = s;
-				nearestDist = s.getCenterLocation().distanceSq(this.getCenterLocation());
-			}
-		}
-
-		//make a bee-line for that victim!
-		move(new Line2D.Double(this.getCenterLocation(), nearestShout.getCenterLocation()));
-		return true;
 	}
 
 	private void assessZone() {
@@ -459,9 +535,9 @@ public class Bot extends Rectangle implements Runnable {
 			}
 		}
 	}
-	
-	
-	
+
+
+
 	public void startBot() {
 		keepGoing = true;
 	}
@@ -480,40 +556,19 @@ public class Bot extends Rectangle implements Runnable {
 
 		//first, see if we should keep going
 		while(keepGoing) {
-			boolean vicInSight = false;
 
 			//first, read any messages that have come in, and take care of them
 			readMessages();
 
-			//now, try to move
-			//we want to look around for victims, if we don't already know where one is
-			if(!vicInSight) {
-				List<Victim> visibleVics = lookForVictims();
-				//if we find some, go towards one of them
-				if(visibleVics.size() > 0) {
-					vicInSight = true;
-					goTowardsAVictim(visibleVics);
-				}
-			}
-
-			//if we haven't already found a victim, try listening for one
-			if(!vicInSight) {
-				List<Shout> audibleShouts = listenForVictims();
-				//if we can hear anything, go towards one of them
-				if(audibleShouts.size() > 0) {
-					vicInSight = true;
-					goTowardsAShout(audibleShouts);
-				}
-			}
-
-			//if we still haven't found a victim, just try to move
-			if(!vicInSight) {
-				move(new Line2D.Double()); //we don't have a direction to move in, so we're not passing a real line.
-			}
+			//now try to move, based on the move rules.
+			move();
 
 			//now, just some housekeeping
 			//we shouldn't hang onto shouts for too long
 			heardShouts.clear();
+			//also don't want to hang on to bot info for too long
+			otherBotInfo.clear();
+
 
 			//make sure we are still in the zone we think we are in
 			if(currentZone == null || ! currentZone.contains(getCenterLocation())) {
@@ -521,7 +576,7 @@ public class Bot extends Rectangle implements Runnable {
 				//reasses the zone's status if we move to a new zone
 				assessZone();
 			}
-			
+
 			try {
 				this.wait(1000);
 			} catch(InterruptedException e) {}
@@ -529,8 +584,7 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 	private void print(String message) {
-		boolean DEBUG = false;
-		if(DEBUG) {
+		if(OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
 		}
 	}

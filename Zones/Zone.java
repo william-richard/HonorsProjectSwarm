@@ -37,6 +37,11 @@ public abstract class Zone extends Polygon {
 		return this.getBounds2D().getCenterY();
 	}
 	
+	public Point2D getCenterLocation() {
+		return new Point2D.Double(getCenterX(), getCenterY());
+	}
+	
+	
 	public abstract Shape getBroadcastRange(Point2D originator);
 	public abstract Shape getVisibilityRange(Point2D originator);
 	public abstract Shape getAudibleRange(Point2D originator);
