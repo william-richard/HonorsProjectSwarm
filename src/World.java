@@ -60,7 +60,7 @@ public class World extends JFrame {
 		setupFrame();
 		
 		//this is with default values, mostly for debugging
-		int numBots = 100;
+		int numBots = 10;
 		int numVic = 2;
 		
 		//initialize the zones
