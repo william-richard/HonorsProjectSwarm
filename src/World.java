@@ -29,7 +29,7 @@ public class World extends JFrame {
 	private static final int FRAME_WIDTH = 500;
 	public static final Rectangle BOUNDING_BOX = new Rectangle(0, MENUBAR_MEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_MEIGHT);
 
-	private static final int ZONE_COMPLEXITY = 10;
+	private static final int ZONE_COMPLEXITY = 20;
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color BOT_COLOR = Color.green;
@@ -62,14 +62,14 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 40;
+		int numBots = 100;
 		int numVic = 2;
 
 		//initialize the zones
 		allZones = new CopyOnWriteArrayList<Zone>();
 
-		int[] xPointsBase = {200, 300, 300, 200};
-		int[] yPointsBase = {200, 200, 300, 300};
+		int[] xPointsBase = {225, 275, 275, 225};
+		int[] yPointsBase = {225, 225, 275, 275};
 		Zone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
 		allZones.add(homeBase);
 
