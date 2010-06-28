@@ -16,22 +16,22 @@ public class Bot extends Rectangle implements Runnable {
 	 * CONSTANTS
 	 **************************************************************************/
 	private final int DIMENSION = 6;
-	private final double VISUAL_ID_VICTIM_PROB = .45;
+	private final double VISUAL_ID_VICTIM_PROB = .70;
 	private final double HEAR_VICTIM_PROB = .75;
 	private final double MOVE_RANDOMLY_PROB = .25;
-	public static final double DEFAULT_BROADCAST_RADIUS = 50;
-	public static final double DEFALUT_VISIBILITY_RADIUS = 12;
-	public static final double DEFAULT_AUDITORY_RADIUS = 30;
+	public static final double DEFAULT_BROADCAST_RADIUS = 75;
+	public static final double DEFALUT_VISIBILITY_RADIUS = 10;
+	public static final double DEFAULT_AUDITORY_RADIUS = 50;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
 
-	private boolean OVERALL_BOT_DEBUG = 	false;
+	private boolean OVERALL_BOT_DEBUG = 	true;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
-	private boolean MOVE_BOT_DEBUG = 		true;
+	private boolean MOVE_BOT_DEBUG = 		false;
 
 
 	/***************************************************************************
@@ -591,7 +591,7 @@ public class Bot extends Rectangle implements Runnable {
 			}
 
 			try {
-				this.wait(500);
+				this.wait(1000);
 			} catch(InterruptedException e) {}
 		}
 	}
@@ -599,6 +599,7 @@ public class Bot extends Rectangle implements Runnable {
 	private void print(String message) {
 		if(OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
+			System.out.flush();
 		}
 	}
 }
