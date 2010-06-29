@@ -133,10 +133,7 @@ public class BaseZone extends Zone {
 				Victim vic = World.allVictims.get(World.allVictims.indexOf(new Victim(vicX, vicY, vicStatus)));
 				
 				//now, make the path and add it to our list
-				victimPaths.add(new VictimPath(vic, pathLength, pathRating, avgRating, pathBots, this.getCenterLocation()));
-				
-//				System.out.println(victimPaths.get(victimPaths.size() -1));
-				
+				victimPaths.add(new VictimPath(vic, pathLength, pathRating, avgRating, pathBots, this.getCenterLocation()));				
 			} else continue;
 
 		}
@@ -150,6 +147,41 @@ public class BaseZone extends Zone {
 		return victimPaths;
 	}
 	
+	
+	public List<VictimPath> getBestVictimPaths() {
+		//first, get all the victim paths
+		List<VictimPath> allPaths = getVictimPaths();
+		
+		List<VictimPath> bestPaths = new ArrayList<VictimPath>();
+		
+		//now, pick out the best ones
+		for(int allIndex = 0; allIndex < allPaths.size(); allIndex++) {
+			
+			VictimPath curPath = allPaths.get(allIndex);
+			
+			boolean foundPathToSameVic = false;
+			
+			for(int bestIndex = 0; bestIndex < bestPaths.size(); bestIndex++) {
+				VictimPath curFromBest = bestPaths.get(bestIndex);
+				
+				if(curPath.getVic().equals(curFromBest.getVic())) {
+					foundPathToSameVic = true;
+					
+					if(curPath.getAvgRating() < curFromBest.getAvgRating()) {
+						bestPaths.remove(bestIndex);
+						bestPaths.add(curPath);
+					}
+					break;
+				}
+			}
+			
+			if(! foundPathToSameVic) {
+				bestPaths.add(curPath);
+			}
+		}
+		
+		return bestPaths;
+	}
 	
 	
 	

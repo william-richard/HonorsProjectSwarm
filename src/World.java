@@ -67,7 +67,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 30;
+		int numBots = 100;
 		int numVic = 2;
 
 		//initialize the zones
@@ -333,11 +333,12 @@ public class World extends JFrame {
 			BaseZone bz = (BaseZone) z;
 
 			//draw all of is paths
-			List<VictimPath> victimPaths= bz.getVictimPaths();
+			List<VictimPath> victimPaths= bz.getBestVictimPaths();
 
 			for(VictimPath vp : victimPaths) {
 				g2d.draw(vp);
 			}
+						
 		}
 
 

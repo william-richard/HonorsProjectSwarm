@@ -35,7 +35,7 @@ public class Bot extends Rectangle implements Runnable {
 	private final double DANGER_MULTIPLIER = 2;
 
 
-	private boolean OVERALL_BOT_DEBUG = 	true;
+	private boolean OVERALL_BOT_DEBUG = 	false;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
@@ -222,8 +222,8 @@ public class Bot extends Rectangle implements Runnable {
 				double newSegmentLength = endOfPathBot.getCenterLocation().distance(this.getCenterLocation());
 				double newPathLength = pathLengthSoFar + newSegmentLength;				
 				double ourDangerMultipler;
-				if(zoneAssesment == ZONE_SAFE) ourDangerMultipler = 1;
-				else ourDangerMultipler = DANGER_MULTIPLIER;
+				if(zoneAssesment == ZONE_DANGEROUS || endOfPathBot.getZoneAssessment() == ZONE_DANGEROUS) ourDangerMultipler = DANGER_MULTIPLIER;
+				else ourDangerMultipler = 1;
 				double newPathRating = pathRating + (newSegmentLength * ourDangerMultipler);
 				double newAvgRating = newPathRating;
 //				double newAvgRating = newPathRating / (newPathLength * DANGER_MULTIPLIER);
