@@ -1,9 +1,11 @@
+import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
@@ -17,8 +19,6 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.JFrame;
 
-import com.sun.org.apache.xml.internal.utils.ListingErrorHandler;
-
 
 public class World extends JFrame {
 
@@ -31,7 +31,7 @@ public class World extends JFrame {
 	private static final int FRAME_WIDTH = 500;
 	public static final Rectangle BOUNDING_BOX = new Rectangle(0, MENUBAR_MEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_MEIGHT);
 
-	private static final boolean DRAW_BOT_RADII = false;
+	private static final boolean DRAW_BOT_RADII = true;
 	
 	private static final int ZONE_COMPLEXITY = 20;
 
@@ -46,6 +46,8 @@ public class World extends JFrame {
 	private static final Color ZONE_LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
+	
+	private static final Stroke VICTIM_PATH_STROKE = new BasicStroke((float) 2.0);	
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
@@ -325,6 +327,7 @@ public class World extends JFrame {
 
 		//paint all the victim paths
 		g2d.setColor(VICTIM_PATH_COLOR);
+		g2d.setStroke(VICTIM_PATH_STROKE);
 		//only basezones have VictimPaths
 		for(Zone z : allZones) {
 			//skip everything that isn't a BaseZone
