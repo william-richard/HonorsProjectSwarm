@@ -17,6 +17,8 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.JFrame;
 
+import com.sun.org.apache.xml.internal.utils.ListingErrorHandler;
+
 
 public class World extends JFrame {
 
@@ -29,6 +31,8 @@ public class World extends JFrame {
 	private static final int FRAME_WIDTH = 500;
 	public static final Rectangle BOUNDING_BOX = new Rectangle(0, MENUBAR_MEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_MEIGHT);
 
+	private static final boolean DRAW_BOT_RADII = false;
+	
 	private static final int ZONE_COMPLEXITY = 20;
 
 	private static final Color BACKGROUND_COLOR = Color.white;
@@ -41,6 +45,7 @@ public class World extends JFrame {
 	private static final Color BOT_LABEL_COLOR = Color.black;
 	private static final Color ZONE_LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
+	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
@@ -62,7 +67,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 100;
+		int numBots = 30;
 		int numVic = 2;
 
 		//initialize the zones
@@ -89,7 +94,7 @@ public class World extends JFrame {
 		allVictims = new CopyOnWriteArrayList<Victim>();
 
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
-		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		setVisible(true);
 	}
@@ -281,8 +286,9 @@ public class World extends JFrame {
 
 		//now, drow all of the shouts
 		g2d.setColor(SHOUT_COLOR);
-		for(Shout s : firstBot.getShouts()) {
-			g2d.draw(s);
+		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
+		while(shoutIterator.hasNext()) {
+			g2d.draw(shoutIterator.next());
 		}
 
 		//draw all the bots and their radii and their labels
@@ -293,14 +299,16 @@ public class World extends JFrame {
 			g2d.setColor(BOT_COLOR);
 			g2d.fill(curBot);
 
-			g2d.setColor(AUDIO_RANGE_COLOR);
-			g2d.draw(curBot.getAuditbleRadius());
+			if(DRAW_BOT_RADII) {
+				g2d.setColor(AUDIO_RANGE_COLOR);
+				g2d.draw(curBot.getAuditbleRadius());
 
-			g2d.setColor(VISIBLE_RANGE_COLOR);
-			g2d.draw(curBot.getVisibilityRadius());
+				g2d.setColor(VISIBLE_RANGE_COLOR);
+				g2d.draw(curBot.getVisibilityRadius());
 
-			g2d.setColor(BROADCAST_RANGE_COLOR);
-			g2d.draw(curBot.getBroadcastRadius());
+				g2d.setColor(BROADCAST_RANGE_COLOR);
+				g2d.draw(curBot.getBroadcastRadius());
+			}
 
 			g2d.setColor(BOT_LABEL_COLOR);
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
@@ -314,6 +322,24 @@ public class World extends JFrame {
 
 			g2d.fill(curVic);
 		}
+
+		//paint all the victim paths
+		g2d.setColor(VICTIM_PATH_COLOR);
+		//only basezones have VictimPaths
+		for(Zone z : allZones) {
+			//skip everything that isn't a BaseZone
+			if(! (z instanceof BaseZone)) continue;
+
+			BaseZone bz = (BaseZone) z;
+
+			//draw all of is paths
+			List<VictimPath> victimPaths= bz.getVictimPaths();
+
+			for(VictimPath vp : victimPaths) {
+				g2d.draw(vp);
+			}
+		}
+
 
 	}
 

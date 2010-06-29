@@ -41,7 +41,7 @@ public class SafeZone extends Zone {
 	}
 
 	@Override
-	public Shout getShout(Point2D originator) {
+	public Shout getShout(Point2D originator, Victim shouter) {
 		//for now, the shout is a circle of the default radius
 
 		//calculate it's corner
@@ -49,7 +49,7 @@ public class SafeZone extends Zone {
 		double cornerY = originator.getY() - Shout.DEFAULT_SHOUT_RADIUS;
 
 		//return the circular shout
-		return new Shout(new Ellipse2D.Double(cornerX, cornerY, Shout.DEFAULT_SHOUT_RADIUS*2, Shout.DEFAULT_SHOUT_RADIUS*2));	
+		return new Shout(new Ellipse2D.Double(cornerX, cornerY, Shout.DEFAULT_SHOUT_RADIUS*2, Shout.DEFAULT_SHOUT_RADIUS*2), shouter);	
 	}
 
 	@Override
@@ -63,5 +63,16 @@ public class SafeZone extends Zone {
 		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFALUT_VISIBILITY_RADIUS*2, Bot.DEFALUT_VISIBILITY_RADIUS*2);
 	}
 
+
+	@Override
+	public Shape getFoundRange(Point2D originator) {
+		//in this case, return a circle
+		//know the center of the circle, and the radius - need to find the corner
+		double foundRangeCornerX = originator.getX() - Bot.DEFAULT_FOUND_RANGE;
+		double foundRangeCornerY = originator.getY() - Bot.DEFAULT_FOUND_RANGE;
+
+		//now, make the broadcast range shape
+		return new Ellipse2D.Double(foundRangeCornerX, foundRangeCornerY, Bot.DEFAULT_FOUND_RANGE*2, Bot.DEFAULT_FOUND_RANGE*2);
+	}
 
 }

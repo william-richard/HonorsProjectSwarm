@@ -7,6 +7,7 @@ public class Shout extends Area {
 	
 	private static final long serialVersionUID = 1L;
 	public static final int DEFAULT_SHOUT_RADIUS = 20;
+	private Victim shouter;
 	
 
 	/***************************************************************************
@@ -23,8 +24,9 @@ public class Shout extends Area {
 //		setFrame(cornerX, cornerY, radius, radius);
 //	}
 
-	public Shout(Shape s) {
+	public Shout(Shape s, Victim _shouter) {
 		super(s);
+		shouter = _shouter;
 	}
 	
 	/***************************************************************************
@@ -39,5 +41,33 @@ public class Shout extends Area {
 		Rectangle2D bounds = this.getBounds2D();
 		return new Point2D.Double(bounds.getCenterX(), bounds.getCenterY());
 	}
+	
+	public Victim getShouter() {
+		return shouter;
+	}
 
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (!(obj instanceof Shout))
+			return false;
+		Shout other = (Shout) obj;
+		Point2D thisCenterLocation = this.getCenterLocation();
+		Point2D otherCenterLocation = other.getCenterLocation();
+		
+		if(thisCenterLocation == null) {
+			if(otherCenterLocation != null) {
+				return false;
+			}
+		} else if(! thisCenterLocation.equals(otherCenterLocation)) {
+			return false;
+		}
+		return true;
+	}
+	
+	
 }

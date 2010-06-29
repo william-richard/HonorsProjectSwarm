@@ -6,6 +6,7 @@ public class BotInfo {
 	
 	private int botNum;
 	private Point2D location;
+	private int zoneAssessment;
 	
 	public BotInfo(int _botNum) {
 		botNum = _botNum;
@@ -15,6 +16,11 @@ public class BotInfo {
 	public BotInfo(int _botNum, double _x, double _y) {
 		this(_botNum);
 		location = new Point2D.Double(_x, _y);
+	}
+	
+	public BotInfo(int _botNum, double _x, double _y, int _zoneAssessment) {
+		this(_botNum, _x, _y);
+		zoneAssessment = _zoneAssessment;
 	}
 	
 	public void update(double newCenterX, double newCenterY) {
@@ -45,10 +51,14 @@ public class BotInfo {
 	/**
 	 * @return the location
 	 */
-	public Point2D getLocation() {
+	public Point2D getCenterLocation() {
 		return location;
 	}
 	
+	public int getZoneAssessment() {
+		return zoneAssessment;
+	}
+
 	public void merge(BotInfo newInfo) {
 		if(newInfo.botNum != this.botNum) {
 			System.out.println("BOT INFOS DON'T MATCH");

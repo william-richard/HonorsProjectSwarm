@@ -2,10 +2,13 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 
 public class Bot extends Rectangle implements Runnable {
@@ -19,19 +22,25 @@ public class Bot extends Rectangle implements Runnable {
 	private final double VISUAL_ID_VICTIM_PROB = .70;
 	private final double HEAR_VICTIM_PROB = .75;
 	private final double MOVE_RANDOMLY_PROB = .25;
+	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
 	public static final double DEFAULT_BROADCAST_RADIUS = 75;
 	public static final double DEFALUT_VISIBILITY_RADIUS = 10;
 	public static final double DEFAULT_AUDITORY_RADIUS = 50;
+	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
+
+	private final double DANGER_MULTIPLIER = 2;
+
 
 	private boolean OVERALL_BOT_DEBUG = 	true;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
 	private boolean MOVE_BOT_DEBUG = 		false;
+	private boolean FIND_VICTIM_DEBUG = 	false;
 
 
 	/***************************************************************************
@@ -50,6 +59,7 @@ public class Bot extends Rectangle implements Runnable {
 	private int botID;
 	private int zoneAssesment; //stores the bot's assesment of what sort of zone it is in
 	private Zone baseZone; //the home base zone.
+	private HashMap<Victim, java.lang.Double> knownVicitms; //keep a list of map we have been told about, so we don't duplicate efforts.  Values are the avg rating of the best path we've seen to them
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -74,11 +84,13 @@ public class Bot extends Rectangle implements Runnable {
 		//set up other variables with default values
 		messageBuffer = "";
 
-		heardShouts = new ArrayList<Shout>();
+		heardShouts = new CopyOnWriteArrayList<Shout>();
 
 		botID = _botID;
 
 		baseZone = homeBase;
+
+		knownVicitms = new HashMap<Victim, java.lang.Double>();
 
 		//find out what zone we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
@@ -107,8 +119,8 @@ public class Bot extends Rectangle implements Runnable {
 		return currentZone.getAudibleRange(getCenterLocation());
 	}
 
-	public List<Shout> getShouts() {
-		return heardShouts;
+	public ListIterator<Shout> getShoutIterator() {
+		return heardShouts.listIterator();
 	}
 
 	public int getID() {
@@ -161,29 +173,88 @@ public class Bot extends Rectangle implements Runnable {
 		Scanner s;
 		//go through the messages and update the stored info about the other bots
 		for(String mes : messageArray) {
-			if(MESSAGE_BOT_DEBUG)
-				print("Reading message '" + mes + "'");
-
 			s = new Scanner(mes);
 
-			if(! s.hasNextInt())
-				continue;
+			if(! s.hasNext()) continue;
 
-			int botNum = s.nextInt();
+			String messageType = s.next();
+			
+			if(messageType.equals("loc")) {
+				int botNum = s.nextInt();
 
-			if(botNum == botID) {
-				if(MESSAGE_BOT_DEBUG)
-					print("got message from myself - skip it");
-				continue;
-			}
+				if(botNum == botID) {
+					if(MESSAGE_BOT_DEBUG)
+						print("got message from myself - skip it");
+					continue;
+				}
 
-			double newX = s.nextDouble();
-			double newY = s.nextDouble();
+				double newX = s.nextDouble();
+				double newY = s.nextDouble();
 
-			BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
+				BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
 
-			//			otherBotInfo.get(botNum).merge(newBotInfo);
-			otherBotInfo.add(newBotInfo);
+				otherBotInfo.add(newBotInfo);
+			} else if(messageType.equals("fv")) {
+				if(FIND_VICTIM_DEBUG)
+					print("Reading message '" + mes + "'");
+
+				double vicStatus = s.nextDouble();
+				double vicX = s.nextDouble();
+				double vicY = s.nextDouble();
+				double pathLengthSoFar = s.nextDouble();
+				double pathRating = s.nextDouble();
+				double avgRating = s.nextDouble();
+
+				//see if we have seen this victim yet, and if this is a better path than the one we know about
+				Victim vic = new Victim(vicX, vicY, vicStatus);
+				java.lang.Double storedRating = knownVicitms.get(vic);
+				
+				//we've determined that this path is worth continuing, so finish reading the message
+				List<BotInfo> pathBots = new ArrayList<BotInfo>();
+
+				while(s.hasNextInt()) {
+					pathBots.add(new BotInfo(s.nextInt(), s.nextDouble(), s.nextDouble(), s.nextInt()));
+				}
+
+				//we now have read all the information from the message, so add on our part and send it out
+				//first, calculate our added distance and path rating
+				BotInfo endOfPathBot = pathBots.get(pathBots.size() - 1);
+				double newSegmentLength = endOfPathBot.getCenterLocation().distance(this.getCenterLocation());
+				double newPathLength = pathLengthSoFar + newSegmentLength;				
+				double ourDangerMultipler;
+				if(zoneAssesment == ZONE_SAFE) ourDangerMultipler = 1;
+				else ourDangerMultipler = DANGER_MULTIPLIER;
+				double newPathRating = pathRating + (newSegmentLength * ourDangerMultipler);
+				double newAvgRating = newPathRating;
+//				double newAvgRating = newPathRating / (newPathLength * DANGER_MULTIPLIER);
+
+				//skip it if we know about this victim already and have already added data to a better path
+				if(storedRating != null && newAvgRating > storedRating.doubleValue()) continue;
+				
+				if(storedRating != null) {
+					print("Stored value is " + storedRating.doubleValue() + " newValue is " + newAvgRating);
+				} else {
+					print("Frist time seeing this");
+				}
+
+				//add this information into our map of Victims
+				knownVicitms.put(vic, new java.lang.Double(newAvgRating));
+
+				//make the message
+				//start it off with the vic info
+				String message = "fv " + vicStatus + " " + vicX + " " + vicY + " " + newPathLength + " " + newPathRating + " " + newAvgRating + " ";
+				//add all the bots on the path so far
+				for(BotInfo bi : pathBots) {
+					message = message + bi.getBotID() + " " + bi.getCenterX() + " " + bi.getCenterY() + " " + bi.getZoneAssessment() + " ";
+				}
+				//add this bot
+				message = message + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + " " + this.zoneAssesment + "\n";				
+				
+				//broadcast the message
+				broadcastMessage(message);
+
+			} else continue;
+
 		}
 	}
 
@@ -288,29 +359,29 @@ public class Bot extends Rectangle implements Runnable {
 				//don't consider ourselves
 				if(bi.getBotID() == botID) continue;
 
-				double curDistSq = bi.getLocation().distanceSq(this.getCenterLocation());
+				double curDistSq = bi.getCenterLocation().distanceSq(this.getCenterLocation());
 
 				if(curDistSq < nearestPointDistSq) {
 					nearestPointDistSq = curDistSq;
-					nearestPoint = bi.getLocation();
+					nearestPoint = bi.getCenterLocation();
 				}
 			}
-			
+
 			//now, also try to maximize distance from base zones
 			for(Zone z : World.allZones) {
 				if(z instanceof BaseZone) {
 					double curDistSq = z.getCenterLocation().distanceSq(this.getCenterLocation());
-					
+
 					if(curDistSq < nearestPointDistSq) {
 						nearestPointDistSq = curDistSq;
 						nearestPoint = z.getCenterLocation();
 					}
 				}
 			}
-			
 
-//			if(MOVE_BOT_DEBUG)
-//				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestPointDistSq + ") away");
+
+			//			if(MOVE_BOT_DEBUG)
+			//				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestPointDistSq + ") away");
 
 			//want to move away from the nearest bot
 			actuallyMoveAway(nearestPoint);
@@ -336,7 +407,7 @@ public class Bot extends Rectangle implements Runnable {
 
 		//we've now moved - broadcast location to nearby bots
 		//construct the message we want to send them.
-		String outgoingMessage = botID + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
+		String outgoingMessage = "loc " + botID + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
 
 		//broadcast it
 		broadcastMessage(outgoingMessage);
@@ -458,14 +529,30 @@ public class Bot extends Rectangle implements Runnable {
 			}
 			try {
 				b.recieveMessage(mes);
-//				if(MESSAGE_BOT_DEBUG)
-//					print("Sucessfully sent message to " + b.getID());
+				//				if(MESSAGE_BOT_DEBUG)
+				//					print("Sucessfully sent message to " + b.getID());
 			} catch (InterruptedException e) {
-//				if(MESSAGE_BOT_DEBUG)
-//					print("Failed to send message to " + b.getID());
+				//				if(MESSAGE_BOT_DEBUG)
+				//					print("Failed to send message to " + b.getID());
 			}
 		}
 
+		//also, send it to any BaseZones
+		List<Zone> nearbyZones = (List<Zone>) World.findIntersections(broadcastRange, World.allZones);
+
+		for(Zone z : nearbyZones) {
+			//skip non-BaseZones
+			if(! (z instanceof BaseZone)) continue;
+
+			//send messages to those basezones
+			BaseZone bz = (BaseZone) z;
+
+			try {
+				bz.recieveMessage(mes);
+			} catch (InterruptedException e) {
+			}
+
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -479,11 +566,21 @@ public class Bot extends Rectangle implements Runnable {
 		if(LOOK_BOT_DEBUG)
 			print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
 
-		//visibileVictims is now a list of all the victims the robot could see if it was perfect
-		//but it's not, and there is some probability that it will miss some of the victims
+		//ignore any vicitms we already know about
+		//use a list iterator for the reasons described below
+		ListIterator<Victim> vicIteratior = visibleVictims.listIterator();
+		while(vicIteratior.hasNext()) {
+			Victim curVic = vicIteratior.next();
+			if(knownVicitms.containsKey(curVic)) {
+				vicIteratior.remove();
+			}
+		}
+
+		//visibileVictims is now a list of all the victims the robot could see and dosen't already know about 
+		//if it was perfect but it's not, and there is some probability that it will miss some of the victims
 		//so, go through the list and remove some or all of the victims with that probability.
 		//need to use an iterator, because it won't let us remove as we go otherwise
-		ListIterator<Victim> vicIteratior = visibleVictims.listIterator();
+		vicIteratior = visibleVictims.listIterator();
 		while(vicIteratior.hasNext()) {
 			vicIteratior.next();
 			if(! (numGen.nextDouble() <= VISUAL_ID_VICTIM_PROB)) {
@@ -511,10 +608,20 @@ public class Bot extends Rectangle implements Runnable {
 		if(LISTEN_BOT_DEBUG)
 			print("In perfect world, would have just heard " + audibleShouts.size() + " vicitms");
 
+		//ignore any shouts that sound like they're coming from vicitms we already know about
+		//use a list iterator for the reasons described below
+		ListIterator<Shout> shoutIterator = audibleShouts.listIterator();
+		while(shoutIterator.hasNext()) {
+			Shout curShout = shoutIterator.next();
+			if(knownVicitms.containsKey(curShout.getShouter())) {
+				shoutIterator.remove();
+			}
+		}
+
 		//audible shouts is now all the shouts we could hear if the robot could hear perfectly
 		//but it can't - we're using a probability to model this fact
 		//so, go through the list and remove the ones that probability says we can't identify
-		ListIterator<Shout> shoutIterator = audibleShouts.listIterator();
+		shoutIterator = audibleShouts.listIterator();
 		while(shoutIterator.hasNext()) {
 			shoutIterator.next();
 			if(! (numGen.nextDouble() <= HEAR_VICTIM_PROB)) {
@@ -549,7 +656,52 @@ public class Bot extends Rectangle implements Runnable {
 		}
 	}
 
+	private double assesVictim(Victim v) {
+		//with some probability we'll get it wrong
+		if(numGen.nextDouble() < ASSES_VICTIM_CORRECTLY_PROB) {
+			return v.getDamage();
+		} else {
+			return numGen.nextInt(101)/100.0;
+		}
+	}
 
+
+	private void findAndAssesVictim() {
+		//first, see if there are any victims that we can see
+		List<Victim> visibleVictims = lookForVictims();
+		
+		//see if any of them are within the FOUND_RANGE
+		List<Victim> foundVictims = new ArrayList<Victim>();
+		
+		for(Victim v : visibleVictims) {
+			if(v.getCenterLocation().distance(this.getCenterLocation()) < DEFAULT_FOUND_RANGE) {
+				foundVictims.add(v);
+			}
+		}
+		
+		//we now know what victims we have found
+		//evaluate each of them in turn
+		for(Victim v : foundVictims) {
+			double vicDamage = assesVictim(v);
+
+			//send out a message letting everyone know where the victim is, what condition they are in, and how safe the zone is
+			double vicDistance = v.getCenterLocation().distance(this.getCenterLocation());
+			double currentSegmentRating;
+			if(zoneAssesment == ZONE_SAFE) currentSegmentRating = vicDistance;
+			else currentSegmentRating = vicDistance * DANGER_MULTIPLIER;
+
+			double avgPathRating = currentSegmentRating/(vicDistance*DANGER_MULTIPLIER);
+			
+			String message = "fv " + vicDamage + " " + v.getCenterX() + " " + v.getCenterY() + " " + vicDistance + " " + currentSegmentRating  + " " +  currentSegmentRating 
+			+ " " + this.getID() + " " + this.getCenterX() + " " + this.getCenterY()  + " " + zoneAssesment + "\n";
+
+			broadcastMessage(message);
+			
+			//add this entry to our know victims so we go onto other victims
+			knownVicitms.put(v, new java.lang.Double(avgPathRating));
+			
+		}
+	}
 
 	public void startBot() {
 		keepGoing = true;
@@ -576,12 +728,14 @@ public class Bot extends Rectangle implements Runnable {
 			//now try to move, based on the move rules.
 			move();
 
+			//now that we have moved, find out if we can see any victims
+			findAndAssesVictim();
+
 			//now, just some housekeeping
 			//we shouldn't hang onto shouts for too long
 			heardShouts.clear();
 			//also don't want to hang on to bot info for too long
 			otherBotInfo.clear();
-
 
 			//make sure we are still in the zone we think we are in
 			if(currentZone == null || ! currentZone.contains(getCenterLocation())) {

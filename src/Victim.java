@@ -58,9 +58,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 		//see if we're going to shout
 		if(World.RAMOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
 			//make and return a new shout
-			//TODO: Make it so that Zone sets the shout radius
-			//for now, use a constant
-			Shout ourShout = currentZone.getShout(getCenterLocation());
+			Shout ourShout = currentZone.getShout(getCenterLocation(), this);
 			
 			//send it off to all the bots - they'll determine if they can hear it or not
 			for(Bot b : World.allBots) {
@@ -74,6 +72,33 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 			
 		}
 		
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (!super.equals(obj))
+			return false;
+		if (!(obj instanceof Victim))
+			return false;
+		Victim other = (Victim) obj;
+		Point2D thisCenterLocation = this.getCenterLocation();
+		Point2D otherCenterLocation = other.getCenterLocation();
+		
+		if(thisCenterLocation == null) {
+			if(otherCenterLocation != null) {
+				return false;
+			}
+		} else if(! thisCenterLocation.equals(otherCenterLocation)) {
+			return false;
+		}
+		return true;
+	}
+
+	@Override
+	public int hashCode() {
+		return this.getCenterLocation().hashCode();
 	}
 	
 	public synchronized void run() {
