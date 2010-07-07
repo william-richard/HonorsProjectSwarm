@@ -46,6 +46,7 @@ public class World extends JFrame {
 	private static final Color ZONE_LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
+	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 	
 	private static final Stroke VICTIM_PATH_STROKE = new BasicStroke((float) 2.0);	
 
@@ -69,7 +70,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 100;
+		int numBots = 40;
 		int numVic = 2;
 
 		//initialize the zones
@@ -314,7 +315,9 @@ public class World extends JFrame {
 
 			g2d.setColor(BOT_LABEL_COLOR);
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
-
+			
+			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
+			g2d.draw(curBot.getMovementVector().rescale(-5.0));
 		}
 
 		//draw all the victims

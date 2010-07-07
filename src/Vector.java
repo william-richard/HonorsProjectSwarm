@@ -2,7 +2,6 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 
-
 public class Vector extends Line2D{
 
 	private Point2D p1;
@@ -22,6 +21,11 @@ public class Vector extends Line2D{
 	
 	public Vector(double x1, double y1, double x2, double y2) {
 		this(new Point2D.Double(x1, y1), new Point2D.Double(x2, y2));
+	}
+	
+	public Vector(Point2D _p1, Point2D _p2, double mag) {
+		this(_p1, _p2);
+		this.rescale(mag);
 	}
 
 	@Override
@@ -66,6 +70,10 @@ public class Vector extends Line2D{
 		return p1.distance(p2);
 	}
 	
+	public double getMagSquare() {
+		return p1.distanceSq(p2);
+	}
+	
 	@Override
 	public void setLine(double x1, double y1, double x2, double y2) {
 		p1 = new Point2D.Double(x1, y1);
@@ -106,14 +114,26 @@ public class Vector extends Line2D{
 		return (this.getXMag()*other.getXMag()) + (this.getYMag()*other.getYMag());
 	}
 	
-	public Vector rescaleRatio(double ratio) {
-		double newX2 = this.getX1() + (ratio*getXMag());
-		double newY2 = this.getY1() + (ratio*getYMag());
+	public Vector rescaleRatio(double ratio) {		
+		if(java.lang.Double.isInfinite(ratio)) {
+//			System.out.println("Trying to rescale by infinity - ignoring");
+			return this;
+		}
+		
+		double newX2 = this.getX1() - (ratio*getXMag());
+		double newY2 = this.getY1() - (ratio*getYMag());
 		return new Vector(this.getP1(), new Point2D.Double(newX2, newY2));
 	}
 	
 	public Vector rescale(double newMag) {
-		return rescaleRatio(newMag/this.getMagnitude());
-		
+		return rescaleRatio(newMag/this.getMagnitude()); 
+	}
+	
+	public Vector reverse() {
+		return this.rescaleRatio(-1.0);
+	}
+	
+	public String toString() {
+		return "(" + this.getX1() + ", " + this.getY1() + ") (" + this.getX2() + ", " + this.getY2() + ")  " + this.getMagnitude();
 	}
 }

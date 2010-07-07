@@ -1,3 +1,4 @@
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
@@ -32,13 +33,19 @@ public class Bot extends Rectangle implements Runnable {
 	private final int ZONE_DANGEROUS = 2;
 
 	private final double DANGER_MULTIPLIER = 2;
+	
+	private final double MAX_VELOCITY = 8;
+	private final double MAX_VELOCITY_SQUARED = MAX_VELOCITY*MAX_VELOCITY;
+	
+	private final double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000.0;
+	private final double REPULSION_FACTOR_FROM_HOME_BASES = 500.0;
 
 
 	private boolean OVERALL_BOT_DEBUG = 	false;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
-	private boolean MOVE_BOT_DEBUG = 		false;
+	private boolean MOVE_BOT_DEBUG = 		true;
 	private boolean FIND_VICTIM_DEBUG = 	false;
 
 
@@ -51,6 +58,7 @@ public class Bot extends Rectangle implements Runnable {
 	private List<Shout> heardShouts; //the shouts that have been heard recently
 	private Bot previousBot;
 	private final Random numGen = new Random();
+	private Vector movementVector;
 
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
 	private String messageBuffer; //keep a buffer of messages from other robots
@@ -94,6 +102,8 @@ public class Bot extends Rectangle implements Runnable {
 		//find out what zone we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
 		assessZone();
+		
+		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 	}
 
 	/***************************************************************************
@@ -126,7 +136,18 @@ public class Bot extends Rectangle implements Runnable {
 		return botID;
 	}
 
-
+	public Vector getMovementVector() {
+		return movementVector;
+	}
+	
+	
+	public void setCenterLocation(Point2D newCenterLoc) {
+		//need find the new upper-left corner location
+		Point newCornerLoc = new Point((int) (newCenterLoc.getX()-(DIMENSION/2.0)), (int) (newCenterLoc.getY()-(DIMENSION/2.0)));
+		this.setLocation(newCornerLoc);
+	}
+	
+	
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -291,21 +312,22 @@ public class Bot extends Rectangle implements Runnable {
 			//if we find some, go towards one of them
 			if(visibleVics.size() > 0) {
 				//want to go towards the nearest victim
-				Victim nearestVic = null;
-				double nearestDist = java.lang.Double.MAX_VALUE;
+				Vector nearestVicVect = null;
+				double nearestDistSquare = java.lang.Double.MAX_VALUE;
 
 
 				//so, we need to figure out which one is the nearest one
 				for(Victim v : visibleVics) {
-					if(v.getCenterLocation().distanceSq(this.getCenterLocation()) < nearestDist) {
-						nearestVic = v;
-						nearestDist = v.getCenterLocation().distanceSq(this.getCenterLocation());
+					Vector vicVect = new Vector(this.getCenterLocation(), v.getCenterLocation());
+					if(vicVect.getMagSquare() < nearestDistSquare) {
+						nearestVicVect = vicVect;
+						nearestDistSquare = vicVect.getMagSquare();
 					}
 				}
 
 				//make a bee-line for that victim!
-				actuallyMoveTowards(nearestVic.getCenterLocation());
-
+				actuallyMoveAlong(nearestVicVect);
+				
 				haveMoved = true;
 			}
 		}
@@ -315,21 +337,22 @@ public class Bot extends Rectangle implements Runnable {
 			//if we can hear anything, go towards one of them
 			if(audibleShouts.size() > 0) {
 				//want to go towards the nearest shout
-				Shout nearestShout = null;
-				double nearestDist = java.lang.Double.MAX_VALUE;
+				Vector nearestShoutVect = null;
+				double nearestDistSquare = java.lang.Double.MAX_VALUE;
 
 
 				//so, we need to figure out which one is the nearest one
 				for(Shout s : audibleShouts) {
-					if(s.getCenterLocation().distanceSq(this.getCenterLocation()) < nearestDist) {
-						nearestShout = s;
-						nearestDist = s.getCenterLocation().distanceSq(this.getCenterLocation());
+					Vector shoutVect = new Vector(this.getCenterLocation(), s.getCenterLocation());
+					if(shoutVect.getMagSquare() < nearestDistSquare) {
+						nearestShoutVect = shoutVect;
+						nearestDistSquare = s.getCenterLocation().distanceSq(this.getCenterLocation());
 					}
 				}
 
 				//make a bee-line for that victim!
-				actuallyMoveTowards(nearestShout.getCenterLocation());
-
+				actuallyMoveAlong(nearestShoutVect);
+				
 				haveMoved = true;
 			}
 		}
@@ -345,12 +368,15 @@ public class Bot extends Rectangle implements Runnable {
 
 		if( (!haveMoved) && (otherBotInfo.size() > 0)) {
 
+			Vector movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
+			
+			
 			//for now, just move away from nearest neighbor
 			//			if(numGen.nextDouble() < MOVE_RANDOMLY_PROB) {
 			//				moveRandomly();
-			//			} else {
-			Point2D nearestPoint = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
-			double nearestPointDistSq = java.lang.Double.MAX_VALUE;
+//			//			} else {
+//			Point2D nearestPoint = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
+//			double nearestPointDistSq = java.lang.Double.MAX_VALUE;
 
 			for(int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
@@ -358,23 +384,26 @@ public class Bot extends Rectangle implements Runnable {
 				//don't consider ourselves
 				if(bi.getBotID() == botID) continue;
 
-				double curDistSq = bi.getCenterLocation().distanceSq(this.getCenterLocation());
+				//make a "force" vector from the other bot
+				Vector curBotVect = new Vector(this.getCenterLocation(), bi.getCenterLocation());
+				//scale it based on how far away we are from the bot and the repulsion factor
+				//also, multiply by -1 so the vector points away from the thing we want to get away from
+				curBotVect = curBotVect.rescaleRatio(-1.0 * REPULSION_FACTOR_FROM_OTHER_BOTS / curBotVect.getMagSquare());
 
-				if(curDistSq < nearestPointDistSq) {
-					nearestPointDistSq = curDistSq;
-					nearestPoint = bi.getCenterLocation();
-				}
+				//now add it to our movement vector
+				movementVector = movementVector.add(curBotVect);
 			}
 
 			//now, also try to maximize distance from base zones
 			for(Zone z : World.allZones) {
 				if(z instanceof BaseZone) {
-					double curDistSq = z.getCenterLocation().distanceSq(this.getCenterLocation());
-
-					if(curDistSq < nearestPointDistSq) {
-						nearestPointDistSq = curDistSq;
-						nearestPoint = z.getCenterLocation();
-					}
+					Vector curZoneVect = new Vector(this.getCenterLocation(), z.getCenterLocation());
+					//scale it based on how far away we are from the base, and the repulsion factor 
+					//also, multiply by -1 so the vector points away from the thing we want to get away from
+					curZoneVect = curZoneVect.rescale(-1.0 * REPULSION_FACTOR_FROM_HOME_BASES / curZoneVect.getMagSquare());
+					
+					//add it to our movement vector
+					movementVector = movementVector.add(curZoneVect);
 				}
 			}
 
@@ -382,8 +411,12 @@ public class Bot extends Rectangle implements Runnable {
 			//			if(MOVE_BOT_DEBUG)
 			//				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestPointDistSq + ") away");
 
-			//want to move away from the nearest bot
-			actuallyMoveAway(nearestPoint);
+//			//want to move away from the nearest bot
+//			actuallyMoveAway(nearestPoint);
+			
+			//move along the vector we made
+			actuallyMoveAlong(movementVector);
+			
 			haveMoved = true;
 			//			}
 		}
@@ -394,7 +427,10 @@ public class Bot extends Rectangle implements Runnable {
 				print("No bots within broadcast distance - move back towards base\nKnow location of " + otherBotInfo.size() + " other bots");
 			}
 
-			actuallyMoveTowards(baseZone.getCenterLocation());
+			Vector baseZoneVect = new Vector(this.getCenterLocation(), baseZone.getCenterLocation());
+			
+			actuallyMoveAlong(baseZoneVect);
+			
 			haveMoved = true;
 		}
 
@@ -433,86 +469,33 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 
-	private void actuallyMoveTowards(Point2D p) {
-		int xChange, yChange;
-
-		//see if our x coordinates are greater than or less than than of p
-		if(this.getCenterX() == p.getX()) {
-			//decide randomly
-			if(numGen.nextDouble() < .5) {
-				xChange = -1*DIMENSION;
-			} else {
-				xChange = 1*DIMENSION;
-			}
+	private void actuallyMoveAlong(Vector v) {
+		print("Current location : " + this.getCenterLocation());
+		
+		movementVector = v;
+		
+		//make sure the vector starts in the right place
+		if(! v.getP1().equals(this.getCenterLocation())) {
+			//move the vector to fix this
+			print("HAD TO ADJUST MOVE VECTOR");
+			v = v.moveTo(this.getCenterLocation());
 		}
-		else if(this.getCenterX() < p.getX()) {
-			//in this case, we want to move in the positive X direction
-			xChange = DIMENSION;
-		} else {
-			//we want to move in the negative x direction
-			xChange = -1 * DIMENSION;
+		
+		print("Moving along vector '" + v + "'");
+		
+		//make sure the vector isn't too long i.e. assert our max velocity
+		//this basically allows us to move to the end of the vector as 1 step
+		if(v.getMagSquare() > MAX_VELOCITY_SQUARED) {
+			v = v.rescale(MAX_VELOCITY);
 		}
-
-		//do the same for the y coordinates
-		if(this.getCenterY() == p.getY()) {
-			//decide randomly
-			if(numGen.nextDouble() < .5) {
-				yChange = -1*DIMENSION;
-			} else {
-				yChange = 1*DIMENSION;
-			}
-		}
-		else if(this.getCenterY() < p.getY()) {
-			//want to move in the positive Y direction
-			yChange = DIMENSION;
-		} else {
-			//want to move in the negative Y direction
-			yChange = -1 * DIMENSION;
-		}	
-
-		this.translate(xChange, yChange);
+		
+		print("rescaled vector is " + v);
+		
+		//now that everything is all set with the vector, we can move to the other end of it
+		this.setCenterLocation(v.getP2());
 	}
-
-	private void actuallyMoveAway(Point2D p) {
-		int xChange, yChange;
-
-		//see if our x coordinates are greater than or less than than of p
-		if(this.getCenterX() == p.getX()) {
-			//decide randomly
-			if(numGen.nextDouble() < .5) {
-				xChange = -1*DIMENSION;
-			} else {
-				xChange = 1*DIMENSION;
-			}
-		}
-		else if(this.getCenterX() < p.getX()) {
-			//in this case, we want to move in the negative X direction
-			xChange = -1 * DIMENSION;
-		} else {
-			//we want to move in the positive x direction
-			xChange = DIMENSION;
-		}
-
-		//do the same for the y coordinates
-		if(this.getCenterY() == p.getY()) {
-			//decide randomly
-			if(numGen.nextDouble() < .5) {
-				yChange = -1*DIMENSION;
-			} else {
-				yChange = 1*DIMENSION;
-			}
-		}
-		else if(this.getCenterY() < p.getY()) {
-			//want to move in the negative Y direction
-			yChange = -1 * DIMENSION;
-		} else {
-			//want to move in the positive Y direction
-			yChange = DIMENSION;
-		}	
-
-		this.translate(xChange, yChange);
-	}
-
+	
+	
 	@SuppressWarnings("unchecked")
 	private void broadcastMessage(String mes) {
 		//first, get our broadcast range
