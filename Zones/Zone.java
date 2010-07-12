@@ -3,6 +3,7 @@ import java.awt.Polygon;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
 
+//TODO Add obsticle zones
 
 public abstract class Zone extends Polygon {
 
