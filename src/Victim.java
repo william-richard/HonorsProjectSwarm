@@ -120,5 +120,10 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 		}	
 	}
 	
+	public void stopVictim() {
+		keepGoing = false;
+	}
+	
+	
 	
 }

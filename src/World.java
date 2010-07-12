@@ -3,12 +3,12 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
@@ -26,10 +26,10 @@ public class World extends JFrame {
 	 * CONSTANTS
 	 **************************************************************************/
 	public static final Random RAMOM_GENERATOR = new Random();
-	private static final int MENUBAR_MEIGHT = 21;
-	private static final int FRAME_HEIGHT = 500 + MENUBAR_MEIGHT;
+	private static final int MENUBAR_HEIGHT = 21;
+	private static final int FRAME_HEIGHT = 500 + MENUBAR_HEIGHT;
 	private static final int FRAME_WIDTH = 500;
-	public static final Rectangle BOUNDING_BOX = new Rectangle(0, MENUBAR_MEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_MEIGHT);
+	public static final Rectangle2D BOUNDING_BOX = new Rectangle2D.Double(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean DRAW_BOT_RADII = true;
 	
@@ -59,9 +59,12 @@ public class World extends JFrame {
 	public static CopyOnWriteArrayList<Zone> allZones; //The zones in the world - should be non-overlapping
 	public static CopyOnWriteArrayList<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static CopyOnWriteArrayList<Victim> allVictims; //The Victims
-
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Victim> allVictimSnapshot;
+	
+	private Zone baseZone;
+	private Timer repaintTimer;
+	private boolean isStopped;
 
 
 	public World() {
@@ -70,7 +73,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 40;
+		int numBots = 55;
 		int numVic = 2;
 
 		//initialize the zones
@@ -78,7 +81,10 @@ public class World extends JFrame {
 
 		int[] xPointsBase = {225, 275, 275, 225};
 		int[] yPointsBase = {225, 225, 275, 275};
+//		int[] xPointsBase = {MENUBAR_HEIGHT, 50, 50, MENUBAR_HEIGHT};
+//		int[] yPointsBase = {MENUBAR_HEIGHT, MENUBAR_HEIGHT, 50, 50};
 		Zone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
+		baseZone = homeBase;
 		allZones.add(homeBase);
 
 		fillInZones();
@@ -88,17 +94,21 @@ public class World extends JFrame {
 		//initialize the bots
 		allBots = new CopyOnWriteArrayList<Bot>();
 
+		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
+		
 		for(int i = 0; i < numBots; i++) {
-			allBots.add(new Bot(FRAME_WIDTH/2, FRAME_HEIGHT/2, numBots, i, homeBase));
+			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase));
 		}
 
 		//initialize the victims
 		//only 2 for now, so we'll hard code them	
 		allVictims = new CopyOnWriteArrayList<Victim>();
 
-		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
+//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
 		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
+		isStopped = false;
+		
 		setVisible(true);
 	}
 
@@ -241,20 +251,30 @@ public class World extends JFrame {
 	public void go() {
 		//start all the threads
 		for(Bot b : allBots){
-			(new Thread(b)).start();
+			Thread curThread = new Thread(b);
+			curThread.start();
 		}
 
 		for(Victim v : allVictims) {
-			(new Thread(v)).start();
+			Thread curThread = new Thread(v);
+			curThread.start();
 		}
 
 		//start a timer to repaint
-		Timer t = new Timer("Repaint timer");
-		t.schedule(new TimerTask() {
+		repaintTimer = new Timer("Repaint timer");
+		repaintTimer.schedule(new TimerTask() {
 			public void run() {
+
 				repaint();
+				
+//				double curBotDist = getAverageBotDistance();
+//				System.out.println("Current average bot distance is " + curBotDist);
+//				if(curBotDist > 30.0) {
+//					stopAndCleanup();
+//				}
 			}
 		}, 0, 200);
+		
 	}
 
 	public void paint(Graphics g) {		
@@ -349,7 +369,50 @@ public class World extends JFrame {
 
 
 	}
+	
+	private double getAverageBotDistance() {
+		//first, need to calculate it
+		double curAvg = 0.0;
+		
+		ListIterator<Bot> botIt = allBots.listIterator();
+		
+		int i = 0;
+		
+		while(botIt.hasNext()) {
+			Bot curBot = botIt.next();
+			i++;
+			
+			double curDist = baseZone.getCenterLocation().distance(curBot.getCenterLocation());
+			
+			curAvg = curAvg + (curDist - curAvg)/i;
+		}
+		
+		return curAvg;
+	}
+	
+	public void stopAndCleanup() {
+		
+		//stop all the running bots
+		for(Bot b : allBots) {
+			b.stopBot();
+		}
+		
+		//stop all the running victims
+		for(Victim v : allVictims) {
+			v.stopVictim();
+		}
+		
+		//stop repainting the scene
+		repaintTimer.cancel();
+		
+		isStopped = true;
+	}
 
+	public boolean isStopped() {
+		return isStopped;
+	}
+	
+	
 	//finds all shapes in the shapeList that intersect the base shape
 	public static List<? extends Shape> findIntersections(Shape base, List<? extends Shape> shapeList) {
 		//we're going to take advantage of Area's intersect method
@@ -377,7 +440,8 @@ public class World extends JFrame {
 		//return the list
 		return intersectingShapes;
 	}
-
+	
+	
 	//figures out which zone the passed point is in, and returns it.
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {
@@ -401,7 +465,6 @@ public class World extends JFrame {
 		//make a new World
 		World w = new World();
 		w.go();
-
 	}
 
 }
