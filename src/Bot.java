@@ -33,12 +33,12 @@ public class Bot extends Rectangle implements Runnable {
 	private final int ZONE_DANGEROUS = 2;
 
 	private final double DANGER_MULTIPLIER = 2;
-	
+
 	private final double MAX_VELOCITY = 8;
 	private final double MAX_VELOCITY_SQUARED = MAX_VELOCITY*MAX_VELOCITY;
-	
-	private final double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000.0;
-	private final double REPULSION_FACTOR_FROM_HOME_BASES = 500.0;
+
+	private double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000.0;
+	private double REPULSION_FACTOR_FROM_HOME_BASES = 500.0;
 
 
 	private boolean OVERALL_BOT_DEBUG = 	false;
@@ -102,8 +102,14 @@ public class Bot extends Rectangle implements Runnable {
 		//find out what zone we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
 		assessZone();
-		
+
 		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
+	}
+
+	public Bot(double centerX, double centerY, int _numBots, int _botID, Zone homeBase, double botRepulsion, double baseReplusion) {
+		this(centerX, centerY, _numBots, _botID, homeBase);
+		REPULSION_FACTOR_FROM_OTHER_BOTS = botRepulsion;
+		REPULSION_FACTOR_FROM_HOME_BASES = baseReplusion;
 	}
 
 	/***************************************************************************
@@ -139,15 +145,15 @@ public class Bot extends Rectangle implements Runnable {
 	public Vector getMovementVector() {
 		return movementVector;
 	}
-	
-	
+
+
 	public void setCenterLocation(Point2D newCenterLoc) {
 		//need find the new upper-left corner location
 		Point newCornerLoc = new Point((int) (newCenterLoc.getX()-(DIMENSION/2.0)), (int) (newCenterLoc.getY()-(DIMENSION/2.0)));
 		this.setLocation(newCornerLoc);
 	}
-	
-	
+
+
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -198,7 +204,7 @@ public class Bot extends Rectangle implements Runnable {
 			if(! s.hasNext()) continue;
 
 			String messageType = s.next();
-			
+
 			if(messageType.equals("loc")) {
 				int botNum = s.nextInt();
 
@@ -228,7 +234,7 @@ public class Bot extends Rectangle implements Runnable {
 				//see if we have seen this victim yet, and if this is a better path than the one we know about
 				Victim vic = new Victim(vicX, vicY, vicStatus);
 				java.lang.Double storedRating = knownVicitms.get(vic);
-				
+
 				//we've determined that this path is worth continuing, so finish reading the message
 				List<BotInfo> pathBots = new ArrayList<BotInfo>();
 
@@ -246,11 +252,11 @@ public class Bot extends Rectangle implements Runnable {
 				else ourDangerMultipler = 1;
 				double newPathRating = pathRating + (newSegmentLength * ourDangerMultipler);
 				double newAvgRating = newPathRating;
-//				double newAvgRating = newPathRating / (newPathLength * DANGER_MULTIPLIER);
+				//				double newAvgRating = newPathRating / (newPathLength * DANGER_MULTIPLIER);
 
 				//skip it if we know about this victim already and have already added data to a better path
 				if(storedRating != null && newAvgRating > storedRating.doubleValue()) continue;
-				
+
 				if(storedRating != null) {
 					print("Stored value is " + storedRating.doubleValue() + " newValue is " + newAvgRating);
 				} else {
@@ -269,7 +275,7 @@ public class Bot extends Rectangle implements Runnable {
 				}
 				//add this bot
 				message = message + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + " " + this.zoneAssesment + "\n";				
-				
+
 				//broadcast the message
 				broadcastMessage(message);
 
@@ -327,7 +333,7 @@ public class Bot extends Rectangle implements Runnable {
 
 				//make a bee-line for that victim!
 				actuallyMoveAlong(nearestVicVect);
-				
+
 				haveMoved = true;
 			}
 		}
@@ -352,7 +358,7 @@ public class Bot extends Rectangle implements Runnable {
 
 				//make a bee-line for that victim!
 				actuallyMoveAlong(nearestShoutVect);
-				
+
 				haveMoved = true;
 			}
 		}
@@ -369,14 +375,14 @@ public class Bot extends Rectangle implements Runnable {
 		if( (!haveMoved) && (otherBotInfo.size() > 0)) {
 
 			Vector movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
-			
-			
+
+
 			//for now, just move away from nearest neighbor
 			//			if(numGen.nextDouble() < MOVE_RANDOMLY_PROB) {
 			//				moveRandomly();
-//			//			} else {
-//			Point2D nearestPoint = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
-//			double nearestPointDistSq = java.lang.Double.MAX_VALUE;
+			//			//			} else {
+			//			Point2D nearestPoint = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
+			//			double nearestPointDistSq = java.lang.Double.MAX_VALUE;
 
 			for(int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
@@ -401,7 +407,7 @@ public class Bot extends Rectangle implements Runnable {
 					//scale it based on how far away we are from the base, and the repulsion factor 
 					//also, multiply by -1 so the vector points away from the thing we want to get away from
 					curZoneVect = curZoneVect.rescale(-1.0 * REPULSION_FACTOR_FROM_HOME_BASES / curZoneVect.getMagSquare());
-					
+
 					//add it to our movement vector
 					movementVector = movementVector.add(curZoneVect);
 				}
@@ -411,12 +417,12 @@ public class Bot extends Rectangle implements Runnable {
 			//			if(MOVE_BOT_DEBUG)
 			//				print("Trying to move away from " + nearestBotIndex + " who is sqrt(" + nearestPointDistSq + ") away");
 
-//			//want to move away from the nearest bot
-//			actuallyMoveAway(nearestPoint);
-			
+			//			//want to move away from the nearest bot
+			//			actuallyMoveAway(nearestPoint);
+
 			//move along the vector we made
 			actuallyMoveAlong(movementVector);
-			
+
 			haveMoved = true;
 			//			}
 		}
@@ -428,16 +434,10 @@ public class Bot extends Rectangle implements Runnable {
 			}
 
 			Vector baseZoneVect = new Vector(this.getCenterLocation(), baseZone.getCenterLocation());
-			
-			actuallyMoveAlong(baseZoneVect);
-			
-			haveMoved = true;
-		}
 
-		//make sure we haven't moved off the screen
-		if(! World.BOUNDING_BOX.contains(this)) {
-			//we have - undo the move
-			this.setLocation(previousBot.getLocation());
+			actuallyMoveAlong(baseZoneVect);
+
+			haveMoved = true;
 		}
 
 		//we've now moved - broadcast location to nearby bots
@@ -471,31 +471,86 @@ public class Bot extends Rectangle implements Runnable {
 
 	private void actuallyMoveAlong(Vector v) {
 		print("Current location : " + this.getCenterLocation());
-		
+
 		movementVector = v;
-		
+
 		//make sure the vector starts in the right place
 		if(! v.getP1().equals(this.getCenterLocation())) {
 			//move the vector to fix this
 			print("HAD TO ADJUST MOVE VECTOR");
 			v = v.moveTo(this.getCenterLocation());
 		}
-		
+
 		print("Moving along vector '" + v + "'");
-		
+
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
 		if(v.getMagSquare() > MAX_VELOCITY_SQUARED) {
 			v = v.rescale(MAX_VELOCITY);
 		}
-		
+
 		print("rescaled vector is " + v);
-		
+
 		//now that everything is all set with the vector, we can move to the other end of it
 		this.setCenterLocation(v.getP2());
+
+		//see if that sticks us outside the walls of the bounding box
+		if(! World.BOUNDING_BOX.contains(this)) {
+			//we have - undo the move
+			this.setLocation(previousBot.getLocation());
+
+			//we're going to try to move again, so we need to hold onto the real movement vector, as it will get written over by the subsequent calls
+			Vector realMovementVector = movementVector;
+
+			//see if the X magnitude or the Y magnitude is bigger - try moving in that direction first
+			if(realMovementVector.getXMag() > realMovementVector.getYMag()) {
+				//we have a bigger X magnitude - try that one first
+				actuallyMoveAlong(realMovementVector.getXVect());
+				//see if that moved us outside our bounding box
+				if(! World.BOUNDING_BOX.contains(this)) {
+					//undo the move
+					this.setLocation(previousBot.getLocation());
+
+					//try moving along the Y magnitude instead
+					actuallyMoveAlong(realMovementVector.getYVect());
+
+					//if that didn't work, undo the move and return
+					if(! World.BOUNDING_BOX.contains(this)) {
+						//undo the move
+						this.setLocation(previousBot.getLocation());
+						//make sure the movement vector is set correctly
+						movementVector = realMovementVector;
+						return;
+					}	
+				}
+			} else {
+				//we have a bigger Y magnitude - try that one first
+				actuallyMoveAlong(realMovementVector.getYVect());
+				//see if that moved us outside our bounding box
+				if(! World.BOUNDING_BOX.contains(this)) {
+					//undo the move
+					this.setLocation(previousBot.getLocation());
+
+					//try moving along the Y magnitude instead
+					actuallyMoveAlong(realMovementVector.getXVect());
+
+					//if that didn't work, undo the move and return
+					if(! World.BOUNDING_BOX.contains(this)) {
+						//undo the move
+						this.setLocation(previousBot.getLocation());
+						//make sure the movement vector is set correctly
+						movementVector = realMovementVector;
+						return;
+					}	
+				}
+			}
+			
+			//make sure the movement vector is set correctly
+			movementVector = realMovementVector;
+		}
 	}
-	
-	
+
+
 	@SuppressWarnings("unchecked")
 	private void broadcastMessage(String mes) {
 		//first, get our broadcast range
@@ -651,16 +706,16 @@ public class Bot extends Rectangle implements Runnable {
 	private void findAndAssesVictim() {
 		//first, see if there are any victims that we can see
 		List<Victim> visibleVictims = lookForVictims();
-		
+
 		//see if any of them are within the FOUND_RANGE
 		List<Victim> foundVictims = new ArrayList<Victim>();
-		
+
 		for(Victim v : visibleVictims) {
 			if(v.getCenterLocation().distance(this.getCenterLocation()) < DEFAULT_FOUND_RANGE) {
 				foundVictims.add(v);
 			}
 		}
-		
+
 		//we now know what victims we have found
 		//evaluate each of them in turn
 		for(Victim v : foundVictims) {
@@ -673,15 +728,15 @@ public class Bot extends Rectangle implements Runnable {
 			else currentSegmentRating = vicDistance * DANGER_MULTIPLIER;
 
 			double avgPathRating = currentSegmentRating/(vicDistance*DANGER_MULTIPLIER);
-			
+
 			String message = "fv " + vicDamage + " " + v.getCenterX() + " " + v.getCenterY() + " " + vicDistance + " " + currentSegmentRating  + " " +  currentSegmentRating 
 			+ " " + this.getID() + " " + this.getCenterX() + " " + this.getCenterY()  + " " + zoneAssesment + "\n";
 
 			broadcastMessage(message);
-			
+
 			//add this entry to our know victims so we go onto other victims
 			knownVicitms.put(v, new java.lang.Double(avgPathRating));
-			
+
 		}
 	}
 

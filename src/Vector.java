@@ -27,6 +27,11 @@ public class Vector extends Line2D{
 		this(_p1, _p2);
 		this.rescale(mag);
 	}
+	
+	public Vector(double x1, double y1, double x2, double y2, double mag) {
+		this(new Point2D.Double(x1, y1), new Point2D.Double(x2, y2), mag);
+	}
+	
 
 	@Override
 	public Point2D getP1() {	
@@ -51,6 +56,10 @@ public class Vector extends Line2D{
 	public double getXMag() {
 		return getX1() - getX2();
 	}
+	
+	public Vector getXVect() {
+		return new Vector(this.getP1().getX(), this.getP1().getY(), this.getP1().getX() + 1.0, this.getP1().getY(), this.getXMag());
+	}
 
 	@Override
 	public double getY1() {
@@ -64,6 +73,10 @@ public class Vector extends Line2D{
 
 	public double getYMag() {
 		return getY1() - getY2();
+	}
+	
+	public Vector getYVect() {
+		return new Vector(this.getP1().getX(), this.getP1().getY(), this.getP1().getX(), this.getP1().getY() + 1.0, this.getYMag());
 	}
 	
 	public double getMagnitude() {
