@@ -59,6 +59,8 @@ public class Bot extends Rectangle implements Runnable {
 	private Bot previousBot;
 	private final Random numGen = new Random();
 	private Vector movementVector;
+	
+	//TODO? should bots know about bounding box directly? I think so...
 
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
 	private String messageBuffer; //keep a buffer of messages from other robots
@@ -494,6 +496,8 @@ public class Bot extends Rectangle implements Runnable {
 		//now that everything is all set with the vector, we can move to the other end of it
 		this.setCenterLocation(v.getP2());
 
+		//TODO: Do a better job handling wall collisions		
+		
 		//see if that sticks us outside the walls of the bounding box
 		if(! World.BOUNDING_BOX.contains(this)) {
 			//we have - undo the move
