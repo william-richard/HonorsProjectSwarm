@@ -80,6 +80,11 @@ public class BaseZone extends Zone {
 		return new Ellipse2D.Double(foundRangeCornerX, foundRangeCornerY, Bot.DEFAULT_FOUND_RANGE*2, Bot.DEFAULT_FOUND_RANGE*2);
 	}
 
+	@Override
+	public double getBotMaxVelocity() {
+		return Bot.DEFAULT_MAX_VELOCITY;
+	}
+
 	private boolean recieveMessages = true;
 
 	public void recieveMessage(String message) throws InterruptedException {
@@ -182,12 +187,4 @@ public class BaseZone extends Zone {
 		
 		return bestPaths;
 	}
-	
-	
-	
-	
-	
-	
-	
-
 }

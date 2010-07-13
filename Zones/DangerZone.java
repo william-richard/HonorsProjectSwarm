@@ -75,4 +75,8 @@ public class DangerZone extends Zone {
 		return new Ellipse2D.Double(foundRangeCornerX, foundRangeCornerY, Bot.DEFAULT_FOUND_RANGE*2, Bot.DEFAULT_FOUND_RANGE*2);
 	}
 
+	@Override
+	public double getBotMaxVelocity() {
+		return Bot.DEFAULT_MAX_VELOCITY;
+	}
 }

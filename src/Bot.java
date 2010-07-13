@@ -23,19 +23,18 @@ public class Bot extends Rectangle implements Runnable {
 	private final double HEAR_VICTIM_PROB = .75;
 	private final double MOVE_RANDOMLY_PROB = .25;
 	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
+	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
+	
 	public static final double DEFAULT_BROADCAST_RADIUS = 75;
 	public static final double DEFALUT_VISIBILITY_RADIUS = 10;
 	public static final double DEFAULT_AUDITORY_RADIUS = 50;
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
-	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
+	public static final double DEFAULT_MAX_VELOCITY = 8;
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
 
 	private final double DANGER_MULTIPLIER = 2;
-
-	private final double MAX_VELOCITY = 8;
-	private final double MAX_VELOCITY_SQUARED = MAX_VELOCITY*MAX_VELOCITY;
 
 	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 250;
 	private static double REPULSION_FACTOR_FROM_HOME_BASES = 10000;
@@ -491,8 +490,8 @@ public class Bot extends Rectangle implements Runnable {
 
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
-		if(v.getMagSquare() > MAX_VELOCITY_SQUARED) {
-			v = v.rescale(MAX_VELOCITY);
+		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
+			v = v.rescale(currentZone.getBotMaxVelocity());
 		}
 
 		print("rescaled vector is " + v);

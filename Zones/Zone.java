@@ -42,12 +42,16 @@ public abstract class Zone extends Polygon {
 		return new Point2D.Double(getCenterX(), getCenterY());
 	}
 	
-	
+	public double getBotMaxVelocitySquared() {
+		return getBotMaxVelocity() * getBotMaxVelocity();
+	}
+
 	public abstract Shape getBroadcastRange(Point2D originator);
 	public abstract Shape getVisibilityRange(Point2D originator);
 	public abstract Shape getAudibleRange(Point2D originator);
 	public abstract Shout getShout(Point2D originator, Victim shouter);
 	public abstract Shape getFoundRange(Point2D originator);
+	public abstract double getBotMaxVelocity();
 	
 	
 }
