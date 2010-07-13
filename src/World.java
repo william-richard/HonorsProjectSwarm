@@ -73,7 +73,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 55;
+		int numBots = 60;
 		int numVic = 2;
 
 		//initialize the zones
@@ -96,8 +96,6 @@ public class World extends JFrame {
 
 		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
 
-		Bot.resetRepulsionConstants();
-
 		for(int i = 0; i < numBots; i++) {
 			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase));
 		}
@@ -112,11 +110,6 @@ public class World extends JFrame {
 		isStopped = false;
 
 		setVisible(true);
-	}
-
-	public World(double botRepulsion, double homeBaseRepulsion) {
-		this();
-		Bot.setRepulsionConstants(botRepulsion, homeBaseRepulsion);
 	}
 
 	private void setupFrame() {
@@ -267,34 +260,14 @@ public class World extends JFrame {
 			curThread.start();
 		}
 
-		double avgDist;
 
-		while((avgDist = getAverageBotDistance()) < 204.0) {
-			repaint();
-
-			//			System.out.println("Avg Dist = " + avgDist);
-
-			//			try {
-			//				wait(200);
-			//			} catch (InterruptedException e) {
-			//				System.out.println("Interrupted while waiting for repaint");
-			//				stopAndCleanup();
-			//			}
-			//			
-			//		}
-			//		
-			//		stopAndCleanup();
-
-
-			//start a timer to repaint
-			repaintTimer = new Timer("Repaint timer");
-			repaintTimer.schedule(new TimerTask() {
-				public void run() {
-					repaint();
-				}
-			}, 0, 200);
-		}
-
+		//start a timer to repaint
+		repaintTimer = new Timer("Repaint timer");
+		repaintTimer.schedule(new TimerTask() {
+			public void run() {
+				repaint();
+			}
+		}, 0, 200);
 	}
 
 	public void paint(Graphics g) {		

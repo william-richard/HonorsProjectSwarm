@@ -37,10 +37,8 @@ public class Bot extends Rectangle implements Runnable {
 	private final double MAX_VELOCITY = 8;
 	private final double MAX_VELOCITY_SQUARED = MAX_VELOCITY*MAX_VELOCITY;
 
-	private static final double DEFAULT_REPULSION_FACTOR_FROM_OTHER_BOTS = 1000.0;
-	private static final double DEFAULT_REPULSION_FACTOR_FROM_HOME_BASES = 500.0;
-	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = DEFAULT_REPULSION_FACTOR_FROM_OTHER_BOTS;
-	private static double REPULSION_FACTOR_FROM_HOME_BASES = DEFAULT_REPULSION_FACTOR_FROM_HOME_BASES;
+	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 250;
+	private static double REPULSION_FACTOR_FROM_HOME_BASES = 10000;
 
 
 	private boolean OVERALL_BOT_DEBUG = 	false;
@@ -160,14 +158,7 @@ public class Bot extends Rectangle implements Runnable {
 	public static void setRepulsionConstants(double botRepulsion, double homeBaseRepulsion) {
 		REPULSION_FACTOR_FROM_OTHER_BOTS = botRepulsion;
 		REPULSION_FACTOR_FROM_HOME_BASES = homeBaseRepulsion;
-	}
-	
-	public static void resetRepulsionConstants() {
-		REPULSION_FACTOR_FROM_OTHER_BOTS = DEFAULT_REPULSION_FACTOR_FROM_OTHER_BOTS;
-		REPULSION_FACTOR_FROM_HOME_BASES = DEFAULT_REPULSION_FACTOR_FROM_HOME_BASES;
-	}
-	
-	
+	}	
 
 	@Override
 	public boolean equals(Object obj) {
