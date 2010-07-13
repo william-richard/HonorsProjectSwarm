@@ -58,7 +58,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 		//see if we're going to shout
 		if(World.RAMOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
 			//make and return a new shout
-			Shout ourShout = currentZone.getShout(getCenterLocation(), this);
+			Shout ourShout = currentZone.getShout(this);
 			
 			//send it off to all the bots - they'll determine if they can hear it or not
 			for(Bot b : World.allBots) {

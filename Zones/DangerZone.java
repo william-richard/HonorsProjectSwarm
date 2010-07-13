@@ -42,12 +42,12 @@ public class DangerZone extends Zone {
 	}
 
 	@Override
-	public Shout getShout(Point2D originator, Victim shouter) {
+	public Shout getShout(Victim shouter) {
 		//for now, the shout is a circle of the default radius
 		
 		//calculate it's corner
-		double cornerX = originator.getX() - Shout.DEFAULT_SHOUT_RADIUS;
-		double cornerY = originator.getY() - Shout.DEFAULT_SHOUT_RADIUS;
+		double cornerX = shouter.getCenterX() - Shout.DEFAULT_SHOUT_RADIUS;
+		double cornerY = shouter.getCenterY() - Shout.DEFAULT_SHOUT_RADIUS;
 		
 		//return the circular shout
 		return new Shout(new Ellipse2D.Double(cornerX, cornerY, Shout.DEFAULT_SHOUT_RADIUS*2, Shout.DEFAULT_SHOUT_RADIUS*2), shouter);
