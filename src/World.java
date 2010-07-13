@@ -32,7 +32,7 @@ public class World extends JFrame {
 	public static final Rectangle2D BOUNDING_BOX = new Rectangle2D.Double(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean DRAW_BOT_RADII = true;
-	
+
 	private static final int ZONE_COMPLEXITY = 20;
 
 	private static final Color BACKGROUND_COLOR = Color.white;
@@ -47,7 +47,7 @@ public class World extends JFrame {
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
-	
+
 	private static final Stroke VICTIM_PATH_STROKE = new BasicStroke((float) 2.0);	
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
@@ -61,7 +61,7 @@ public class World extends JFrame {
 	public static CopyOnWriteArrayList<Victim> allVictims; //The Victims
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Victim> allVictimSnapshot;
-	
+
 	private Zone baseZone;
 	private Timer repaintTimer;
 	private boolean isStopped;
@@ -81,8 +81,8 @@ public class World extends JFrame {
 
 		int[] xPointsBase = {225, 275, 275, 225};
 		int[] yPointsBase = {225, 225, 275, 275};
-//		int[] xPointsBase = {MENUBAR_HEIGHT, 50, 50, MENUBAR_HEIGHT};
-//		int[] yPointsBase = {MENUBAR_HEIGHT, MENUBAR_HEIGHT, 50, 50};
+		//		int[] xPointsBase = {MENUBAR_HEIGHT, 50, 50, MENUBAR_HEIGHT};
+		//		int[] yPointsBase = {MENUBAR_HEIGHT, MENUBAR_HEIGHT, 50, 50};
 		Zone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
 		baseZone = homeBase;
 		allZones.add(homeBase);
@@ -95,7 +95,9 @@ public class World extends JFrame {
 		allBots = new CopyOnWriteArrayList<Bot>();
 
 		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
-		
+
+		Bot.resetRepulsionConstants();
+
 		for(int i = 0; i < numBots; i++) {
 			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase));
 		}
@@ -104,12 +106,17 @@ public class World extends JFrame {
 		//only 2 for now, so we'll hard code them	
 		allVictims = new CopyOnWriteArrayList<Victim>();
 
-//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
+		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
 		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		isStopped = false;
-		
+
 		setVisible(true);
+	}
+
+	public World(double botRepulsion, double homeBaseRepulsion) {
+		this();
+		Bot.setRepulsionConstants(botRepulsion, homeBaseRepulsion);
 	}
 
 	private void setupFrame() {
@@ -248,7 +255,7 @@ public class World extends JFrame {
 	}
 
 
-	public void go() {
+	public synchronized void go() {
 		//start all the threads
 		for(Bot b : allBots){
 			Thread curThread = new Thread(b);
@@ -260,21 +267,34 @@ public class World extends JFrame {
 			curThread.start();
 		}
 
-		//start a timer to repaint
-		repaintTimer = new Timer("Repaint timer");
-		repaintTimer.schedule(new TimerTask() {
-			public void run() {
+		double avgDist;
 
-				repaint();
-				
-//				double curBotDist = getAverageBotDistance();
-//				System.out.println("Current average bot distance is " + curBotDist);
-//				if(curBotDist > 30.0) {
-//					stopAndCleanup();
-//				}
-			}
-		}, 0, 200);
-		
+		while((avgDist = getAverageBotDistance()) < 204.0) {
+			repaint();
+
+			//			System.out.println("Avg Dist = " + avgDist);
+
+			//			try {
+			//				wait(200);
+			//			} catch (InterruptedException e) {
+			//				System.out.println("Interrupted while waiting for repaint");
+			//				stopAndCleanup();
+			//			}
+			//			
+			//		}
+			//		
+			//		stopAndCleanup();
+
+
+			//start a timer to repaint
+			repaintTimer = new Timer("Repaint timer");
+			repaintTimer.schedule(new TimerTask() {
+				public void run() {
+					repaint();
+				}
+			}, 0, 200);
+		}
+
 	}
 
 	public void paint(Graphics g) {		
@@ -335,7 +355,7 @@ public class World extends JFrame {
 
 			g2d.setColor(BOT_LABEL_COLOR);
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
-			
+
 			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
 			g2d.draw(curBot.getMovementVector().rescale(-5.0));
 		}
@@ -364,55 +384,55 @@ public class World extends JFrame {
 			for(VictimPath vp : victimPaths) {
 				g2d.draw(vp);
 			}
-						
+
 		}
 
 
 	}
-	
+
 	private double getAverageBotDistance() {
 		//first, need to calculate it
 		double curAvg = 0.0;
-		
+
 		ListIterator<Bot> botIt = allBots.listIterator();
-		
+
 		int i = 0;
-		
+
 		while(botIt.hasNext()) {
 			Bot curBot = botIt.next();
 			i++;
-			
+
 			double curDist = baseZone.getCenterLocation().distance(curBot.getCenterLocation());
-			
+
 			curAvg = curAvg + (curDist - curAvg)/i;
 		}
-		
+
 		return curAvg;
 	}
-	
+
 	public void stopAndCleanup() {
-		
+
 		//stop all the running bots
 		for(Bot b : allBots) {
 			b.stopBot();
 		}
-		
+
 		//stop all the running victims
 		for(Victim v : allVictims) {
 			v.stopVictim();
 		}
-		
+
 		//stop repainting the scene
 		repaintTimer.cancel();
-		
+
 		isStopped = true;
 	}
 
 	public boolean isStopped() {
 		return isStopped;
 	}
-	
-	
+
+
 	//finds all shapes in the shapeList that intersect the base shape
 	public static List<? extends Shape> findIntersections(Shape base, List<? extends Shape> shapeList) {
 		//we're going to take advantage of Area's intersect method
@@ -440,8 +460,8 @@ public class World extends JFrame {
 		//return the list
 		return intersectingShapes;
 	}
-	
-	
+
+
 	//figures out which zone the passed point is in, and returns it.
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {
