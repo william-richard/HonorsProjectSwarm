@@ -1,3 +1,4 @@
+package simulation;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
@@ -18,6 +19,13 @@ import java.util.TimerTask;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.JFrame;
+
+import zones.BaseZone;
+import zones.DangerDebris;
+import zones.DangerZone;
+import zones.SafeDebris;
+import zones.SafeZone;
+import zones.Zone;
 
 
 public class World extends JFrame {
@@ -120,10 +128,10 @@ public class World extends JFrame {
 	}
 
 	public void checkZoneSanity() {
-		//check each zone's area with all the rest to make sure they don't overlap
+		//check each zones's area with all the rest to make sure they don't overlap
 		for(int i = 0; i < allZones.size(); i++) {
 			//calculate if there are any intersections
-			List<? extends Shape> intersections = findIntersections(allZones.get(i), allZones.subList(i+1, allZones.size()));
+			List<? extends Shape> intersections = findAreaIntersectionsInList(allZones.get(i), allZones.subList(i+1, allZones.size()));
 			//if there are, freak out
 			if(intersections.size() > 0) {
 				System.out.println("ZONES ARE NOT SANE!!!!");
@@ -203,7 +211,7 @@ public class World extends JFrame {
 		}
 
 		//now, start making arbitrary triangles and see if they overlap with any existing zones
-		//if they don't, add them to the zone list
+		//if they don't, add them to the zones list
 		while(! unfilledArea.isEmpty()) {
 			//choose 3 points randomly
 			Point2D p1 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
@@ -213,7 +221,7 @@ public class World extends JFrame {
 			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
 			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
 
-			//make a zone out of them
+			//make a zones out of them
 			Zone newZone;
 
 			switch(RAMOM_GENERATOR.nextInt(4)) {
@@ -225,7 +233,7 @@ public class World extends JFrame {
 			}
 
 			//make sure it doesn't intersect any existing zones
-			if(findIntersections(newZone, allZones).size() > 0) {
+			if(findAreaIntersectionsInList(newZone, allZones).size() > 0) {
 				zoneVerticies.add(p1);
 				zoneVerticies.add(p2);
 				zoneVerticies.add(p3);
@@ -409,7 +417,7 @@ public class World extends JFrame {
 
 
 	//finds all shapes in the shapeList that intersect the base shape
-	public static List<? extends Shape> findIntersections(Shape base, List<? extends Shape> shapeList) {
+	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, List<? extends Shape> shapeList) {
 		//we're going to take advantage of Area's intersect method
 		// so we need to turn base into an area
 		Area baseArea = new Area(base);
@@ -436,8 +444,25 @@ public class World extends JFrame {
 		return intersectingShapes;
 	}
 
+	/*can figure out if the edges of these 2 intersect if
+	 * 1) Their intersection (defined mathematically as the area shared by both of the shapes) is non empty.  If this is the case, they are not touching at all.
+	 * 2) they intersection is not equal to the total area of either of the shapes.  In this case, one is completely within the other.
+	 */
+	public static boolean edgeIntersects(Shape s1, Shape s2) {
+		Area zoneArea = new Area(s1);
+		Area shapeArea = new Area(s2);
+		
+		Area intersection = new Area(s1);
+		intersection.intersect(shapeArea);
+		
+		if(intersection.isEmpty()) return false;
+		if(intersection.equals(zoneArea) || intersection.equals(shapeArea)) return false;
+				
+		return true;
+	}
 
-	//figures out which zone the passed point is in, and returns it.
+	
+	//figures out which zones the passed point is in, and returns it.
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {
 

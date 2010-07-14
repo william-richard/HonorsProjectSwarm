@@ -1,3 +1,4 @@
+package simulation;
 import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;

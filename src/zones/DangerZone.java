@@ -1,7 +1,13 @@
+package zones;
+
 import java.awt.Color;
 import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
+
+import simulation.Bot;
+import simulation.Shout;
+import simulation.Victim;
 
 
 public class DangerZone extends Zone {
@@ -11,8 +17,11 @@ public class DangerZone extends Zone {
 	private static final Color DangerZoneColor = new Color(139,37,0);
 	
 	public DangerZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID);
-		setColor(DangerZoneColor);
+		this(xPoints, yPoints, numPoints, _zoneID, DangerZoneColor);
+	}
+	
+	protected DangerZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
+		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
 	}
 
 //	public DangerZone(Area a, int _zoneid) {

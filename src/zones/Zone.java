@@ -1,7 +1,13 @@
+package zones;
+
 import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.Shape;
+import java.awt.geom.Area;
 import java.awt.geom.Point2D;
+
+import simulation.Shout;
+import simulation.Victim;
 
 public abstract class Zone extends Polygon {
 
@@ -10,8 +16,14 @@ public abstract class Zone extends Polygon {
 	protected int zoneID;
 	protected Color zoneColor;
 	
-	public Zone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
+	protected Zone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
 		super(xPoints, yPoints, numPoints);
+		zoneID = _zoneID;
+		zoneColor = _zoneColor;
+	}
+	
+	protected Zone(int _zoneID, Color _zoneColor) {
+		super();
 		zoneID = _zoneID;
 	}
 		
@@ -50,4 +62,5 @@ public abstract class Zone extends Polygon {
 	public abstract Shout getShout(Victim shouter);
 	public abstract Shape getFoundRange(Point2D originator);
 	public abstract double getBotMaxVelocity();
+	
 }

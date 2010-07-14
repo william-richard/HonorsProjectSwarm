@@ -1,3 +1,4 @@
+package simulation;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
@@ -9,6 +10,10 @@ import java.util.ListIterator;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import zones.BaseZone;
+import zones.SafeZone;
+import zones.Zone;
 
 
 public class Bot extends Rectangle implements Runnable {
@@ -23,7 +28,7 @@ public class Bot extends Rectangle implements Runnable {
 	private final double HEAR_VICTIM_PROB = .75;
 	private final double MOVE_RANDOMLY_PROB = .25;
 	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
-	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zone correctly
+	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zones correctly
 	
 	public static final double DEFAULT_BROADCAST_RADIUS = 75;
 	public static final double DEFALUT_VISIBILITY_RADIUS = 10;
@@ -53,20 +58,20 @@ public class Bot extends Rectangle implements Runnable {
 	 **************************************************************************/
 
 	/** These variables the bot does not know about - we store them for our convience. */
-	private Zone currentZone; //what zone we actually are in can change some behavior
+	private Zone currentZone; //what zones we actually are in can change some behavior
 	private List<Shout> heardShouts; //the shouts that have been heard recently
 	private Bot previousBot;
 	private final Random numGen = new Random();
 	private Vector movementVector;
 	
-	//TODO? should bots know about bounding box directly? I think so...
+	//TODO? should bots know about bounding box directly? I think so... SO DO IT!
 
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
 	private String messageBuffer; //keep a buffer of messages from other robots
 	private boolean keepGoing; //allows us to start or stop the robots
 	private int botID;
-	private int zoneAssesment; //stores the bot's assesment of what sort of zone it is in
-	private Zone baseZone; //the home base zone.
+	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
+	private Zone baseZone; //the home base zones.
 	private HashMap<Victim, java.lang.Double> knownVicitms; //keep a list of map we have been told about, so we don't duplicate efforts.  Values are the avg rating of the best path we've seen to them
 
 	/***************************************************************************
@@ -100,7 +105,7 @@ public class Bot extends Rectangle implements Runnable {
 
 		knownVicitms = new HashMap<Victim, java.lang.Double>();
 
-		//find out what zone we start in, and try to determine how safe it is
+		//find out what zones we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
 		assessZone();
 
@@ -121,17 +126,17 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 	public Shape getBroadcastRadius() {
-		//see how far the current zone thinks we can broadcast
+		//see how far the current zones thinks we can broadcast
 		return currentZone.getBroadcastRange(getCenterLocation());
 	}
 
 	public Shape getVisibilityRadius() {
-		//see how far the current zone thinks we can see
+		//see how far the current zones thinks we can see
 		return currentZone.getVisibilityRange(getCenterLocation());
 	}
 
 	public Shape getAuditbleRadius() {
-		//see how far the current zone thinks we can hear
+		//see how far the current zones thinks we can hear
 		return currentZone.getAudibleRange(getCenterLocation());
 	}
 
@@ -564,7 +569,7 @@ public class Bot extends Rectangle implements Runnable {
 		Shape broadcastRange = getBroadcastRadius();
 
 		//find any nearby bots
-		List<Bot> nearbyBots = (List<Bot>) World.findIntersections(broadcastRange, World.allBots);
+		List<Bot> nearbyBots = (List<Bot>) World.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
@@ -582,7 +587,7 @@ public class Bot extends Rectangle implements Runnable {
 		}
 
 		//also, send it to any BaseZones
-		List<Zone> nearbyZones = (List<Zone>) World.findIntersections(broadcastRange, World.allZones);
+		List<Zone> nearbyZones = (List<Zone>) World.findAreaIntersectionsInList(broadcastRange, World.allZones);
 
 		for(Zone z : nearbyZones) {
 			//skip non-BaseZones
@@ -605,7 +610,7 @@ public class Bot extends Rectangle implements Runnable {
 		Shape visibilityRange = getVisibilityRadius();
 
 		//see if the location of any of our victims intersects this range
-		List<Victim> visibleVictims = (List<Victim>) World.findIntersections((Shape)visibilityRange, World.allVictims);
+		List<Victim> visibleVictims = (List<Victim>) World.findAreaIntersectionsInList((Shape)visibilityRange, World.allVictims);
 
 		if(LOOK_BOT_DEBUG)
 			print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
@@ -647,7 +652,7 @@ public class Bot extends Rectangle implements Runnable {
 		Shape auditoryRange = getAuditbleRadius();
 
 		//see if any of the shouts we know about intersect this range
-		List<Shout> audibleShouts = (List<Shout>) World.findIntersections((Shape) auditoryRange, heardShouts);
+		List<Shout> audibleShouts = (List<Shout>) World.findAreaIntersectionsInList((Shape) auditoryRange, heardShouts);
 
 		if(LISTEN_BOT_DEBUG)
 			print("In perfect world, would have just heard " + audibleShouts.size() + " vicitms");
@@ -683,7 +688,7 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 	private void assessZone() {
-		//with some probability, the bot will asses the zone correctly
+		//with some probability, the bot will asses the zones correctly
 		if(numGen.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
 			if(currentZone instanceof SafeZone) {
 				zoneAssesment = ZONE_SAFE;
@@ -728,7 +733,7 @@ public class Bot extends Rectangle implements Runnable {
 		for(Victim v : foundVictims) {
 			double vicDamage = assesVictim(v);
 
-			//send out a message letting everyone know where the victim is, what condition they are in, and how safe the zone is
+			//send out a message letting everyone know where the victim is, what condition they are in, and how safe the zones is
 			double vicDistance = v.getCenterLocation().distance(this.getCenterLocation());
 			double currentSegmentRating;
 			if(zoneAssesment == ZONE_SAFE) currentSegmentRating = vicDistance;
@@ -781,10 +786,10 @@ public class Bot extends Rectangle implements Runnable {
 			//also don't want to hang on to bot info for too long
 			otherBotInfo.clear();
 
-			//make sure we are still in the zone we think we are in
+			//make sure we are still in the zones we think we are in
 			if(currentZone == null || ! currentZone.contains(getCenterLocation())) {
 				currentZone = World.findZone(getCenterLocation());
-				//reasses the zone's status if we move to a new zone
+				//reasses the zones's status if we move to a new zones
 				assessZone();
 			}
 

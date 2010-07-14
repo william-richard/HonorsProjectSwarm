@@ -1,5 +1,8 @@
+package simulation;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+
+import zones.Zone;
 
 
 public class Victim extends Rectangle2D.Double implements Runnable {
@@ -35,7 +38,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 		//store the damage of this Victim
 		damage = _damage;
 		
-		//store the zone that we're in
+		//store the zones that we're in
 		currentZone = World.findZone(getCenterLocation());
 	}
 	
@@ -108,7 +111,7 @@ public class Victim extends Rectangle2D.Double implements Runnable {
 			//each time, we want to try to shout
 			shout();
 			
-			//don't need to update what zone we're in because we can't move
+			//don't need to update what zones we're in because we can't move
 			//this fact may change later
 			
 			//then wait a bit

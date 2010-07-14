@@ -1,7 +1,13 @@
+package zones;
+
 import java.awt.Color;
 import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
+
+import simulation.Bot;
+import simulation.Shout;
+import simulation.Victim;
 
 
 public class SafeZone extends Zone {
@@ -10,14 +16,13 @@ public class SafeZone extends Zone {
 	private static final Color SafeZoneColor = new Color(34, 139, 34);
 
 	public SafeZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID);
-		setColor(SafeZoneColor);
+		this(xPoints, yPoints, numPoints, _zoneID, SafeZoneColor);
 	}
 
-//	public SafeZone(Area a, int _zoneid) {
-//		super(a, _zoneid, SafeZone.SafeZoneColor);
-//	}
-
+	protected SafeZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
+		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
+	}
+	
 	
 	@Override
 	public Shape getAudibleRange(Point2D originator) {

@@ -1,3 +1,4 @@
+package zones;
 import java.awt.Color;
 import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
@@ -5,6 +6,13 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Scanner;
+
+import simulation.Bot;
+import simulation.BotInfo;
+import simulation.Shout;
+import simulation.Victim;
+import simulation.VictimPath;
+import simulation.World;
 
 
 public class BaseZone extends Zone {
@@ -15,11 +23,15 @@ public class BaseZone extends Zone {
 	private List<VictimPath> victimPaths;
 	
 	public BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID);
+		this(xPoints, yPoints, numPoints, _zoneID, BaseZoneColor);
+	}
+	
+	protected BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
+		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
 		messageBuffer = "";
 		victimPaths = new ArrayList<VictimPath>();
-		setColor(BaseZoneColor);
 	}
+	
 	
 //	public BaseZone(Area a, int _zoneid) {
 //		super(a, _zoneid, BaseZone.BaseZoneColor);

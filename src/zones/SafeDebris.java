@@ -1,4 +1,8 @@
+package zones;
+
 import java.awt.Color;
+
+import simulation.Bot;
 
 
 public class SafeDebris extends SafeZone {
@@ -7,8 +11,7 @@ public class SafeDebris extends SafeZone {
 
 	
 	public SafeDebris(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID);
-		setColor(SafeDebrisColor);
+		super(xPoints, yPoints, numPoints, _zoneID, SafeDebrisColor);
 	}
 	
 	@Override
