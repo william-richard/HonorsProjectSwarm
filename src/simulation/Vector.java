@@ -26,13 +26,17 @@ public class Vector extends Line2D{
 	
 	public Vector(Point2D _p1, Point2D _p2, double mag) {
 		this(_p1, _p2);
-		this.rescale(mag);
+		this.setLine(this.rescale(mag));
 	}
 	
 	public Vector(double x1, double y1, double x2, double y2, double mag) {
 		this(new Point2D.Double(x1, y1), new Point2D.Double(x2, y2), mag);
 	}
 	
+
+	public Vector(Line2D closestSide) {
+		this(closestSide.getP1(), closestSide.getP2());
+	}
 
 	@Override
 	public Point2D getP1() {	
@@ -43,7 +47,7 @@ public class Vector extends Line2D{
 	public Point2D getP2() {
 		return p2;
 	}
-
+	
 	@Override
 	public double getX1() {
 		return p1.getX();
@@ -55,13 +59,13 @@ public class Vector extends Line2D{
 	}
 	
 	public double getXMag() {
-		return getX1() - getX2();
+		return getX2() - getX1();
 	}
 	
-	public Vector getXVect() {
-		return new Vector(this.getP1().getX(), this.getP1().getY(), this.getP1().getX() + 1.0, this.getP1().getY(), this.getXMag());
+	public Vector getXComponent() {
+		return new Vector(this.getX1(), this.getY1(), this.getX1() + 1.0, this.getY1(), this.getXMag());
 	}
-
+	
 	@Override
 	public double getY1() {
 		return p1.getY();
@@ -73,12 +77,17 @@ public class Vector extends Line2D{
 	}
 
 	public double getYMag() {
-		return getY1() - getY2();
+		return getY2() - getY1();
 	}
 	
-	public Vector getYVect() {
-		return new Vector(this.getP1().getX(), this.getP1().getY(), this.getP1().getX(), this.getP1().getY() + 1.0, this.getYMag());
+	public Vector getYComponent() {
+		return new Vector(this.getX1(), this.getY1(), this.getX1(), this.getY1() + 1.0, this.getYMag());
 	}
+	
+	public Vector getUnitVector() {
+		return this.rescale(1.0);
+	}
+	
 	
 	public double getMagnitude() {
 		return p1.distance(p2);
@@ -134,8 +143,8 @@ public class Vector extends Line2D{
 			return this;
 		}
 		
-		double newX2 = this.getX1() - (ratio*getXMag());
-		double newY2 = this.getY1() - (ratio*getYMag());
+		double newX2 = this.getX1() + (ratio*getXMag());
+		double newY2 = this.getY1() + (ratio*getYMag());
 		return new Vector(this.getP1(), new Point2D.Double(newX2, newY2));
 	}
 	
@@ -146,6 +155,12 @@ public class Vector extends Line2D{
 	public Vector reverse() {
 		return this.rescaleRatio(-1.0);
 	}
+	
+	//get the scalar projection of this on other
+	public double scalerProjection(Vector other) {
+		return other.dot(this.getUnitVector());
+	}
+	
 	
 	public String toString() {
 		return "(" + this.getX1() + ", " + this.getY1() + ") (" + this.getX2() + ", " + this.getY2() + ")  " + this.getMagnitude();

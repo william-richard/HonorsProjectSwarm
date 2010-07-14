@@ -12,6 +12,7 @@ import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import zones.BaseZone;
+import zones.BoundingBox;
 import zones.SafeZone;
 import zones.Zone;
 
@@ -41,15 +42,15 @@ public class Bot extends Rectangle implements Runnable {
 
 	private final double DANGER_MULTIPLIER = 2;
 
-	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 250;
-	private static double REPULSION_FACTOR_FROM_HOME_BASES = 10000;
+	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 750;
+	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2500;
 
 
-	private boolean OVERALL_BOT_DEBUG = 	false;
+	private boolean OVERALL_BOT_DEBUG = 	true;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
-	private boolean MOVE_BOT_DEBUG = 		true;
+	private boolean MOVE_BOT_DEBUG = 		false;
 	private boolean FIND_VICTIM_DEBUG = 	false;
 
 
@@ -63,8 +64,8 @@ public class Bot extends Rectangle implements Runnable {
 	private Bot previousBot;
 	private final Random numGen = new Random();
 	private Vector movementVector;
-	
-	//TODO? should bots know about bounding box directly? I think so... SO DO IT!
+	private BoundingBox boundingBox;
+
 
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
 	private String messageBuffer; //keep a buffer of messages from other robots
@@ -77,7 +78,7 @@ public class Bot extends Rectangle implements Runnable {
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
-	public Bot(double centerX, double centerY, int _numBots, int _botID, Zone homeBase) {
+	public Bot(double centerX, double centerY, int _numBots, int _botID, Zone homeBase, BoundingBox _bounds) {
 		super();
 
 		//first, in order to store our location, we need to find our top left corner
@@ -104,18 +105,14 @@ public class Bot extends Rectangle implements Runnable {
 		baseZone = homeBase;
 
 		knownVicitms = new HashMap<Victim, java.lang.Double>();
+		
+		boundingBox = _bounds;
 
 		//find out what zones we start in, and try to determine how safe it is
 		currentZone = World.findZone(getCenterLocation());
 		assessZone();
 
 		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
-	}
-
-	public Bot(double centerX, double centerY, int _numBots, int _botID, Zone homeBase, double botRepulsion, double baseReplusion) {
-		this(centerX, centerY, _numBots, _botID, homeBase);
-		REPULSION_FACTOR_FROM_OTHER_BOTS = botRepulsion;
-		REPULSION_FACTOR_FROM_HOME_BASES = baseReplusion;
 	}
 
 	/***************************************************************************
@@ -413,7 +410,11 @@ public class Bot extends Rectangle implements Runnable {
 			//now, also try to maximize distance from base zones
 			for(Zone z : World.allZones) {
 				if(z instanceof BaseZone) {
-					Vector curZoneVect = new Vector(this.getCenterLocation(), z.getCenterLocation());
+					//find the point on the edge of the zone that is closest to us
+					Point2D nearestBasePoint = Utilities.getNearestPoint(z, getCenterLocation());
+										
+					//try to move away from that point
+					Vector curZoneVect = new Vector(this.getCenterLocation(), nearestBasePoint);
 					//scale it based on how far away we are from the base, and the repulsion factor 
 					//also, multiply by -1 so the vector points away from the thing we want to get away from
 					curZoneVect = curZoneVect.rescale(-1.0 * REPULSION_FACTOR_FROM_HOME_BASES / curZoneVect.getMagSquare());
@@ -480,7 +481,8 @@ public class Bot extends Rectangle implements Runnable {
 
 
 	private void actuallyMoveAlong(Vector v) {
-		print("Current location : " + this.getCenterLocation());
+		if(MOVE_BOT_DEBUG)
+			print("Current location : " + this.getCenterLocation());
 
 		movementVector = v;
 
@@ -491,75 +493,28 @@ public class Bot extends Rectangle implements Runnable {
 			v = v.moveTo(this.getCenterLocation());
 		}
 
-		print("Moving along vector '" + v + "'");
+		if(MOVE_BOT_DEBUG) 
+			print("Moving along vector '" + v + "'");
+		
+		//don't hit the walls of the bounding box
+		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
+			//this means we can "see" the edge of the bounding box
+			//try to move such that we don't hit it
+			v = boundingBox.getPathAround(v);
+		}
 
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
 		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
 			v = v.rescale(currentZone.getBotMaxVelocity());
 		}
-
-		print("rescaled vector is " + v);
+		
+		if(MOVE_BOT_DEBUG)
+			print("rescaled vector is " + v);
 
 		//now that everything is all set with the vector, we can move to the other end of it
 		this.setCenterLocation(v.getP2());
 
-		//TODO: Do a better job handling wall collisions		
-		
-		//see if that sticks us outside the walls of the bounding box
-		if(! World.BOUNDING_BOX.contains(this)) {
-			//we have - undo the move
-			this.setLocation(previousBot.getLocation());
-
-			//we're going to try to move again, so we need to hold onto the real movement vector, as it will get written over by the subsequent calls
-			Vector realMovementVector = movementVector;
-
-			//see if the X magnitude or the Y magnitude is bigger - try moving in that direction first
-			if(realMovementVector.getXMag() > realMovementVector.getYMag()) {
-				//we have a bigger X magnitude - try that one first
-				actuallyMoveAlong(realMovementVector.getXVect());
-				//see if that moved us outside our bounding box
-				if(! World.BOUNDING_BOX.contains(this)) {
-					//undo the move
-					this.setLocation(previousBot.getLocation());
-
-					//try moving along the Y magnitude instead
-					actuallyMoveAlong(realMovementVector.getYVect());
-
-					//if that didn't work, undo the move and return
-					if(! World.BOUNDING_BOX.contains(this)) {
-						//undo the move
-						this.setLocation(previousBot.getLocation());
-						//make sure the movement vector is set correctly
-						movementVector = realMovementVector;
-						return;
-					}	
-				}
-			} else {
-				//we have a bigger Y magnitude - try that one first
-				actuallyMoveAlong(realMovementVector.getYVect());
-				//see if that moved us outside our bounding box
-				if(! World.BOUNDING_BOX.contains(this)) {
-					//undo the move
-					this.setLocation(previousBot.getLocation());
-
-					//try moving along the Y magnitude instead
-					actuallyMoveAlong(realMovementVector.getXVect());
-
-					//if that didn't work, undo the move and return
-					if(! World.BOUNDING_BOX.contains(this)) {
-						//undo the move
-						this.setLocation(previousBot.getLocation());
-						//make sure the movement vector is set correctly
-						movementVector = realMovementVector;
-						return;
-					}	
-				}
-			}
-			
-			//make sure the movement vector is set correctly
-			movementVector = realMovementVector;
-		}
 	}
 
 
@@ -569,7 +524,7 @@ public class Bot extends Rectangle implements Runnable {
 		Shape broadcastRange = getBroadcastRadius();
 
 		//find any nearby bots
-		List<Bot> nearbyBots = (List<Bot>) World.findAreaIntersectionsInList(broadcastRange, World.allBots);
+		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
@@ -587,7 +542,7 @@ public class Bot extends Rectangle implements Runnable {
 		}
 
 		//also, send it to any BaseZones
-		List<Zone> nearbyZones = (List<Zone>) World.findAreaIntersectionsInList(broadcastRange, World.allZones);
+		List<Zone> nearbyZones = (List<Zone>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allZones);
 
 		for(Zone z : nearbyZones) {
 			//skip non-BaseZones
@@ -610,7 +565,7 @@ public class Bot extends Rectangle implements Runnable {
 		Shape visibilityRange = getVisibilityRadius();
 
 		//see if the location of any of our victims intersects this range
-		List<Victim> visibleVictims = (List<Victim>) World.findAreaIntersectionsInList((Shape)visibilityRange, World.allVictims);
+		List<Victim> visibleVictims = (List<Victim>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allVictims);
 
 		if(LOOK_BOT_DEBUG)
 			print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
@@ -652,7 +607,7 @@ public class Bot extends Rectangle implements Runnable {
 		Shape auditoryRange = getAuditbleRadius();
 
 		//see if any of the shouts we know about intersect this range
-		List<Shout> audibleShouts = (List<Shout>) World.findAreaIntersectionsInList((Shape) auditoryRange, heardShouts);
+		List<Shout> audibleShouts = (List<Shout>) Utilities.findAreaIntersectionsInList((Shape) auditoryRange, heardShouts);
 
 		if(LISTEN_BOT_DEBUG)
 			print("In perfect world, would have just heard " + audibleShouts.size() + " vicitms");

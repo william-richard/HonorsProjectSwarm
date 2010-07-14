@@ -3,7 +3,6 @@ package zones;
 import java.awt.Color;
 import java.awt.Polygon;
 import java.awt.Shape;
-import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 
 import simulation.Shout;

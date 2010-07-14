@@ -7,10 +7,8 @@ import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.geom.Area;
-import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -21,15 +19,14 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.JFrame;
 
 import zones.BaseZone;
-import zones.DangerDebris;
 import zones.DangerZone;
-import zones.SafeDebris;
 import zones.SafeZone;
 import zones.Zone;
+import zones.BoundingBox;
 
 
 public class World extends JFrame {
-
+	
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
@@ -37,7 +34,7 @@ public class World extends JFrame {
 	private static final int MENUBAR_HEIGHT = 21;
 	private static final int FRAME_HEIGHT = 500 + MENUBAR_HEIGHT;
 	private static final int FRAME_WIDTH = 500;
-	public static final Rectangle2D BOUNDING_BOX = new Rectangle2D.Double(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
+	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean DRAW_BOT_RADII = true;
 
@@ -81,7 +78,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 30;
+		int numBots = 50;
 		int numVic = 2;
 
 		//initialize the zones
@@ -95,6 +92,12 @@ public class World extends JFrame {
 		baseZone = homeBase;
 		allZones.add(homeBase);
 
+//		int[] xPointsSlow = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
+//		int[] yPointsSlow = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
+//		
+//		Zone slowZone = new DangerDebris(xPointsSlow, yPointsSlow, 4, allZones.size());
+//		allZones.add(slowZone);
+		
 		fillInZones();
 
 		checkZoneSanity();
@@ -105,7 +108,7 @@ public class World extends JFrame {
 		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
 
 		for(int i = 0; i < numBots; i++) {
-			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase));
+			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
 		}
 
 		//initialize the victims
@@ -131,7 +134,7 @@ public class World extends JFrame {
 		//check each zones's area with all the rest to make sure they don't overlap
 		for(int i = 0; i < allZones.size(); i++) {
 			//calculate if there are any intersections
-			List<? extends Shape> intersections = findAreaIntersectionsInList(allZones.get(i), allZones.subList(i+1, allZones.size()));
+			List<? extends Shape> intersections = Utilities.findAreaIntersectionsInList(allZones.get(i), allZones.subList(i+1, allZones.size()));
 			//if there are, freak out
 			if(intersections.size() > 0) {
 				System.out.println("ZONES ARE NOT SANE!!!!");
@@ -162,34 +165,8 @@ public class World extends JFrame {
 
 		Area unfilledArea = new Area(BOUNDING_BOX);
 		unfilledArea.subtract(filledAreas);
-
-		//get all the points on the edge of the unfilled area
-		PathIterator unfilledIterator = unfilledArea.getPathIterator(null);
-
-		ArrayList<Point2D> zoneVerticies = new ArrayList<Point2D>();
-
-		double[] curPoint = new double[6];
-
-
-		while(! unfilledIterator.isDone()) {			
-			//get that point
-			unfilledIterator.currentSegment(curPoint);
-
-			//there shouldn't be any curves, so we just need to store the first 2 indicies
-			//so, store them
-			Point2D.Double newPoint = new Point2D.Double(curPoint[0], curPoint[1]);
-
-			//don't want to add multiples
-			if(zoneVerticies.indexOf(newPoint) >= 0) {
-				unfilledIterator.next();
-				continue;
-			}
-
-			zoneVerticies.add(newPoint);
-
-			//go to the next point
-			unfilledIterator.next();
-		}
+		
+		List<Point2D> zoneVerticies = Utilities.getVerticies(unfilledArea);
 
 		//the ZONE_COMPLEXITY constant basically defines how many extra verticies in Zones we should add
 		//so add them
@@ -227,13 +204,13 @@ public class World extends JFrame {
 			switch(RAMOM_GENERATOR.nextInt(4)) {
 			case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
-			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
+//			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
+//			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
 			//make sure it doesn't intersect any existing zones
-			if(findAreaIntersectionsInList(newZone, allZones).size() > 0) {
+			if(Utilities.findAreaIntersectionsInList(newZone, allZones).size() > 0) {
 				zoneVerticies.add(p1);
 				zoneVerticies.add(p2);
 				zoneVerticies.add(p3);
@@ -416,52 +393,6 @@ public class World extends JFrame {
 	}
 
 
-	//finds all shapes in the shapeList that intersect the base shape
-	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, List<? extends Shape> shapeList) {
-		//we're going to take advantage of Area's intersect method
-		// so we need to turn base into an area
-		Area baseArea = new Area(base);
-
-		//make the list of shapes that we'll end up returning
-		List<Shape> intersectingShapes = new ArrayList<Shape>();
-
-		//Then, we'll go through all the shapes in the list, and see if any of them intersect the base area
-		for(Shape testShape : shapeList) {
-			//make an area out of testShape
-			Area testArea = new Area(testShape);
-			//find the intersection
-			testArea.intersect(baseArea);
-			//now, test area is the area of intersection
-			//see if that area is empty.
-			//if it is not, we have an intersection and we should add it to the list
-			if(! testArea.isEmpty()) {
-				intersectingShapes.add(testShape);
-			}
-		}
-
-		//we have found all the intersecting shape
-		//return the list
-		return intersectingShapes;
-	}
-
-	/*can figure out if the edges of these 2 intersect if
-	 * 1) Their intersection (defined mathematically as the area shared by both of the shapes) is non empty.  If this is the case, they are not touching at all.
-	 * 2) they intersection is not equal to the total area of either of the shapes.  In this case, one is completely within the other.
-	 */
-	public static boolean edgeIntersects(Shape s1, Shape s2) {
-		Area zoneArea = new Area(s1);
-		Area shapeArea = new Area(s2);
-		
-		Area intersection = new Area(s1);
-		intersection.intersect(shapeArea);
-		
-		if(intersection.isEmpty()) return false;
-		if(intersection.equals(zoneArea) || intersection.equals(shapeArea)) return false;
-				
-		return true;
-	}
-
-	
 	//figures out which zones the passed point is in, and returns it.
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {

@@ -1,6 +1,5 @@
 package simulation;
 import java.awt.geom.Path2D;
-import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.util.List;
 
@@ -53,14 +52,10 @@ public class VictimPath extends Path2D.Double {
 	public String toString() {
 		String retStr = "Vic loc: " + vic.getCenterX() + ", " + vic.getCenterY() + "\t" + "Length = "+ pathLength + "\tRating= " + pathRating +"\tAvgRating = " + avgRating + "\t Points: ";
 		
-		PathIterator pi = this.getPathIterator(null);
-	
-		double[] cur = new double[6];
+		List<Point2D> verticies = Utilities.getVerticies(this);
 		
-		while(!pi.isDone()) {
-			pi.currentSegment(cur);
-			retStr += "(" + cur[0] + ", " + cur[1] + ") ";
-			pi.next();
+		for(Point2D p : verticies) {
+			retStr += "(" + p.getX() + ", " + p.getY() + ") ";
 		}
 		
 		return retStr;
