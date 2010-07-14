@@ -73,7 +73,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 60;
+		int numBots = 30;
 		int numVic = 2;
 
 		//initialize the zones
@@ -216,9 +216,11 @@ public class World extends JFrame {
 			//make a zone out of them
 			Zone newZone;
 
-			switch(RAMOM_GENERATOR.nextInt(2)) {
+			switch(RAMOM_GENERATOR.nextInt(4)) {
 			case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
+			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
+			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 

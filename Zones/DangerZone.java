@@ -11,7 +11,8 @@ public class DangerZone extends Zone {
 	private static final Color DangerZoneColor = new Color(139,37,0);
 	
 	public DangerZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID, DangerZoneColor); //SET THE ZONE COLOR HERE
+		super(xPoints, yPoints, numPoints, _zoneID);
+		setColor(DangerZoneColor);
 	}
 
 //	public DangerZone(Area a, int _zoneid) {

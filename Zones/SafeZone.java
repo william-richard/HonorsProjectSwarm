@@ -10,7 +10,8 @@ public class SafeZone extends Zone {
 	private static final Color SafeZoneColor = new Color(34, 139, 34);
 
 	public SafeZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID, SafeZoneColor);
+		super(xPoints, yPoints, numPoints, _zoneID);
+		setColor(SafeZoneColor);
 	}
 
 //	public SafeZone(Area a, int _zoneid) {

@@ -15,9 +15,10 @@ public class BaseZone extends Zone {
 	private List<VictimPath> victimPaths;
 	
 	public BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		super(xPoints, yPoints, numPoints, _zoneID, BaseZone.BaseZoneColor);
+		super(xPoints, yPoints, numPoints, _zoneID);
 		messageBuffer = "";
 		victimPaths = new ArrayList<VictimPath>();
+		setColor(BaseZoneColor);
 	}
 	
 //	public BaseZone(Area a, int _zoneid) {

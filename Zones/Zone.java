@@ -3,8 +3,6 @@ import java.awt.Polygon;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
 
-//TODO Add obsticle zones
-
 public abstract class Zone extends Polygon {
 
 	private static final long serialVersionUID = 1L;
@@ -12,16 +10,11 @@ public abstract class Zone extends Polygon {
 	protected int zoneID;
 	protected Color zoneColor;
 	
-	private Zone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
+	public Zone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
 		super(xPoints, yPoints, numPoints);
 		zoneID = _zoneID;
 	}
-	
-	protected Zone(int [] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
-		this(xPoints, yPoints, numPoints, _zoneID);
-		zoneColor = _zoneColor;
-	}
-	
+		
 	public Color getColor() {
 		return zoneColor;
 	}
@@ -46,12 +39,15 @@ public abstract class Zone extends Polygon {
 		return getBotMaxVelocity() * getBotMaxVelocity();
 	}
 
+	protected void setColor(Color newColor) {
+		zoneColor = newColor;
+	}
+	
+	
 	public abstract Shape getBroadcastRange(Point2D originator);
 	public abstract Shape getVisibilityRange(Point2D originator);
 	public abstract Shape getAudibleRange(Point2D originator);
 	public abstract Shout getShout(Victim shouter);
 	public abstract Shape getFoundRange(Point2D originator);
 	public abstract double getBotMaxVelocity();
-	
-	
 }
