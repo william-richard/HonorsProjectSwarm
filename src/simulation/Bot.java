@@ -42,7 +42,7 @@ public class Bot extends Rectangle implements Runnable {
 
 	private final double DANGER_MULTIPLIER = 2;
 
-	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 750;
+	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 800;
 	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2500;
 
 
@@ -483,9 +483,7 @@ public class Bot extends Rectangle implements Runnable {
 	private void actuallyMoveAlong(Vector v) {
 		if(MOVE_BOT_DEBUG)
 			print("Current location : " + this.getCenterLocation());
-
-		movementVector = v;
-
+		
 		//make sure the vector starts in the right place
 		if(! v.getP1().equals(this.getCenterLocation())) {
 			//move the vector to fix this
@@ -496,13 +494,13 @@ public class Bot extends Rectangle implements Runnable {
 		if(MOVE_BOT_DEBUG) 
 			print("Moving along vector '" + v + "'");
 		
-		//don't hit the walls of the bounding box
+		//don't hit the walls of the bounding box 
 		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
 			//this means we can "see" the edge of the bounding box
 			//try to move such that we don't hit it
 			v = boundingBox.getPathAround(v);
-		}
-
+		} 
+		
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
 		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
@@ -514,6 +512,8 @@ public class Bot extends Rectangle implements Runnable {
 
 		//now that everything is all set with the vector, we can move to the other end of it
 		this.setCenterLocation(v.getP2());
+		
+		movementVector = v;
 
 	}
 
@@ -742,8 +742,15 @@ public class Bot extends Rectangle implements Runnable {
 			otherBotInfo.clear();
 
 			//make sure we are still in the zones we think we are in
-			if(currentZone == null || ! currentZone.contains(getCenterLocation())) {
+			if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
 				currentZone = World.findZone(getCenterLocation());
+				
+				if(currentZone == null) {
+					print("AHH! WE DON'T KNOW WHAT ZONE WE'RE IN!! - " + this.getCenterX() + ", " + getCenterY());
+					print("Just moved: " + movementVector);
+				}
+				
+				
 				//reasses the zones's status if we move to a new zones
 				assessZone();
 			}

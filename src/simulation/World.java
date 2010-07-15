@@ -76,9 +76,9 @@ public class World extends JFrame {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
-
+		
 		//this is with default values, mostly for debugging
-		int numBots = 50;
+		int numBots = 20;
 		int numVic = 2;
 
 		//initialize the zones
@@ -403,6 +403,8 @@ public class World extends JFrame {
 			}
 		}
 
+		System.out.println("Could not find a zone for " + point.getX() + ", " + point.getY());
+		
 		return null;
 	}
 

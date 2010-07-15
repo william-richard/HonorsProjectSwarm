@@ -14,8 +14,8 @@ public class BoundingBox extends Rectangle2D.Double implements Obstacle {
 	private static final long serialVersionUID = 1L;
 	private List<Line2D> sides;
 
-	public BoundingBox(double arg0, double arg1, double arg2, double arg3) {
-		super(arg0, arg1, arg2, arg3);
+	public BoundingBox(double x, double y, double w, double h) {
+		super(x, y, w, h);
 		sides = Utilities.getSides(this);
 	}
 
@@ -34,10 +34,19 @@ public class BoundingBox extends Rectangle2D.Double implements Obstacle {
 		return null;
 	}
 
+	private final double IN_CORNER_THRESHOLD = 20.0;
+	private final double IN_CORNER_THRESHOLD_SQ = IN_CORNER_THRESHOLD * IN_CORNER_THRESHOLD;
+	
 	@Override
 	public Vector getPathAround(Vector intendedPath) {
 		//essentially, since we can't get around it, we try to find a path that goes along the closest wall of the bounding box
 
+		//first, see if this vector moves us outside the bounding box
+		//if it doesn't we don't need to do anything just right now
+		if(this.contains(intendedPath.getP2())) {
+			return intendedPath;
+		}
+		
 		//see which wall is nearest to the path start right now
 		List<Line2D> closestSides = new ArrayList<Line2D>();
 		closestSides.add(sides.get(0));
@@ -48,7 +57,8 @@ public class BoundingBox extends Rectangle2D.Double implements Obstacle {
 			Line2D curSide = sides.get(i);
 			double curDist = curSide.ptSegDistSq(intendedPath.getP1());
 			
-			if(Utilities.equalsWithin(curDist, closestDistance, 20)) {
+			//we're doing distance squared to save computation time, so we need to square the treshold
+			if(Utilities.equalsWithin(curDist, closestDistance, IN_CORNER_THRESHOLD_SQ)) {
 				//we're in a corner
 				inCorner = true;
 				closestSides.add(curSide);
@@ -64,21 +74,8 @@ public class BoundingBox extends Rectangle2D.Double implements Obstacle {
 			}
 		}
 		
-		boolean needToAdjust = false;
-		//see if the vector moves us toward our closest wall(s)
-		for(Line2D s : closestSides) {
-			if(s.ptSegDist(intendedPath.getP2()) < closestDistance) {
-				needToAdjust = true;
-				break;
-			}
-				
-		}
-		
-		//if the vector is pointing out of the the wall(s), then we don't need to adjust anything
-		if(! needToAdjust) return intendedPath;
-		
-		//don't move if we're in a corner
-		if(inCorner) return new Vector(intendedPath.getP1(), intendedPath.getP2());
+		//don't move if we're in a corner - return a vector of length 0
+		if(inCorner) return new Vector(intendedPath.getP1(), intendedPath.getP1());
 		
 		//now that we know what side is closest, see if it's vertical or horizontal
 		//we have a box, so it should be one or the other
@@ -99,4 +96,6 @@ public class BoundingBox extends Rectangle2D.Double implements Obstacle {
 			return null;
 		}
 	}
+	
+	
 }
