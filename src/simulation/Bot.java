@@ -13,6 +13,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import zones.BaseZone;
 import zones.BoundingBox;
+import zones.Fire;
 import zones.SafeZone;
 import zones.Zone;
 
@@ -484,6 +485,16 @@ public class Bot extends Rectangle implements Runnable {
 		if(MOVE_BOT_DEBUG)
 			print("Current location : " + this.getCenterLocation());
 		
+		//don't hit the walls of the bounding box 
+		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
+			//this means we can "see" the edge of the bounding box
+			//try to move such that we don't hit it
+			v = boundingBox.getPathThatStaysInside(v);
+		}
+		
+		//don't hit any obsacles
+		v = avoidObstacles(v);
+		
 		//make sure the vector starts in the right place
 		if(! v.getP1().equals(this.getCenterLocation())) {
 			//move the vector to fix this
@@ -493,20 +504,13 @@ public class Bot extends Rectangle implements Runnable {
 
 		if(MOVE_BOT_DEBUG) 
 			print("Moving along vector '" + v + "'");
-		
-		//don't hit the walls of the bounding box 
-		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
-			//this means we can "see" the edge of the bounding box
-			//try to move such that we don't hit it
-			v = boundingBox.getPathAround(v);
-		} 
-		
+				
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
 		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
 			v = v.rescale(currentZone.getBotMaxVelocity());
 		}
-		
+			
 		if(MOVE_BOT_DEBUG)
 			print("rescaled vector is " + v);
 
@@ -515,6 +519,42 @@ public class Bot extends Rectangle implements Runnable {
 		
 		movementVector = v;
 
+	}
+	
+	private Vector avoidObstacles(Vector intendedPath) {
+		
+		//first, look for any obstacles nearby
+		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibilityRadius(), World.allZones);
+		
+		List<Zone> visibleObstacles = new ArrayList<Zone>();
+		for(Shape s : visibleZones) {
+			if(s instanceof Zone && ((Zone) s).isObstacle()) {
+				visibleObstacles.add((Zone)s);
+			}
+		}
+		
+		
+		
+		//see if we're heading into any obstacles and adjust the path
+		for(Zone o : visibleObstacles) {
+			if(o instanceof Shape && ((Shape) o).contains(intendedPath.getP2())) {
+				//try to avoid it
+				List<Point2D> obstacleDiscontinuityPoints = Utilities.getDiscontinuityPoints(this.getVisibilityRadius(), (Shape)o);
+				//head toward the discontinuity point closest to where we were trying to go
+				Point2D closestDiscontinuityPoint = null;
+				double distToClosestDiscontinuityPoint = java.lang.Double.MAX_VALUE;
+				for(Point2D p : obstacleDiscontinuityPoints) {
+					double curDist = p.distance(intendedPath.getP2());
+					if(curDist < distToClosestDiscontinuityPoint) {
+						distToClosestDiscontinuityPoint = curDist;
+						closestDiscontinuityPoint = p;
+					}
+				}
+				intendedPath.setLine(intendedPath.getP1(), closestDiscontinuityPoint);
+			}
+		}
+		
+		return intendedPath;
 	}
 
 
@@ -748,6 +788,10 @@ public class Bot extends Rectangle implements Runnable {
 				if(currentZone == null) {
 					print("AHH! WE DON'T KNOW WHAT ZONE WE'RE IN!! - " + this.getCenterX() + ", " + getCenterY());
 					print("Just moved: " + movementVector);
+				}
+				
+				if(currentZone instanceof Fire) {
+					print("AHHHH!!!! I'M MELTING!!!!");
 				}
 				
 				

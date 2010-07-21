@@ -33,9 +33,8 @@ public class Vector extends Line2D{
 		this(new Point2D.Double(x1, y1), new Point2D.Double(x2, y2), mag);
 	}
 	
-
-	public Vector(Line2D closestSide) {
-		this(closestSide.getP1(), closestSide.getP2());
+	public Vector(Line2D l) {
+		this(l.getP1(), l.getP2());
 	}
 
 	@Override
@@ -156,10 +155,25 @@ public class Vector extends Line2D{
 		return this.rescaleRatio(-1.0);
 	}
 	
-	//get the scalar projection of this on other
-	public double scalerProjection(Vector other) {
-		return other.dot(this.getUnitVector());
+	/*get the scalar projection of this on other
+	 * i.e. get the magnitude of the component of the this vector in the direction of the other vector
+	 */
+	public double scalerProjectionOnto(Vector other) {
+		return this.dot(other.getUnitVector());
 	}
+	
+	public Vector getParallelVector(Point2D startPoint, double magnitude) {
+		Vector parallelVector = this.moveTo(startPoint);
+		return parallelVector.rescale(magnitude);
+	}
+	
+	/*get the angle between this and other
+	 * 
+	 */
+	public double getAngleBetween(Vector other) {
+		return Math.acos(this.dot(other) / (this.getMagnitude() * other.getMagnitude()));
+	}
+	
 	
 	
 	public String toString() {

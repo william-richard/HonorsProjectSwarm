@@ -19,14 +19,17 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.JFrame;
 
 import zones.BaseZone;
+import zones.DangerDebris;
 import zones.DangerZone;
+import zones.Fire;
+import zones.SafeDebris;
 import zones.SafeZone;
 import zones.Zone;
 import zones.BoundingBox;
 
 
 public class World extends JFrame {
-	
+
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
@@ -76,7 +79,7 @@ public class World extends JFrame {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
-		
+
 		//this is with default values, mostly for debugging
 		int numBots = 20;
 		int numVic = 2;
@@ -92,12 +95,12 @@ public class World extends JFrame {
 		baseZone = homeBase;
 		allZones.add(homeBase);
 
-//		int[] xPointsSlow = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
-//		int[] yPointsSlow = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
-//		
-//		Zone slowZone = new DangerDebris(xPointsSlow, yPointsSlow, 4, allZones.size());
-//		allZones.add(slowZone);
-		
+		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
+		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
+
+		Zone fireZone = new Fire(xPointsFire, yPointsFire, 4, allZones.size());
+		allZones.add(fireZone);
+
 		fillInZones();
 
 		checkZoneSanity();
@@ -165,7 +168,7 @@ public class World extends JFrame {
 
 		Area unfilledArea = new Area(BOUNDING_BOX);
 		unfilledArea.subtract(filledAreas);
-		
+
 		List<Point2D> zoneVerticies = Utilities.getVerticies(unfilledArea);
 
 		//the ZONE_COMPLEXITY constant basically defines how many extra verticies in Zones we should add
@@ -204,8 +207,8 @@ public class World extends JFrame {
 			switch(RAMOM_GENERATOR.nextInt(4)) {
 			case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-//			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
-//			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
+			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
+			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
@@ -229,9 +232,6 @@ public class World extends JFrame {
 
 			zoneVerticies.add(p3);
 		}
-
-		//should be all filled up now - check the sanity to make sure
-		checkZoneSanity();
 	}
 
 
@@ -404,7 +404,7 @@ public class World extends JFrame {
 		}
 
 		System.out.println("Could not find a zone for " + point.getX() + ", " + point.getY());
-		
+
 		return null;
 	}
 

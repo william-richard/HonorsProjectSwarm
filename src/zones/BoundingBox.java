@@ -1,7 +1,6 @@
 package zones;
 
 import java.awt.geom.Line2D;
-import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +8,7 @@ import java.util.List;
 import simulation.Utilities;
 import simulation.Vector;
 
-public class BoundingBox extends Rectangle2D.Double implements Obstacle {
+public class BoundingBox extends Rectangle2D.Double {
 	
 	private static final long serialVersionUID = 1L;
 	private List<Line2D> sides;
@@ -19,26 +18,10 @@ public class BoundingBox extends Rectangle2D.Double implements Obstacle {
 		sides = Utilities.getSides(this);
 	}
 
-	@Override
-	public boolean hasOpenings() {
-		return false;
-	}
-
-	@Override
-	public Point2D getNearestOpening(Point2D p) {
-		return null;
-	}
-
-	@Override
-	public Vector getPathToNearestOpening(Point2D p) {
-		return null;
-	}
-
-	private final double IN_CORNER_THRESHOLD = 20.0;
+	private final double IN_CORNER_THRESHOLD = 10.0;
 	private final double IN_CORNER_THRESHOLD_SQ = IN_CORNER_THRESHOLD * IN_CORNER_THRESHOLD;
 	
-	@Override
-	public Vector getPathAround(Vector intendedPath) {
+	public Vector getPathThatStaysInside(Vector intendedPath) {
 		//essentially, since we can't get around it, we try to find a path that goes along the closest wall of the bounding box
 
 		//first, see if this vector moves us outside the bounding box

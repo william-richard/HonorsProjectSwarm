@@ -98,6 +98,12 @@ public class BaseZone extends Zone {
 		return Bot.DEFAULT_MAX_VELOCITY;
 	}
 
+	@Override
+	public boolean isObstacle() {
+		return false;
+	}
+	
+	
 	private boolean recieveMessages = true;
 
 	public void recieveMessage(String message) throws InterruptedException {

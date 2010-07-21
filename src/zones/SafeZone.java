@@ -85,4 +85,9 @@ public class SafeZone extends Zone {
 	public double getBotMaxVelocity() {
 		return Bot.DEFAULT_MAX_VELOCITY;
 	}
+	
+	@Override
+	public boolean isObstacle() {
+		return false;
+	}
 }

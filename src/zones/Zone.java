@@ -61,5 +61,5 @@ public abstract class Zone extends Polygon {
 	public abstract Shout getShout(Victim shouter);
 	public abstract Shape getFoundRange(Point2D originator);
 	public abstract double getBotMaxVelocity();
-	
+	public abstract boolean isObstacle();
 }
