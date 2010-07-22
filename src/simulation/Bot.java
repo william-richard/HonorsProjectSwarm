@@ -485,16 +485,6 @@ public class Bot extends Rectangle implements Runnable {
 		if(MOVE_BOT_DEBUG)
 			print("Current location : " + this.getCenterLocation());
 		
-		//don't hit the walls of the bounding box 
-		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
-			//this means we can "see" the edge of the bounding box
-			//try to move such that we don't hit it
-			v = boundingBox.getPathThatStaysInside(v);
-		}
-		
-		//don't hit any obsacles
-		v = avoidObstacles(v);
-		
 		//make sure the vector starts in the right place
 		if(! v.getP1().equals(this.getCenterLocation())) {
 			//move the vector to fix this
@@ -510,6 +500,16 @@ public class Bot extends Rectangle implements Runnable {
 		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
 			v = v.rescale(currentZone.getBotMaxVelocity());
 		}
+		
+		//don't hit the walls of the bounding box 
+		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
+			//this means we can "see" the edge of the bounding box
+			//try to move such that we don't hit it
+			v = boundingBox.getPathThatStaysInside(v);
+		}
+		
+		//don't hit any obsacles
+		v = avoidObstacles(v);
 			
 		if(MOVE_BOT_DEBUG)
 			print("rescaled vector is " + v);
@@ -533,11 +533,10 @@ public class Bot extends Rectangle implements Runnable {
 			}
 		}
 		
-		
-		
 		//see if we're heading into any obstacles and adjust the path
 		for(Zone o : visibleObstacles) {
-			if(o instanceof Shape && ((Shape) o).contains(intendedPath.getP2())) {
+			//test if our path goes through the obstacle
+			if(Utilities.lineIntersectsShape(intendedPath, o)) {
 				//try to avoid it
 				List<Point2D> obstacleDiscontinuityPoints = Utilities.getDiscontinuityPoints(this.getVisibilityRadius(), (Shape)o);
 				//head toward the discontinuity point closest to where we were trying to go

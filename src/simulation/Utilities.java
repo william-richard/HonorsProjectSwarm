@@ -52,15 +52,24 @@ public class Utilities {
 	 * 2) they intersection is not equal to the total area of either of the shapes.  In this case, one is completely within the other.
 	 */
 	public static boolean edgeIntersects(Shape s1, Shape s2) {
+		//handle the cases for lines
+		if(s1 instanceof Line2D && s2 instanceof Line2D) {
+			return ((Line2D) s1).intersectsLine((Line2D)s2);
+		} else if(s1 instanceof Line2D) {
+			return lineIntersectsShape((Line2D) s1, s2);
+		} else if(s2 instanceof Line2D) {
+			return lineIntersectsShape((Line2D) s2, s1);
+		}
+		
+		//possible lines are handled - we only have real shapes (unless we're passed curves, but we shouldn't be)
 		Area a1 = new Area(s1);
 		Area a2 = new Area(s2);
 		
-		if(a1.isEmpty()) {
-			a1 = new Area(giveArealessShapeArea(s1));
-		}
-		
-		if(a2.isEmpty()) {
-			a2 = new Area(giveArealessShapeArea(s2));
+		if(a1.isEmpty() || a2.isEmpty()) {
+			System.out.println("GOT AN AREALESS SHAPE FOR EDGE INTERSECTIONS!!!");
+			System.out.println(s1);
+			System.out.println(s2);
+			System.exit(0);
 		}
 
 		Area intersection = new Area(s1);
@@ -71,7 +80,20 @@ public class Utilities {
 
 		return true;
 	}
-
+	
+	public static boolean lineIntersectsShape(Line2D l, Shape s) {
+		//get all the edges of the shape
+		List<Line2D> edges = getSides(s);
+		
+		for(int i = 0; i < edges.size(); i++) {
+			Line2D curEdge = edges.get(i);
+			if(curEdge.intersectsLine(l)) return true;
+		}
+		
+		return false;
+	}
+	
+	
 	public static Polygon giveArealessShapeArea(Shape s) {
 		//get all the verticies of the shape
 		List<Point2D> shapeVerticies = getVerticies(s);
@@ -158,6 +180,7 @@ public class Utilities {
 			
 			if(segType == PathIterator.SEG_QUADTO || segType == PathIterator.SEG_CUBICTO) {
 				System.out.println("GET SIDES HAS RUN INTO A SEGMENT IT CAN'T DEAL WITH!!!!)");
+				System.out.println("Got a quad segment? " + (segType == PathIterator.SEG_QUADTO));
 				System.out.println(s);
 				System.exit(0);
 			} else if(segType == PathIterator.SEG_MOVETO) {

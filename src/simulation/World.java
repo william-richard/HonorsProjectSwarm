@@ -81,7 +81,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 20;
+		int numBots = 10;
 		int numVic = 2;
 
 		//initialize the zones
@@ -95,11 +95,11 @@ public class World extends JFrame {
 		baseZone = homeBase;
 		allZones.add(homeBase);
 
-		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
-		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
-
-		Zone fireZone = new Fire(xPointsFire, yPointsFire, 4, allZones.size());
-		allZones.add(fireZone);
+//		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
+//		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
+//
+//		Zone fireZone = new Fire(xPointsFire, yPointsFire, 4, allZones.size());
+//		allZones.add(fireZone);
 
 		fillInZones();
 
@@ -204,11 +204,12 @@ public class World extends JFrame {
 			//make a zones out of them
 			Zone newZone;
 
-			switch(RAMOM_GENERATOR.nextInt(4)) {
+			switch(RAMOM_GENERATOR.nextInt(5)) {
 			case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
 			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
+			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
@@ -276,8 +277,8 @@ public class World extends JFrame {
 		for(Zone z : allZones) {
 			g2d.setColor(z.getColor());
 			g2d.fill(z);
-			g2d.setColor(ZONE_LABEL_COLOR);
-			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+//			g2d.setColor(ZONE_LABEL_COLOR);
+//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 		}
