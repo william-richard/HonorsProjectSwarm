@@ -1,7 +1,10 @@
 package zones;
 
+import java.awt.Point;
 import java.awt.geom.Line2D;
+import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -78,6 +81,12 @@ public class BoundingBox extends Rectangle2D.Double {
 			System.exit(0);
 			return null;
 		}
+	}
+	
+	public double getDiagonalLength() {
+		Point2D oneCorner = new Point2D.Double(this.getMinX(), this.getMinY());
+		Point2D otherCorner = new Point2D.Double(this.getMaxX(), this.getMaxY());
+		return oneCorner.distance(otherCorner);
 	}
 	
 	

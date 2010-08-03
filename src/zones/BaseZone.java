@@ -52,11 +52,11 @@ public class BaseZone extends Zone {
 	public Shape getBroadcastRange(Point2D originator) {
 		//in this case, return a circle
 		//know the center of the circle, and the radius - need to find the corner
-		double broadcastRangeCornerX = originator.getX() - Bot.DEFAULT_BROADCAST_RADIUS;
-		double broadcastRangeCornerY = originator.getY() - Bot.DEFAULT_BROADCAST_RADIUS;
+		double broadcastRangeCornerX = originator.getX() - Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS;
+		double broadcastRangeCornerY = originator.getY() - Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS;
 
 		//now, make the broadcast range shape
-		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFAULT_BROADCAST_RADIUS*2, Bot.DEFAULT_BROADCAST_RADIUS*2);
+		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS*2, Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS*2);
 	}
 
 	@Override

@@ -8,6 +8,7 @@ public class Shout extends Area {
 	
 	private static final long serialVersionUID = 1L;
 	public static final int DEFAULT_SHOUT_RADIUS = 20;
+	public static final int DEFAULT_SHOUT_RADIUS_THROUGH_WALL = 10;
 	private Victim shouter;
 	
 

@@ -19,6 +19,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.JFrame;
 
 import zones.BaseZone;
+import zones.Building;
 import zones.DangerDebris;
 import zones.DangerZone;
 import zones.Fire;
@@ -40,6 +41,8 @@ public class World extends JFrame {
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean DRAW_BOT_RADII = true;
+	
+	private static final boolean WORLD_DEBUG = true;
 
 	private static final int ZONE_COMPLEXITY = 20;
 
@@ -70,6 +73,8 @@ public class World extends JFrame {
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Victim> allVictimSnapshot;
 
+	public static CopyOnWriteArrayList<Shape> debugShapesToDraw;
+	
 	private Zone baseZone;
 	private Timer repaintTimer;
 	private boolean isStopped;
@@ -95,6 +100,10 @@ public class World extends JFrame {
 		baseZone = homeBase;
 		allZones.add(homeBase);
 
+		Zone building = new Building(100, 100, 50, 50, allZones.size());
+		allZones.add(building);
+		
+		
 //		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
 //		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
 //
@@ -121,6 +130,9 @@ public class World extends JFrame {
 		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
 		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
+		debugShapesToDraw = new CopyOnWriteArrayList<Shape>();
+		
+		
 		isStopped = false;
 
 		setVisible(true);
@@ -281,6 +293,9 @@ public class World extends JFrame {
 //			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
+			if(z instanceof Building) {
+				g2d.draw(((Building) z).getFloorplan());
+			}
 		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
@@ -305,13 +320,13 @@ public class World extends JFrame {
 
 			if(DRAW_BOT_RADII) {
 				g2d.setColor(AUDIO_RANGE_COLOR);
-				g2d.draw(curBot.getAuditbleRadius());
+				g2d.draw(curBot.getAuditbleArea());
 
 				g2d.setColor(VISIBLE_RANGE_COLOR);
-				g2d.draw(curBot.getVisibilityRadius());
+				g2d.draw(curBot.getVisibibleArea());
 
 				g2d.setColor(BROADCAST_RANGE_COLOR);
-				g2d.draw(curBot.getBroadcastRadius());
+				g2d.draw(curBot.getBroadcastArea());
 			}
 
 			g2d.setColor(BOT_LABEL_COLOR);
@@ -346,6 +361,14 @@ public class World extends JFrame {
 				g2d.draw(vp);
 			}
 
+		}
+		
+		if(WORLD_DEBUG) {
+			//draw the shapes in the debug arraylist
+			g2d.setColor(Color.white);
+			for(Shape s : debugShapesToDraw) {
+				g2d.draw(s);
+			}
 		}
 
 

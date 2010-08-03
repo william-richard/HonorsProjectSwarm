@@ -2,7 +2,10 @@ package simulation;
 import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
+import java.awt.geom.Area;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Line2D.Double;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,12 +34,18 @@ public class Bot extends Rectangle implements Runnable {
 	private final double MOVE_RANDOMLY_PROB = .25;
 	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zones correctly
-	
-	public static final double DEFAULT_BROADCAST_RADIUS = 75;
+
+	public static final double DEFAULT_OUTDOOR_BROADCAST_RADIUS = 95;
+	public static final double DEFAULT_INDOOR_BROADCAST_RADIUS = 32;
 	public static final double DEFALUT_VISIBILITY_RADIUS = 10;
 	public static final double DEFAULT_AUDITORY_RADIUS = 50;
+	public static final double DEFAULT_AUDITORY_RADIS_THROUGH_WALL = 20;
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 8;
+
+	public static final double RADIAL_SWEEP_INCREMENT_DEGREES = 2.0;
+	public static final double RADIAL_SWEEP_INCREMENT_RADIANS = RADIAL_SWEEP_INCREMENT_DEGREES * Math.PI / 180.0;
+
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
@@ -106,7 +115,7 @@ public class Bot extends Rectangle implements Runnable {
 		baseZone = homeBase;
 
 		knownVicitms = new HashMap<Victim, java.lang.Double>();
-		
+
 		boundingBox = _bounds;
 
 		//find out what zones we start in, and try to determine how safe it is
@@ -123,17 +132,17 @@ public class Bot extends Rectangle implements Runnable {
 		return new Point2D.Double(getCenterX(), getCenterY());
 	}
 
-	public Shape getBroadcastRadius() {
+	public Shape getBroadcastArea() {
 		//see how far the current zones thinks we can broadcast
 		return currentZone.getBroadcastRange(getCenterLocation());
 	}
 
-	public Shape getVisibilityRadius() {
+	public Shape getVisibibleArea() {
 		//see how far the current zones thinks we can see
 		return currentZone.getVisibilityRange(getCenterLocation());
 	}
 
-	public Shape getAuditbleRadius() {
+	public Shape getAuditbleArea() {
 		//see how far the current zones thinks we can hear
 		return currentZone.getAudibleRange(getCenterLocation());
 	}
@@ -141,6 +150,11 @@ public class Bot extends Rectangle implements Runnable {
 	public ListIterator<Shout> getShoutIterator() {
 		return heardShouts.listIterator();
 	}
+
+	public double getObstacleBufferRange() {
+		return DEFALUT_VISIBILITY_RADIUS / 8.0;
+	}
+
 
 	public int getID() {
 		return botID;
@@ -413,7 +427,7 @@ public class Bot extends Rectangle implements Runnable {
 				if(z instanceof BaseZone) {
 					//find the point on the edge of the zone that is closest to us
 					Point2D nearestBasePoint = Utilities.getNearestPoint(z, getCenterLocation());
-										
+
 					//try to move away from that point
 					Vector curZoneVect = new Vector(this.getCenterLocation(), nearestBasePoint);
 					//scale it based on how far away we are from the base, and the repulsion factor 
@@ -484,7 +498,7 @@ public class Bot extends Rectangle implements Runnable {
 	private void actuallyMoveAlong(Vector v) {
 		if(MOVE_BOT_DEBUG)
 			print("Current location : " + this.getCenterLocation());
-		
+
 		//make sure the vector starts in the right place
 		if(! v.getP1().equals(this.getCenterLocation())) {
 			//move the vector to fix this
@@ -494,73 +508,228 @@ public class Bot extends Rectangle implements Runnable {
 
 		if(MOVE_BOT_DEBUG) 
 			print("Moving along vector '" + v + "'");
-				
+
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
-		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
-			v = v.rescale(currentZone.getBotMaxVelocity());
-		}
-		
+		v = verifyMovementVector(v);
+
+
 		//don't hit the walls of the bounding box 
 		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
 			//this means we can "see" the edge of the bounding box
 			//try to move such that we don't hit it
 			v = boundingBox.getPathThatStaysInside(v);
 		}
-		
+
 		//don't hit any obsacles
 		v = avoidObstacles(v);
-			
+
+		//again, make sure our movement vector is legal
+		v = verifyMovementVector(v);
+
 		if(MOVE_BOT_DEBUG)
 			print("rescaled vector is " + v);
 
 		//now that everything is all set with the vector, we can move to the other end of it
 		this.setCenterLocation(v.getP2());
-		
+
 		movementVector = v;
 
 	}
-	
+
+	//makes sure that the passed movement vector is OK i.e. it isn't too long
+	private Vector verifyMovementVector(Vector v) {
+		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
+			v = v.rescale(currentZone.getBotMaxVelocity());
+		}
+		return v;
+	}
+
 	private Vector avoidObstacles(Vector intendedPath) {
-		
+
 		//first, look for any obstacles nearby
-		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibilityRadius(), World.allZones);
-		
+		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibibleArea(), World.allZones);
+
 		List<Zone> visibleObstacles = new ArrayList<Zone>();
 		for(Shape s : visibleZones) {
 			if(s instanceof Zone && ((Zone) s).isObstacle()) {
 				visibleObstacles.add((Zone)s);
 			}
 		}
-		
+
 		//see if we're heading into any obstacles and adjust the path
 		for(Zone o : visibleObstacles) {
 			//test if our path goes through the obstacle
 			if(Utilities.lineIntersectsShape(intendedPath, o)) {
+				//				//try to avoid it
+				//				List<Point2D> obstacleDiscontinuityPoints = Utilities.getDiscontinuityPoints(this.getVisibilityRadius(), (Shape)o);
+				//				//head toward the discontinuity point closest to where we were trying to go
+				//				Point2D closestDiscontinuityPoint = null;
+				//				double distToClosestDiscontinuityPoint = java.lang.Double.MAX_VALUE;
+				//				for(Point2D p : obstacleDiscontinuityPoints) {
+				//					double curDist = p.distance(intendedPath.getP2());
+				//					if(curDist < distToClosestDiscontinuityPoint) {
+				//						distToClosestDiscontinuityPoint = curDist;
+				//						closestDiscontinuityPoint = p;
+				//					}
+				//				}
+				//				intendedPath.setLine(intendedPath.getP1(), closestDiscontinuityPoint);
+
 				//try to avoid it
-				List<Point2D> obstacleDiscontinuityPoints = Utilities.getDiscontinuityPoints(this.getVisibilityRadius(), (Shape)o);
-				//head toward the discontinuity point closest to where we were trying to go
-				Point2D closestDiscontinuityPoint = null;
-				double distToClosestDiscontinuityPoint = java.lang.Double.MAX_VALUE;
-				for(Point2D p : obstacleDiscontinuityPoints) {
-					double curDist = p.distance(intendedPath.getP2());
-					if(curDist < distToClosestDiscontinuityPoint) {
-						distToClosestDiscontinuityPoint = curDist;
-						closestDiscontinuityPoint = p;
+				//start by finding it's edges that we can see
+				List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(o);
+
+				boolean hasBeenSet = false;
+				//now, check all those edges, and find the one we're heading into
+				for(Line2D curEdge : visibleObstacleEdges) {
+					if(intendedPath.intersectsLine(curEdge)) {
+						//choose to head towards one of the endpoints of the edge
+						//whichever one is closer to our P2
+						if(intendedPath.getP2().distanceSq(curEdge.getP1()) < intendedPath.getP2().distanceSq(curEdge.getP2())) {
+							intendedPath.setLine(intendedPath.getP1(), curEdge.getP1());
+						} else {
+							intendedPath.setLine(intendedPath.getP1(), curEdge.getP2());
+						}
+
+						//also, add a bit of buffer around the obstacle so that we don't get too near to it
+						//to get the buffer, we're going to add a small vector going out from the current edge
+						Vector bufferVect = (new Vector(curEdge)).getPerpendicularVector(intendedPath.getP2(), this.getObstacleBufferRange());
+						//flip it around if it's pointing into the shape
+						if(o.contains(bufferVect.getP2())) {
+							bufferVect = bufferVect.rotate(Math.PI);
+						}
+
+						intendedPath = intendedPath.add(bufferVect);
+
+						hasBeenSet = true;
+						break;
 					}
 				}
-				intendedPath.setLine(intendedPath.getP1(), closestDiscontinuityPoint);
+				if(hasBeenSet) print("I have tried to avoid the obstacle");
+				else print("I did not avoid the obstacle - something is wrong");
 			}
 		}
-		
+
 		return intendedPath;
 	}
 
+	private List<Line2D> getVisibleObstacleEdges(Zone obstacle) {
+		//essentially, we're going to do a radial sweep around our view range
+		//and see where the obstacle starts and stops
+
+		Area obstacleArea = new Area(obstacle);
+		Area viewRangeArea = new Area(this.getVisibibleArea());
+		Area obstacleInViewRange = (Area) obstacleArea.clone();
+		obstacleInViewRange.intersect(viewRangeArea);
+
+		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
+
+		List<Line2D> visibleObstacleSegments = new ArrayList<Line2D>();
+
+		//start at 0 radians, and go around the full circle
+		//when you hit part of the obstacle you can see, store that point
+		//use just the part of the obstacle in our view range to make the calculation easier
+		//keep going until you can't see it any more
+		//add those 2 points in an array into the list edgePoints
+
+		Line2D curSeg = new Line2D.Double();
+		boolean currentlyAddingSegment = false;
+		Point2D curPoint = null;
+		Point2D prevPoint = null;
+
+		for(double curRad = 0.0; curRad < 2*Math.PI; curRad += RADIAL_SWEEP_INCREMENT_RADIANS) {
+			//			curPoint = getVisiblePointOnShape(curRad, obstacle);
+			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
+
+
+//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
+
+
+			if( (! currentlyAddingSegment) && curPoint != null) {
+				curSeg = new Line2D.Double();
+				curSeg.setLine(curPoint, curSeg.getP2());
+				currentlyAddingSegment = true;
+			} else if(currentlyAddingSegment && curPoint == null) {
+				curSeg.setLine(curSeg.getP1(), prevPoint);
+				visibleObstacleSegments.add(curSeg);
+				currentlyAddingSegment = false;
+			}
+
+			if(curPoint != null) {
+				prevPoint = (Point2D) curPoint.clone();
+			}
+		}
+
+		//if we come out of this, and we're still adding a segment, then we have a segment that goes over 0 radians
+		//so, we should only have one segment rather than 2
+		//		if(currentlyAddingSegment) {
+		//			//the segment at 0 radians should be the first one stored i.e. index 0
+		//			Line2D firstSeg = visibleObstacleSegments.remove(0);
+		//
+		//			//put the start point of the current segment, as that is the real start of this segment
+		//			firstSeg.setLine(curSeg.getP1(), firstSeg.getP2());
+		//
+		//			//re-add the segment
+		//			visibleObstacleSegments.add(firstSeg);
+		//		}
+
+		//make sure we close any segemnts if we are still adding them
+		if(currentlyAddingSegment) {
+			curSeg.setLine(curSeg.getP1(), prevPoint);
+			visibleObstacleSegments.add(curSeg);
+		}
+
+		for(Line2D l :visibleObstacleSegments) {
+			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+		}
+
+		List<Line2D> obstacleSides = Utilities.getSides(obstacle);
+		for(Line2D l : obstacleSides) {
+			print("Obstacle has sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+		}
+
+		//return the list of segments
+		return visibleObstacleSegments;
+	}
+
+	private Point2D getClosestPointOnShapeInDirection(double direction, Shape s) {
+		//make a vector at 0 radians
+		Vector testRay = new Vector(this.getCenterX(), this.getCenterY(), this.getCenterX()+1.0, this.getCenterY());
+		//rotate the vector to the correct angle
+		testRay = testRay.rotate(direction);
+		//make it really long, so that it is sure to intersect the shape if it is in that direction
+		//we're going to make it the length of the Bounding Box's diagonal, so that it is pretty much guaranteed to go out of the bounding box
+		testRay = testRay.rescale(boundingBox.getDiagonalLength());
+		//now, get the intersection point closest to P1 along the vector
+		return testRay.getClosestIntersectionToStart(s);
+	}
+
+	@Deprecated
+	private Point2D getVisiblePointOnShape(double viewAngle, Shape lookingAt) {
+		//first, make a vector along the view angle
+		//to do this, make a vector going along 0 degrees and then rotate it to the view angle
+		Vector viewVect = new Vector(this.getCenterX(), this.getCenterY(), this.getCenterX() + 1, this.getCenterY());
+		//rotate it
+		viewVect = viewVect.rotate(viewAngle);
+		//now, need to scale it such that it goes just to the edge of the visible range
+		//start by scaling it really far, then finding the really long vector's intersection with the view radius
+		//and then rescaling it to end at the intersection point
+		viewVect = viewVect.rescale(boundingBox.getDiagonalLength());
+		Point2D intersectionWithVisibleRange = viewVect.getClosestIntersectionToStart(this.getVisibibleArea());
+		//it is possible no such intersection exists, in which case return null
+		if(intersectionWithVisibleRange == null)  return null;
+
+		viewVect = new Vector(viewVect.getP1(), intersectionWithVisibleRange);
+
+		//now, we have a vector that goes from us to the edge of our visible range at the angle viewAngle
+		//see if there is an intersection point along that vector with the shape we're looking at
+		return viewVect.getClosestIntersectionToStart(lookingAt);
+	}
 
 	@SuppressWarnings("unchecked")
 	private void broadcastMessage(String mes) {
 		//first, get our broadcast range
-		Shape broadcastRange = getBroadcastRadius();
+		Shape broadcastRange = getBroadcastArea();
 
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
@@ -601,7 +770,7 @@ public class Bot extends Rectangle implements Runnable {
 	@SuppressWarnings("unchecked")
 	private List<Victim> lookForVictims() {
 		//first, get our visibility radius
-		Shape visibilityRange = getVisibilityRadius();
+		Shape visibilityRange = getVisibibleArea();
 
 		//see if the location of any of our victims intersects this range
 		List<Victim> visibleVictims = (List<Victim>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allVictims);
@@ -643,7 +812,7 @@ public class Bot extends Rectangle implements Runnable {
 		listeningForShouts = false;
 
 		//first, get our auditory radius
-		Shape auditoryRange = getAuditbleRadius();
+		Shape auditoryRange = getAuditbleArea();
 
 		//see if any of the shouts we know about intersect this range
 		List<Shout> audibleShouts = (List<Shout>) Utilities.findAreaIntersectionsInList((Shape) auditoryRange, heardShouts);
@@ -783,17 +952,17 @@ public class Bot extends Rectangle implements Runnable {
 			//make sure we are still in the zones we think we are in
 			if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
 				currentZone = World.findZone(getCenterLocation());
-				
+
 				if(currentZone == null) {
 					print("AHH! WE DON'T KNOW WHAT ZONE WE'RE IN!! - " + this.getCenterX() + ", " + getCenterY());
 					print("Just moved: " + movementVector);
 				}
-				
+
 				if(currentZone instanceof Fire) {
 					print("AHHHH!!!! I'M MELTING!!!!");
 				}
-				
-				
+
+
 				//reasses the zones's status if we move to a new zones
 				assessZone();
 			}
