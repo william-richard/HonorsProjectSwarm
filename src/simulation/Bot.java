@@ -557,6 +557,9 @@ public class Bot extends Rectangle implements Runnable {
 			}
 		}
 
+		//don't do anything if we're not going to run into anything.
+		if(visibleObstacles.size() == 0) return intendedPath;
+		
 		//Try to avoid any obstacles we might run into
 		//first, make an Area that is all the obstacles we can see
 		Area obstacleArea = new Area();
@@ -597,8 +600,8 @@ public class Bot extends Rectangle implements Runnable {
 				break;
 			}
 		}
-		if(hasBeenSet) print("I have tried to avoid the obstacle");
-		else print("I did not avoid the obstacle - something is wrong");
+//		if(hasBeenSet) print("I have tried to avoid the obstacle");
+//		else print("I did not avoid the obstacle - something is wrong");
 
 
 		return intendedPath;
@@ -612,7 +615,7 @@ public class Bot extends Rectangle implements Runnable {
 		Area obstacleInViewRange = (Area) obstacleArea.clone();
 		obstacleInViewRange.intersect(viewRangeArea);
 
-		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
+//		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
 
 		List<Line2D> visibleObstacleSegments = new ArrayList<Line2D>();
 
@@ -669,14 +672,14 @@ public class Bot extends Rectangle implements Runnable {
 			visibleObstacleSegments.add(curSeg);
 		}
 
-		for(Line2D l :visibleObstacleSegments) {
-			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-		}
-
-		List<Line2D> obstacleSides = Utilities.getSides(obstacleArea);
-		for(Line2D l : obstacleSides) {
-			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-		}
+//		for(Line2D l :visibleObstacleSegments) {
+//			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+//		}
+//
+//		List<Line2D> obstacleSides = Utilities.getSides(obstacleArea);
+//		for(Line2D l : obstacleSides) {
+//			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+//		}
 
 		//return the list of segments
 		return visibleObstacleSegments;
