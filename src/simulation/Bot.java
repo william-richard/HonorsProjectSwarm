@@ -5,7 +5,6 @@ import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
-import java.awt.geom.Line2D.Double;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -16,6 +15,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import zones.BaseZone;
 import zones.BoundingBox;
+import zones.Building;
 import zones.Fire;
 import zones.SafeZone;
 import zones.Zone;
@@ -557,67 +557,57 @@ public class Bot extends Rectangle implements Runnable {
 			}
 		}
 
-		//see if we're heading into any obstacles and adjust the path
-		for(Zone o : visibleObstacles) {
-			//test if our path goes through the obstacle
-			if(Utilities.lineIntersectsShape(intendedPath, o)) {
-				//				//try to avoid it
-				//				List<Point2D> obstacleDiscontinuityPoints = Utilities.getDiscontinuityPoints(this.getVisibilityRadius(), (Shape)o);
-				//				//head toward the discontinuity point closest to where we were trying to go
-				//				Point2D closestDiscontinuityPoint = null;
-				//				double distToClosestDiscontinuityPoint = java.lang.Double.MAX_VALUE;
-				//				for(Point2D p : obstacleDiscontinuityPoints) {
-				//					double curDist = p.distance(intendedPath.getP2());
-				//					if(curDist < distToClosestDiscontinuityPoint) {
-				//						distToClosestDiscontinuityPoint = curDist;
-				//						closestDiscontinuityPoint = p;
-				//					}
-				//				}
-				//				intendedPath.setLine(intendedPath.getP1(), closestDiscontinuityPoint);
-
-				//try to avoid it
-				//start by finding it's edges that we can see
-				List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(o);
-
-				boolean hasBeenSet = false;
-				//now, check all those edges, and find the one we're heading into
-				for(Line2D curEdge : visibleObstacleEdges) {
-					if(intendedPath.intersectsLine(curEdge)) {
-						//choose to head towards one of the endpoints of the edge
-						//whichever one is closer to our P2
-						if(intendedPath.getP2().distanceSq(curEdge.getP1()) < intendedPath.getP2().distanceSq(curEdge.getP2())) {
-							intendedPath.setLine(intendedPath.getP1(), curEdge.getP1());
-						} else {
-							intendedPath.setLine(intendedPath.getP1(), curEdge.getP2());
-						}
-
-						//also, add a bit of buffer around the obstacle so that we don't get too near to it
-						//to get the buffer, we're going to add a small vector going out from the current edge
-						Vector bufferVect = (new Vector(curEdge)).getPerpendicularVector(intendedPath.getP2(), this.getObstacleBufferRange());
-						//flip it around if it's pointing into the shape
-						if(o.contains(bufferVect.getP2())) {
-							bufferVect = bufferVect.rotate(Math.PI);
-						}
-
-						intendedPath = intendedPath.add(bufferVect);
-
-						hasBeenSet = true;
-						break;
-					}
-				}
-				if(hasBeenSet) print("I have tried to avoid the obstacle");
-				else print("I did not avoid the obstacle - something is wrong");
+		//Try to avoid any obstacles we might run into
+		//first, make an Area that is all the obstacles we can see
+		Area obstacleArea = new Area();
+		for(Zone curObstacle : visibleObstacles) {
+			if(curObstacle instanceof Building) {
+				obstacleArea.add(new Area(((Building) curObstacle).getFloorplan()));
+			} else {
+				obstacleArea.add(new Area(curObstacle));
 			}
 		}
+
+		//start by finding it's edges that we can see
+		List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(obstacleArea);
+
+		boolean hasBeenSet = false;
+		//now, check all those edges, and find the one we're heading into
+		for(Line2D curEdge : visibleObstacleEdges) {
+			if(intendedPath.intersectsLine(curEdge)) {
+				//choose to head towards one of the endpoints of the edge
+				//whichever one is closer to our P2
+				if(intendedPath.getP2().distanceSq(curEdge.getP1()) < intendedPath.getP2().distanceSq(curEdge.getP2())) {
+					intendedPath.setLine(intendedPath.getP1(), curEdge.getP1());
+				} else {
+					intendedPath.setLine(intendedPath.getP1(), curEdge.getP2());
+				}
+
+				//also, add a bit of buffer around the obstacle so that we don't get too near to it
+				//to get the buffer, we're going to add a small vector going out from the current edge
+				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVector(intendedPath.getP2(), this.getObstacleBufferRange());
+				//flip it around if it's pointing into the shape
+				if(obstacleArea.contains(bufferVect.getP2())) {
+					bufferVect = bufferVect.rotate(Math.PI);
+				}
+
+				intendedPath = intendedPath.add(bufferVect);
+
+				hasBeenSet = true;
+				break;
+			}
+		}
+		if(hasBeenSet) print("I have tried to avoid the obstacle");
+		else print("I did not avoid the obstacle - something is wrong");
+
 
 		return intendedPath;
 	}
 
-	private List<Line2D> getVisibleObstacleEdges(Zone obstacle) {
+	private List<Line2D> getVisibleObstacleEdges(Area obstacleArea) {
 		//essentially, we're going to do a radial sweep around our view range
 		//and see where the obstacle starts and stops
 
-		Area obstacleArea = new Area(obstacle);
 		Area viewRangeArea = new Area(this.getVisibibleArea());
 		Area obstacleInViewRange = (Area) obstacleArea.clone();
 		obstacleInViewRange.intersect(viewRangeArea);
@@ -642,7 +632,7 @@ public class Bot extends Rectangle implements Runnable {
 			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
 
 
-//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
+			//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
 
 
 			if( (! currentlyAddingSegment) && curPoint != null) {
@@ -683,9 +673,9 @@ public class Bot extends Rectangle implements Runnable {
 			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
 		}
 
-		List<Line2D> obstacleSides = Utilities.getSides(obstacle);
+		List<Line2D> obstacleSides = Utilities.getSides(obstacleArea);
 		for(Line2D l : obstacleSides) {
-			print("Obstacle has sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
 		}
 
 		//return the list of segments
