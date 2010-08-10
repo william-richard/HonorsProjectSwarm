@@ -589,9 +589,9 @@ public class Bot extends Rectangle implements Runnable {
 				//also, add a bit of buffer around the obstacle so that we don't get too near to it
 				//to get the buffer, we're going to add a small vector going out from the current edge
 				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVector(intendedPath.getP2(), this.getObstacleBufferRange());
-				//flip it around if it's pointing into the shape
-				if(obstacleArea.contains(bufferVect.getP2())) {
-					bufferVect = bufferVect.rotate(Math.PI);
+				//flip it around if there is an intersection with the shape
+				if(bufferVect.getClosestIntersectionToStart(obstacleArea) != null) {
+						bufferVect = bufferVect.rotate(Math.PI);
 				}
 
 				intendedPath = intendedPath.add(bufferVect);

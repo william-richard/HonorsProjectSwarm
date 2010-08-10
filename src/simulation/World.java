@@ -51,7 +51,7 @@ public class World extends JFrame {
 	private static final Color VICTIM_COLOR = Color.red;
 	private static final Color SHOUT_COLOR = new Color(30, 144, 255);
 	private static final Color VISIBLE_RANGE_COLOR = new Color(255,106,106);
-	private static final Color AUDIO_RANGE_COLOR = new Color(255,165,0);
+	private static final Color AUDIO_RANGE_COLOR = new Color(205,102,0);
 	private static final Color BROADCAST_RANGE_COLOR = Color.yellow;
 	private static final Color BOT_LABEL_COLOR = Color.black;
 	private static final Color ZONE_LABEL_COLOR = Color.black;
@@ -100,7 +100,7 @@ public class World extends JFrame {
 		baseZone = homeBase;
 		allZones.add(homeBase);
 
-		Zone building = new Building(100, 100, 50, 50, allZones.size());
+		Zone building = new Building(150, 150, 150, 150, allZones.size());
 		allZones.add(building);
 		
 		
@@ -221,7 +221,7 @@ public class World extends JFrame {
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
 			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
-			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
+//			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 

@@ -250,6 +250,7 @@ public class Utilities {
 		return v1.getAngleBetween(v2);
 	}
 	
+	@Deprecated
 	public static List<Point2D> getDiscontinuityPoints(Shape base, Shape outsider) {
 		//if the outsider is a building, we need to consider it's floorplan
 		if(outsider instanceof Building) {

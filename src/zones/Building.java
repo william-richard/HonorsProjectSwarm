@@ -17,7 +17,7 @@ public class Building extends Zone {
 
 	private static final Color BuildingColor = new Color(58,95,205);
 	
-	private Polygon floorplan;
+	private Area floorplan;
 	
 	public Building(int centerX, int centerY, int width, int height, int _zoneID) {
 		super(new int[0], new int[0], 0, _zoneID, BuildingColor);
@@ -34,29 +34,36 @@ public class Building extends Zone {
 		
 		
 		//now, add the points that make up the floorplan
-		floorplan = new Polygon();
+		floorplan = new Area();
 		//walls are on average about 3 1/2 to 9 inches thick
 		//we can't get that kind of resolution, so walls will be 1 pixel thick
 		//doors are going to be at 1/4 and 3/4 of the width, on edge
-		floorplan.addPoint(cornerX + width, cornerY);
-		floorplan.addPoint(cornerX+width, cornerY + height);
-		floorplan.addPoint(cornerX, cornerY+height);
-		floorplan.addPoint(cornerX, cornerY);
-		floorplan.addPoint(cornerX + (int)(width/4.0), 			cornerY);
-		floorplan.addPoint(cornerX + (int)(width/4.0), 			cornerY + 1);
-		floorplan.addPoint(cornerX + 1, 							cornerY + 1);
-		floorplan.addPoint(cornerX + 1, 							cornerY + height - 1);
-		floorplan.addPoint(cornerX + (int)(width / 2.0), 			cornerY + height - 1);
-		floorplan.addPoint(cornerX + (int)(width / 2.0), 			cornerY + height);
-		floorplan.addPoint(cornerX + (int)(width * 3.0 / 4.0), 	cornerY + height);
-		floorplan.addPoint(cornerX + (int)(width * 3.0 / 4.0), 	cornerY + height - 1);
-		floorplan.addPoint(cornerX + width - 1, 					cornerY + height - 1);
-		floorplan.addPoint(cornerX + width - 1, 					cornerY + 1);
-		floorplan.addPoint(cornerX + (int)(width / 2.0), 			cornerY + 1);
-		floorplan.addPoint(cornerX + (int)(width / 2.0),			cornerY);
+		Polygon floorplanPart1 = new Polygon();
+		floorplanPart1.addPoint(cornerX,							cornerY);
+		floorplanPart1.addPoint((int)(cornerX + (width/4.0)),		cornerY);
+		floorplanPart1.addPoint((int)(cornerX + (width/4.0)),	 	cornerY + 1);
+		floorplanPart1.addPoint(cornerX + 1,						cornerY + 1);
+		floorplanPart1.addPoint(cornerX + 1,						cornerY + height -1);
+		floorplanPart1.addPoint((int)(cornerX + (width/2.0)),		cornerY + height - 1);
+		floorplanPart1.addPoint((int)(cornerX + (width/2.0)),		cornerY + height);
+		floorplanPart1.addPoint(cornerX, 							cornerY + height);
+		
+		Polygon floorplanPart2 = new Polygon();
+		floorplanPart2.addPoint(cornerX + width, 					cornerY + height);
+		floorplanPart2.addPoint((int)(cornerX + width * 3.0/4.0),	cornerY + height);
+		floorplanPart2.addPoint((int)(cornerX + width * 3.0/4.0),	cornerY + height - 1);
+		floorplanPart2.addPoint(cornerX + width - 1,				cornerY + height - 1);
+		floorplanPart2.addPoint(cornerX + width - 1,				cornerY + 1);
+		floorplanPart2.addPoint((int)(cornerX + (width/2.0)),		cornerY + 1);
+		floorplanPart2.addPoint((int)(cornerX + (width/2.0)),		cornerY);
+		floorplanPart2.addPoint(cornerX + width,					cornerY);
+		
+		floorplan.add(new Area(floorplanPart1));
+		floorplan.add(new Area(floorplanPart2));
+		
 	}
 	
-	public Polygon getFloorplan() {
+	public Area getFloorplan() {
 		return floorplan;
 	}
 	
@@ -114,13 +121,18 @@ public class Building extends Zone {
 		//so we need to consider 2 radii
 		//and take from one or the other based on where the walls are.
 		//TODO: Need to make this better as well, just like the Shouts need to be improved
-		Ellipse2D.Double audibleRadiusWithoutWall = new Ellipse2D.Double(originator.getX() - Bot.DEFAULT_AUDITORY_RADIUS, originator.getY() - Bot.DEFAULT_AUDITORY_RADIUS, Bot.DEFAULT_AUDITORY_RADIUS*2, Bot.DEFAULT_AUDITORY_RADIUS*2);
-		Ellipse2D.Double audibleRadiusThroughWall = new Ellipse2D.Double(originator.getX() - Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL, originator.getY() - Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL, Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL*2, Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL*2);
+		double withoutWallCornerX = originator.getX() - Bot.DEFAULT_AUDITORY_RADIUS;
+		double withoutWallCornerY = originator.getY() - Bot.DEFAULT_AUDITORY_RADIUS;
+		Ellipse2D.Double audibleRadiusWithoutWall = new Ellipse2D.Double(withoutWallCornerX, withoutWallCornerY, Bot.DEFAULT_AUDITORY_RADIUS*2, Bot.DEFAULT_AUDITORY_RADIUS*2);
 		
-		Area indoorAudibleRadius = new Area(audibleRadiusWithoutWall);
+		double throughWallCornerX = originator.getX() - Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL;
+		double throughWallCornerY = originator.getY() - Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL;
+		Ellipse2D.Double audibleRadiusThroughWall = new Ellipse2D.Double(throughWallCornerX, throughWallCornerY, Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL*2, Bot.DEFAULT_AUDITORY_RADIS_THROUGH_WALL*2);
+		
+		Area indoorAudibleRadius = new Area(audibleRadiusThroughWall);
 		indoorAudibleRadius.intersect(new Area(this));
 		
-		Area outdoorAudibleRadius = new Area(audibleRadiusThroughWall);
+		Area outdoorAudibleRadius = new Area(audibleRadiusWithoutWall);
 		outdoorAudibleRadius.subtract(new Area(this));
 		
 		Area overallRadius = new Area();
