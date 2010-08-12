@@ -155,14 +155,14 @@ public class Vector extends Line2D{
 	}
 
 	public Vector reverse() {
-		return this.rescaleRatio(-1.0);
+		return this.rotate(Math.PI);
 	}
 
 	public Vector rotate(double radians) {
-		/* want to rotate P2 about P1
+		/* want to rotate P2 about P1 clockwise
 		 * so, we want to use newX = X*cos(angle) - Y*sin(angle)
 		 * and newY = X*sin(angle) + Y*cos(angle)
-		 * but we need first need to traslate so that P1 is the orgin, then do the calculation
+		 * but we need first need to translate so that P1 is the origin, then do the calculation
 		 * and then translate back
 		 */
 		Point2D translatedP2 = new Point2D.Double(this.getX2() - this.getX1(), this.getY2() - this.getY1());
@@ -170,6 +170,10 @@ public class Vector extends Line2D{
 		double rotatedTranslatedY = translatedP2.getX()*Math.sin(radians) + translatedP2.getY()*Math.cos(radians);
 		Point2D rotatedP2 = new Point2D.Double(rotatedTranslatedX + this.getX1(), rotatedTranslatedY + this.getY1());
 		return new Vector(this.getP1(), rotatedP2);
+	}
+	
+	public Vector rotateDegrees(double degrees) {
+		return this.rotate(degrees * Math.PI / 180.0);
 	}
 
 	/*get the scalar projection of this on other
@@ -187,6 +191,18 @@ public class Vector extends Line2D{
 	public Vector getPerpendicularVector(Point2D startPoint, double magnitude) {
 		Vector perpVect = this.moveTo(startPoint);
 		perpVect = perpVect.rotate(Math.PI/2.0);
+		return perpVect.rescale(magnitude);
+	}
+	
+	public Vector getPerpendicularVectorPointedTowards(Point2D startPoint, double magnitude, Point2D directionPoint) {
+		Vector perpVect = this.moveTo(startPoint);
+		if(perpVect.relativeCCW(directionPoint) > 0) {
+			//we need to turn counter clockwise
+			perpVect = perpVect.rotate(-1 * Math.PI / 2.0);
+		} else {
+			//we'll rotate clockwise
+			perpVect = perpVect.rotate(Math.PI / 2.0);
+		}
 		return perpVect.rescale(magnitude);
 	}
 

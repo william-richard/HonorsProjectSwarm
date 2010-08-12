@@ -151,7 +151,7 @@ public class Utilities {
 	
 	public static List<Line2D> getSides(Shape s) {
 		//get s's PathIterator
-		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .1);
+		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .01);
 		
 		//now, go through the iterator and extract the sides
 		double[] curCoords = new double[6];

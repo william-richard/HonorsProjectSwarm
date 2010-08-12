@@ -41,7 +41,7 @@ public class World extends JFrame {
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean DRAW_BOT_RADII = true;
-	
+
 	private static final boolean WORLD_DEBUG = true;
 
 	private static final int ZONE_COMPLEXITY = 20;
@@ -74,7 +74,7 @@ public class World extends JFrame {
 	public ListIterator<Victim> allVictimSnapshot;
 
 	public static CopyOnWriteArrayList<Shape> debugShapesToDraw;
-	
+
 	private Zone baseZone;
 	private Timer repaintTimer;
 	private boolean isStopped;
@@ -100,15 +100,15 @@ public class World extends JFrame {
 		baseZone = homeBase;
 		allZones.add(homeBase);
 
-		Zone building = new Building(150, 150, 150, 150, allZones.size());
-		allZones.add(building);
-		
-		
-//		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
-//		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
-//
-//		Zone fireZone = new Fire(xPointsFire, yPointsFire, 4, allZones.size());
-//		allZones.add(fireZone);
+		//		Zone building = new Building(150, 150, 150, 150, allZones.size());
+		//		allZones.add(building);
+
+
+		//		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
+		//		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
+		//
+		//		Zone fireZone = new Fire(xPointsFire, yPointsFire, 4, allZones.size());
+		//		allZones.add(fireZone);
 
 		fillInZones();
 
@@ -127,12 +127,12 @@ public class World extends JFrame {
 		//only 2 for now, so we'll hard code them	
 		allVictims = new CopyOnWriteArrayList<Victim>();
 
-		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
-		//		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
+		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		debugShapesToDraw = new CopyOnWriteArrayList<Shape>();
-		
-		
+
+
 		isStopped = false;
 
 		setVisible(true);
@@ -221,7 +221,7 @@ public class World extends JFrame {
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
 			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
-//			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
+			//			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
@@ -289,8 +289,8 @@ public class World extends JFrame {
 		for(Zone z : allZones) {
 			g2d.setColor(z.getColor());
 			g2d.fill(z);
-//			g2d.setColor(ZONE_LABEL_COLOR);
-//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+			//			g2d.setColor(ZONE_LABEL_COLOR);
+			//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 			if(z instanceof Building) {
@@ -362,7 +362,7 @@ public class World extends JFrame {
 			}
 
 		}
-		
+
 		if(WORLD_DEBUG) {
 			//draw the shapes in the debug arraylist
 			g2d.setColor(Color.white);

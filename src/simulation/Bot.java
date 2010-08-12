@@ -37,13 +37,13 @@ public class Bot extends Rectangle implements Runnable {
 
 	public static final double DEFAULT_OUTDOOR_BROADCAST_RADIUS = 95;
 	public static final double DEFAULT_INDOOR_BROADCAST_RADIUS = 32;
-	public static final double DEFALUT_VISIBILITY_RADIUS = 10;
+	public static final double DEFALUT_VISIBILITY_RADIUS = 15;
 	public static final double DEFAULT_AUDITORY_RADIUS = 50;
 	public static final double DEFAULT_AUDITORY_RADIS_THROUGH_WALL = 20;
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 8;
 
-	public static final double RADIAL_SWEEP_INCREMENT_DEGREES = 2.0;
+	public static final double RADIAL_SWEEP_INCREMENT_DEGREES = 1.0;
 	public static final double RADIAL_SWEEP_INCREMENT_RADIANS = RADIAL_SWEEP_INCREMENT_DEGREES * Math.PI / 180.0;
 
 
@@ -152,7 +152,7 @@ public class Bot extends Rectangle implements Runnable {
 	}
 
 	public double getObstacleBufferRange() {
-		return DEFALUT_VISIBILITY_RADIUS / 8.0;
+		return DEFALUT_VISIBILITY_RADIUS / 4.0;
 	}
 
 
@@ -559,7 +559,7 @@ public class Bot extends Rectangle implements Runnable {
 
 		//don't do anything if we're not going to run into anything.
 		if(visibleObstacles.size() == 0) return intendedPath;
-		
+
 		//Try to avoid any obstacles we might run into
 		//first, make an Area that is all the obstacles we can see
 		Area obstacleArea = new Area();
@@ -574,7 +574,8 @@ public class Bot extends Rectangle implements Runnable {
 		//start by finding it's edges that we can see
 		List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(obstacleArea);
 
-		boolean hasBeenSet = false;
+		World.debugShapesToDraw.addAll(visibleObstacleEdges);
+
 		//now, check all those edges, and find the one we're heading into
 		for(Line2D curEdge : visibleObstacleEdges) {
 			if(intendedPath.intersectsLine(curEdge)) {
@@ -588,21 +589,13 @@ public class Bot extends Rectangle implements Runnable {
 
 				//also, add a bit of buffer around the obstacle so that we don't get too near to it
 				//to get the buffer, we're going to add a small vector going out from the current edge
-				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVector(intendedPath.getP2(), this.getObstacleBufferRange());
-				//flip it around if there is an intersection with the shape
-				if(bufferVect.getClosestIntersectionToStart(obstacleArea) != null) {
-						bufferVect = bufferVect.rotate(Math.PI);
-				}
+				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVectorPointedTowards(intendedPath.getP2(), this.getObstacleBufferRange(), this.getCenterLocation());
 
 				intendedPath = intendedPath.add(bufferVect);
 
-				hasBeenSet = true;
 				break;
 			}
 		}
-//		if(hasBeenSet) print("I have tried to avoid the obstacle");
-//		else print("I did not avoid the obstacle - something is wrong");
-
 
 		return intendedPath;
 	}
@@ -615,7 +608,9 @@ public class Bot extends Rectangle implements Runnable {
 		Area obstacleInViewRange = (Area) obstacleArea.clone();
 		obstacleInViewRange.intersect(viewRangeArea);
 
-//		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
+		//		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
+
+		//		World.debugShapesToDraw.add(obstacleInViewRange);
 
 		List<Line2D> visibleObstacleSegments = new ArrayList<Line2D>();
 
@@ -631,11 +626,10 @@ public class Bot extends Rectangle implements Runnable {
 		Point2D prevPoint = null;
 
 		for(double curRad = 0.0; curRad < 2*Math.PI; curRad += RADIAL_SWEEP_INCREMENT_RADIANS) {
-			//			curPoint = getVisiblePointOnShape(curRad, obstacle);
 			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
 
 
-			//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
+//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
 
 
 			if( (! currentlyAddingSegment) && curPoint != null) {
@@ -672,14 +666,14 @@ public class Bot extends Rectangle implements Runnable {
 			visibleObstacleSegments.add(curSeg);
 		}
 
-//		for(Line2D l :visibleObstacleSegments) {
-//			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-//		}
-//
-//		List<Line2D> obstacleSides = Utilities.getSides(obstacleArea);
-//		for(Line2D l : obstacleSides) {
-//			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-//		}
+		for(Line2D l :visibleObstacleSegments) {
+			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+		}
+
+		List<Line2D> obstacleSides = Utilities.getSides(obstacleArea);
+		for(Line2D l : obstacleSides) {
+			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+		}
 
 		//return the list of segments
 		return visibleObstacleSegments;
