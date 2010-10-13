@@ -9,12 +9,10 @@ import java.awt.Stroke;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 import javax.swing.JFrame;
 
@@ -66,17 +64,15 @@ public class World extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	/** VARIABLES */
-	public static CopyOnWriteArrayList<Zone> allZones; //The zones in the world - should be non-overlapping
-	public static CopyOnWriteArrayList<Bot> allBots; //List of the Bots, so we can do stuff with them
-	public static CopyOnWriteArrayList<Victim> allVictims; //The Victims
+	public static List<Zone> allZones; //The zones in the world - should be non-overlapping
+	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
+	public static List<Victim> allVictims; //The Victims
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Victim> allVictimSnapshot;
 
-	public static CopyOnWriteArrayList<Shape> debugShapesToDraw;
+	public static List<Shape> debugShapesToDraw;
 
 	private Zone baseZone;
-	private Timer repaintTimer;
-	private boolean isStopped;
 
 
 	public World() {
@@ -89,7 +85,7 @@ public class World extends JFrame {
 		int numVic = 2;
 
 		//initialize the zones
-		allZones = new CopyOnWriteArrayList<Zone>();
+		allZones = new ArrayList<Zone>();
 
 		int[] xPointsBase = {225, 275, 275, 225};
 		int[] yPointsBase = {225, 225, 275, 275};
@@ -114,7 +110,7 @@ public class World extends JFrame {
 		checkZoneSanity();
 
 		//initialize the bots
-		allBots = new CopyOnWriteArrayList<Bot>();
+		allBots = new ArrayList<Bot>();
 
 		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
 
@@ -124,15 +120,12 @@ public class World extends JFrame {
 
 		//initialize the victims
 		//only 2 for now, so we'll hard code them	
-		allVictims = new CopyOnWriteArrayList<Victim>();
+		allVictims = new ArrayList<Victim>();
 
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
 		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
-		debugShapesToDraw = new CopyOnWriteArrayList<Shape>();
-
-
-		isStopped = false;
+		debugShapesToDraw = new ArrayList<Shape>();
 
 		setVisible(true);
 	}
@@ -247,26 +240,25 @@ public class World extends JFrame {
 	}
 
 
-	public synchronized void go() {
-		//start all the threads
-		for(Bot b : allBots){
-			Thread curThread = new Thread(b);
-			curThread.start();
-		}
+	public void go(int numTimestepsToRun) {
 
-		for(Victim v : allVictims) {
-			Thread curThread = new Thread(v);
-			curThread.start();
-		}
-
-
-		//start a timer to repaint
-		repaintTimer = new Timer("Repaint timer");
-		repaintTimer.schedule(new TimerTask() {
-			public void run() {
-				repaint();
+		for(int curTimestep = 0; curTimestep < numTimestepsToRun; curTimestep++) {
+			System.out.println("On timestep " + curTimestep);
+			//do all the victims
+			for(Victim v : allVictims) {
+				v.doOneTimestep();
 			}
-		}, 0, 200);
+			System.out.println("Done with victims");
+			//do all the bots
+			for(Bot b : allBots) {
+				b.doOneTimestep();
+			}
+			System.out.println("Done with bots");
+			//repaint the scenario
+			repaint();
+			System.out.println("Done with repaint");
+		}
+
 	}
 
 	public void paint(Graphics g) {		
@@ -393,29 +385,6 @@ public class World extends JFrame {
 		return curAvg;
 	}
 
-	public void stopAndCleanup() {
-
-		//stop all the running bots
-		for(Bot b : allBots) {
-			b.stopBot();
-		}
-
-		//stop all the running victims
-		for(Victim v : allVictims) {
-			v.stopVictim();
-		}
-
-		//stop repainting the scene
-		repaintTimer.cancel();
-
-		isStopped = true;
-	}
-
-	public boolean isStopped() {
-		return isStopped;
-	}
-
-
 	//figures out which zones the passed point is in, and returns it.
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {
@@ -440,7 +409,7 @@ public class World extends JFrame {
 
 		//make a new World
 		World w = new World();
-		w.go();
+		w.go(100);
 	}
 
 }

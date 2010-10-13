@@ -21,7 +21,7 @@ import zones.SafeZone;
 import zones.Zone;
 
 
-public class Bot extends Rectangle implements Runnable {
+public class Bot extends Rectangle {
 
 	private static final long serialVersionUID = 1L;
 
@@ -81,7 +81,6 @@ public class Bot extends Rectangle implements Runnable {
 
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
 	private String messageBuffer; //keep a buffer of messages from other robots
-	private boolean keepGoing; //allows us to start or stop the robots
 	private int botID;
 	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
@@ -122,12 +121,12 @@ public class Bot extends Rectangle implements Runnable {
 
 		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 
-		
+
 		pathMemory = new ArrayList<BotPathMemoryPoint>();
 
 		//for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
-		
+
 		//find out what zones we start in, and try to determine how safe it is
 		updateZoneInfo();
 	}
@@ -157,7 +156,7 @@ public class Bot extends Rectangle implements Runnable {
 	public ListIterator<Shout> getShoutIterator() {
 		return heardShouts.listIterator();
 	}
-	
+
 	public ListIterator<BotPathMemoryPoint> getPathMemoryIterator() {
 		return pathMemory.listIterator();
 	}
@@ -640,7 +639,7 @@ public class Bot extends Rectangle implements Runnable {
 			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
 
 
-//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
+			//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
 
 
 			if( (! currentlyAddingSegment) && curPoint != null) {
@@ -864,7 +863,7 @@ public class Bot extends Rectangle implements Runnable {
 
 		//reasses the zones's status if we move to a new zones
 		assessZone();
-		
+
 		//store the transition information
 		//first, need to find the point of transition that we passed
 		//for simplicity, assume that the transition took place halfway through our last step
@@ -879,8 +878,8 @@ public class Bot extends Rectangle implements Runnable {
 		//store the point
 		pathMemory.add(newTransitionMemory);
 	}
-	
-	
+
+
 	private void assessZone() {
 		//with some probability, the bot will asses the zones correctly
 		if(numGen.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
@@ -947,53 +946,30 @@ public class Bot extends Rectangle implements Runnable {
 
 		}
 	}
-	
-//	private List<BotPathMemoryPoint> getPathToVictim(String victimPathMessage) {
-//		
-//	}
 
-	public void startBot() {
-		keepGoing = true;
-	}
+	//	private List<BotPathMemoryPoint> getPathToVictim(String victimPathMessage) {
+	//		
+	//	}
 
-	public void stopBot() {
-		keepGoing = false;
-	}
+	public void doOneTimestep() {
+		//first, read any messages that have come in, and take care of them
+		readMessages();
 
+		//now try to move, based on the move rules.
+		move();
 
-	public synchronized void run() {
+		//now that we have moved, find out if we can see any victims
+		findAndAssesVictim();
 
-		keepGoing = true;
+		//now, just some housekeeping
+		//we shouldn't hang onto shouts for too long
+		heardShouts.clear();
+		//also don't want to hang on to bot info for too long
+		otherBotInfo.clear();
 
-		//first things first, make one move randomly, to spread out a bit
-		moveRandomly();
-
-		//first, see if we should keep going
-		while(keepGoing) {
-
-			//first, read any messages that have come in, and take care of them
-			readMessages();
-
-			//now try to move, based on the move rules.
-			move();
-
-			//now that we have moved, find out if we can see any victims
-			findAndAssesVictim();
-
-			//now, just some housekeeping
-			//we shouldn't hang onto shouts for too long
-			heardShouts.clear();
-			//also don't want to hang on to bot info for too long
-			otherBotInfo.clear();
-
-			//make sure we are still in the zones we think we are in
-			if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
-				updateZoneInfo();
-			}
-
-			try {
-				this.wait(1000);
-			} catch(InterruptedException e) {}
+		//make sure we are still in the zones we think we are in
+		if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
+			updateZoneInfo();
 		}
 	}
 
