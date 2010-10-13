@@ -16,6 +16,7 @@ import java.util.Random;
 
 import javax.swing.JFrame;
 
+import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.Building;

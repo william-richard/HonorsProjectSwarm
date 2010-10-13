@@ -3,6 +3,8 @@ import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.util.List;
 
+import util.Utilities;
+
 
 public class VictimPath extends Path2D.Double {
 	

@@ -6,8 +6,8 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import simulation.Utilities;
-import simulation.Vector;
+import util.Utilities;
+import util.Vector;
 
 public class BoundingBox extends Rectangle2D.Double {
 	

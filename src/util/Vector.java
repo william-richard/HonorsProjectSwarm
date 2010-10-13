@@ -1,4 +1,4 @@
-package simulation;
+package util;
 import java.awt.Shape;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;

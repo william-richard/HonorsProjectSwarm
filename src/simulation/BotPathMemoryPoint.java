@@ -2,6 +2,8 @@ package simulation;
 
 import java.awt.geom.Point2D;
 
+import util.Vector;
+
 public class BotPathMemoryPoint extends Point2D {
 
 	double x;

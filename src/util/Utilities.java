@@ -1,4 +1,4 @@
-package simulation;
+package util;
 
 import java.awt.Polygon;
 import java.awt.Shape;
