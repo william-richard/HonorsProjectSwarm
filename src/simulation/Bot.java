@@ -33,7 +33,7 @@ public class Bot extends Rectangle implements Runnable {
 	private final double HEAR_VICTIM_PROB = .75;
 	private final double MOVE_RANDOMLY_PROB = .25;
 	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
-	private final double CORRECT_ZONE_ASSESMENT_PROB = .5; //the probability that the bot will asses the zones correctly
+	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; //the probability that the bot will asses the zones correctly
 
 	public static final double DEFAULT_OUTDOOR_BROADCAST_RADIUS = 95;
 	public static final double DEFAULT_INDOOR_BROADCAST_RADIUS = 32;
@@ -49,6 +49,7 @@ public class Bot extends Rectangle implements Runnable {
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
+	private final int ZONE_BASE = 3;
 
 	private final double DANGER_MULTIPLIER = 2;
 
@@ -75,6 +76,7 @@ public class Bot extends Rectangle implements Runnable {
 	private final Random numGen = new Random();
 	private Vector movementVector;
 	private BoundingBox boundingBox;
+	private List<BotPathMemoryPoint> pathMemory;
 
 
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
@@ -118,11 +120,16 @@ public class Bot extends Rectangle implements Runnable {
 
 		boundingBox = _bounds;
 
-		//find out what zones we start in, and try to determine how safe it is
-		currentZone = World.findZone(getCenterLocation());
-		assessZone();
-
 		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
+
+		
+		pathMemory = new ArrayList<BotPathMemoryPoint>();
+
+		//for now, assume we're starting in a base zone
+		zoneAssesment = ZONE_BASE;
+		
+		//find out what zones we start in, and try to determine how safe it is
+		updateZoneInfo();
 	}
 
 	/***************************************************************************
@@ -149,6 +156,10 @@ public class Bot extends Rectangle implements Runnable {
 
 	public ListIterator<Shout> getShoutIterator() {
 		return heardShouts.listIterator();
+	}
+	
+	public ListIterator<BotPathMemoryPoint> getPathMemoryIterator() {
+		return pathMemory.listIterator();
 	}
 
 	public double getObstacleBufferRange() {
@@ -837,11 +848,46 @@ public class Bot extends Rectangle implements Runnable {
 		return audibleShouts;	
 	}
 
+	private void updateZoneInfo() {
+		currentZone = World.findZone(getCenterLocation());
+
+		if(currentZone == null) {
+			print("AHH! WE DON'T KNOW WHAT ZONE WE'RE IN!! - " + this.getCenterX() + ", " + getCenterY());
+			print("Just moved: " + movementVector);
+		}
+
+		if(currentZone instanceof Fire) {
+			print("AHHHH!!!! I'M MELTING!!!!");
+		}
+
+		int formorZoneAssessment = this.zoneAssesment;
+
+		//reasses the zones's status if we move to a new zones
+		assessZone();
+		
+		//store the transition information
+		//first, need to find the point of transition that we passed
+		//for simplicity, assume that the transition took place halfway through our last step
+		//also, this will always work in all cases
+		Point2D transitionPoint = getMovementVector().getMidpoint();
+		//make our from vector by making a vector from the transition point to P1 of the movement vector
+		Vector fromVector = new Vector(transitionPoint, getMovementVector().getP1());
+		//make the to vector in a similar way
+		Vector toVector = new Vector(transitionPoint, getMovementVector().getP2());
+		//make the memory point
+		BotPathMemoryPoint newTransitionMemory = new BotPathMemoryPoint(transitionPoint, fromVector, toVector, formorZoneAssessment, zoneAssesment);
+		//store the point
+		pathMemory.add(newTransitionMemory);
+	}
+	
+	
 	private void assessZone() {
 		//with some probability, the bot will asses the zones correctly
 		if(numGen.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
 			if(currentZone instanceof SafeZone) {
 				zoneAssesment = ZONE_SAFE;
+			} else if(currentZone instanceof BaseZone) {
+				zoneAssesment = ZONE_BASE;
 			} else {
 				zoneAssesment = ZONE_DANGEROUS;
 			}
@@ -901,6 +947,10 @@ public class Bot extends Rectangle implements Runnable {
 
 		}
 	}
+	
+//	private List<BotPathMemoryPoint> getPathToVictim(String victimPathMessage) {
+//		
+//	}
 
 	public void startBot() {
 		keepGoing = true;
@@ -938,20 +988,7 @@ public class Bot extends Rectangle implements Runnable {
 
 			//make sure we are still in the zones we think we are in
 			if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
-				currentZone = World.findZone(getCenterLocation());
-
-				if(currentZone == null) {
-					print("AHH! WE DON'T KNOW WHAT ZONE WE'RE IN!! - " + this.getCenterX() + ", " + getCenterY());
-					print("Just moved: " + movementVector);
-				}
-
-				if(currentZone instanceof Fire) {
-					print("AHHHH!!!! I'M MELTING!!!!");
-				}
-
-
-				//reasses the zones's status if we move to a new zones
-				assessZone();
+				updateZoneInfo();
 			}
 
 			try {

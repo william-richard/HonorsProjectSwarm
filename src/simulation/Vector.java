@@ -246,6 +246,16 @@ public class Vector extends Line2D{
 	public double getAngleBetween(Vector other) {
 		return Math.acos(this.dot(other) / (this.getMagnitude() * other.getMagnitude()));
 	}
+	
+	public Point2D getMidpoint() {
+		//get the mid x value
+		double xMid = (getX1() + getX2()) / 2.0;
+		//get the mid y value
+		double yMid = (getY1() + getY2()) /2.0;
+		//return the point
+		return new Point2D.Double(xMid, yMid);
+		
+	}
 
 	public String toString() {
 		return "(" + this.getX1() + ", " + this.getY1() + ") (" + this.getX2() + ", " + this.getY2() + ")  " + this.getMagnitude();

@@ -19,14 +19,13 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import javax.swing.JFrame;
 
 import zones.BaseZone;
+import zones.BoundingBox;
 import zones.Building;
 import zones.DangerDebris;
 import zones.DangerZone;
-import zones.Fire;
 import zones.SafeDebris;
 import zones.SafeZone;
 import zones.Zone;
-import zones.BoundingBox;
 
 
 public class World extends JFrame {
@@ -86,7 +85,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 10;
+		int numBots = 50;
 		int numVic = 2;
 
 		//initialize the zones
@@ -309,7 +308,7 @@ public class World extends JFrame {
 		while(shoutIterator.hasNext()) {
 			g2d.draw(shoutIterator.next());
 		}
-
+		
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
