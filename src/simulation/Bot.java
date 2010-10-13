@@ -33,7 +33,6 @@ public class Bot extends Rectangle {
 	private final int DIMENSION = 6;
 	private final double VISUAL_ID_VICTIM_PROB = .70;
 	private final double HEAR_VICTIM_PROB = .75;
-	private final double MOVE_RANDOMLY_PROB = .25;
 	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; //the probability that the bot will asses the zones correctly
 
@@ -701,28 +700,6 @@ public class Bot extends Rectangle {
 		testRay = testRay.rescale(boundingBox.getDiagonalLength());
 		//now, get the intersection point closest to P1 along the vector
 		return testRay.getClosestIntersectionToStart(s);
-	}
-
-	@Deprecated
-	private Point2D getVisiblePointOnShape(double viewAngle, Shape lookingAt) {
-		//first, make a vector along the view angle
-		//to do this, make a vector going along 0 degrees and then rotate it to the view angle
-		Vector viewVect = new Vector(this.getCenterX(), this.getCenterY(), this.getCenterX() + 1, this.getCenterY());
-		//rotate it
-		viewVect = viewVect.rotate(viewAngle);
-		//now, need to scale it such that it goes just to the edge of the visible range
-		//start by scaling it really far, then finding the really long vector's intersection with the view radius
-		//and then rescaling it to end at the intersection point
-		viewVect = viewVect.rescale(boundingBox.getDiagonalLength());
-		Point2D intersectionWithVisibleRange = viewVect.getClosestIntersectionToStart(this.getVisibibleArea());
-		//it is possible no such intersection exists, in which case return null
-		if(intersectionWithVisibleRange == null)  return null;
-
-		viewVect = new Vector(viewVect.getP1(), intersectionWithVisibleRange);
-
-		//now, we have a vector that goes from us to the edge of our visible range at the angle viewAngle
-		//see if there is an intersection point along that vector with the shape we're looking at
-		return viewVect.getClosestIntersectionToStart(lookingAt);
 	}
 
 	@SuppressWarnings("unchecked")
