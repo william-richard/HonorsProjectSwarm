@@ -241,7 +241,12 @@ public class World extends JFrame {
 
 
 	public void go(int numTimestepsToRun) {
-
+		//First, need to randomly distribute the bots a bit
+		for(Bot b : allBots) {
+			b.moveRandomly();
+		}
+		
+		//then, start with timesteps
 		for(int curTimestep = 0; curTimestep < numTimestepsToRun; curTimestep++) {
 			System.out.println("On timestep " + curTimestep);
 			//do all the victims

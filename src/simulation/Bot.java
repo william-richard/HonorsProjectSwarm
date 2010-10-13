@@ -485,7 +485,7 @@ public class Bot extends Rectangle {
 
 	}
 
-	private void moveRandomly() {
+	protected void moveRandomly() {
 		int xChange, yChange;
 		//50-50 chance to go left or right
 		if(numGen.nextDouble() < .5) {
