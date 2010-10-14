@@ -7,7 +7,7 @@ import java.awt.geom.Point2D;
 
 import simulation.Bot;
 import simulation.Shout;
-import simulation.Victim;
+import simulation.Survivor;
 
 
 public class SafeZone extends Zone {
@@ -47,7 +47,7 @@ public class SafeZone extends Zone {
 	}
 
 	@Override
-	public Shout getShout(Victim shouter) {
+	public Shout getShout(Survivor shouter) {
 		//for now, the shout is a circle of the default radius
 
 		//calculate it's corner

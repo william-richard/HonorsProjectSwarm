@@ -6,25 +6,25 @@ import java.util.List;
 import util.Utilities;
 
 
-public class VictimPath extends Path2D.Double {
+public class SurvivorPath extends Path2D.Double {
 	
 	private static final long serialVersionUID = 1L;
 	
 	private double pathLength;
 	private double pathRating;
 	private double avgRating;
-	private Victim vic;
+	private Survivor sur;
 	
-	public VictimPath(Victim _vic, double _pathLength, double _pathRating, double _avgRating, List<BotInfo> bots, Point2D endPoint) {
+	public SurvivorPath(Survivor _sur, double _pathLength, double _pathRating, double _avgRating, List<BotInfo> bots, Point2D endPoint) {
 		super();
-		vic = _vic;
+		sur = _sur;
 		pathLength = _pathLength;
 		pathRating = _pathRating;
 		avgRating = _avgRating;
 
 		//now, set up the path
 		//start at the victim
-		this.moveTo(vic.getCenterX(), vic.getCenterY());
+		this.moveTo(sur.getCenterX(), sur.getCenterY());
 		//now add all the bots
 		for(BotInfo bi: bots) {
 			this.lineTo(bi.getCenterX(), bi.getCenterY());
@@ -46,13 +46,13 @@ public class VictimPath extends Path2D.Double {
 		return avgRating;
 	}
 
-	public Victim getVic() {
-		return vic;
+	public Survivor getSur() {
+		return sur;
 	}
 	
 	@Override
 	public String toString() {
-		String retStr = "Vic loc: " + vic.getCenterX() + ", " + vic.getCenterY() + "\t" + "Length = "+ pathLength + "\tRating= " + pathRating +"\tAvgRating = " + avgRating + "\t Points: ";
+		String retStr = "Vic loc: " + sur.getCenterX() + ", " + sur.getCenterY() + "\t" + "Length = "+ pathLength + "\tRating= " + pathRating +"\tAvgRating = " + avgRating + "\t Points: ";
 		
 		List<Point2D> verticies = Utilities.getVerticies(this);
 		

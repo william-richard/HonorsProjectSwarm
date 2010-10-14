@@ -6,7 +6,7 @@ import java.awt.Shape;
 import java.awt.geom.Point2D;
 
 import simulation.Shout;
-import simulation.Victim;
+import simulation.Survivor;
 
 public abstract class Zone extends Polygon {
 
@@ -58,7 +58,7 @@ public abstract class Zone extends Polygon {
 	public abstract Shape getBroadcastRange(Point2D originator);
 	public abstract Shape getVisibilityRange(Point2D originator);
 	public abstract Shape getAudibleRange(Point2D originator);
-	public abstract Shout getShout(Victim shouter);
+	public abstract Shout getShout(Survivor shouter);
 	public abstract Shape getFoundRange(Point2D originator);
 	public abstract double getBotMaxVelocity();
 	public abstract boolean isObstacle();

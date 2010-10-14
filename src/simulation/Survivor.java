@@ -5,7 +5,7 @@ import java.awt.geom.Rectangle2D;
 import zones.Zone;
 
 
-public class Victim extends Rectangle2D.Double {
+public class Survivor extends Rectangle2D.Double {
 
 	private static final long serialVersionUID = 1L;
 	/***************************************************************************
@@ -24,7 +24,7 @@ public class Victim extends Rectangle2D.Double {
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
-	public Victim(double centerX, double centerY, double _damage) {
+	public Survivor(double centerX, double centerY, double _damage) {
 		super();
 
 		//determine where the top left corner of the Victim is - that's what Rectangle2D.Double wants
@@ -81,9 +81,9 @@ public class Victim extends Rectangle2D.Double {
 			return true;
 		if (!super.equals(obj))
 			return false;
-		if (!(obj instanceof Victim))
+		if (!(obj instanceof Survivor))
 			return false;
-		Victim other = (Victim) obj;
+		Survivor other = (Survivor) obj;
 		Point2D thisCenterLocation = this.getCenterLocation();
 		Point2D otherCenterLocation = other.getCenterLocation();
 

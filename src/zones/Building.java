@@ -9,7 +9,7 @@ import java.awt.geom.Point2D;
 
 import simulation.Bot;
 import simulation.Shout;
-import simulation.Victim;
+import simulation.Survivor;
 
 public class Building extends Zone {
 
@@ -82,7 +82,7 @@ public class Building extends Zone {
 	}
 
 	@Override
-	public Shout getShout(Victim shouter) {
+	public Shout getShout(Survivor shouter) {
 		//we don't know what to do if the victim is outside
 		//so make sure they are inside
 		if(! this.contains(shouter.getCenterLocation())) return null;

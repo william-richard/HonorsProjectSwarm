@@ -9,7 +9,7 @@ public class Shout extends Area {
 	private static final long serialVersionUID = 1L;
 	public static final int DEFAULT_SHOUT_RADIUS = 20;
 	public static final int DEFAULT_SHOUT_RADIUS_THROUGH_WALL = 10;
-	private Victim shouter;
+	private Survivor shouter;
 	
 
 	/***************************************************************************
@@ -26,7 +26,7 @@ public class Shout extends Area {
 //		setFrame(cornerX, cornerY, radius, radius);
 //	}
 
-	public Shout(Shape s, Victim _shouter) {
+	public Shout(Shape s, Survivor _shouter) {
 		super(s);
 		shouter = _shouter;
 	}
@@ -44,7 +44,7 @@ public class Shout extends Area {
 		return new Point2D.Double(bounds.getCenterX(), bounds.getCenterY());
 	}
 	
-	public Victim getShouter() {
+	public Survivor getShouter() {
 		return shouter;
 	}
 

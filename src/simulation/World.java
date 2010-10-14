@@ -67,9 +67,9 @@ public class World extends JFrame {
 	/** VARIABLES */
 	public static List<Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
-	public static List<Victim> allVictims; //The Victims
+	public static List<Survivor> allSurvivors; //The Victims
 	public ListIterator<Bot> allBotSnapshot;
-	public ListIterator<Victim> allVictimSnapshot;
+	public ListIterator<Survivor> allSurvivorSnapshot;
 
 	public static List<Shape> debugShapesToDraw;
 
@@ -123,10 +123,10 @@ public class World extends JFrame {
 
 		//initialize the victims
 		//only 2 for now, so we'll hard code them	
-		allVictims = new ArrayList<Victim>();
+		allSurvivors = new ArrayList<Survivor>();
 
-		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
-		allVictims.add(new Victim(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
+		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		debugShapesToDraw = new ArrayList<Shape>();
 
@@ -253,7 +253,7 @@ public class World extends JFrame {
 		for(currentTimestep = 0; currentTimestep < numTimestepsToRun; currentTimestep++) {
 			System.out.println("On timestep " + currentTimestep);
 			//do all the victims
-			for(Victim v : allVictims) {
+			for(Survivor v : allSurvivors) {
 				v.doOneTimestep();
 			}
 			System.out.println("Done with victims");
@@ -281,7 +281,7 @@ public class World extends JFrame {
 
 		//get a snapshot of the bots and victims
 		allBotSnapshot = allBots.listIterator();
-		allVictimSnapshot = allVictims.listIterator();
+		allSurvivorSnapshot = allSurvivors.listIterator();
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -337,10 +337,10 @@ public class World extends JFrame {
 
 		//draw all the victims
 		g2d.setColor(VICTIM_COLOR);
-		while(allVictimSnapshot.hasNext()) {
-			Victim curVic = allVictimSnapshot.next();
+		while(allSurvivorSnapshot.hasNext()) {
+			Survivor curSur = allSurvivorSnapshot.next();
 
-			g2d.fill(curVic);
+			g2d.fill(curSur);
 		}
 
 		//paint all the victim paths
@@ -354,10 +354,10 @@ public class World extends JFrame {
 			BaseZone bz = (BaseZone) z;
 
 			//draw all of is paths
-			List<VictimPath> victimPaths= bz.getBestVictimPaths();
+			List<SurvivorPath> survivorPaths= bz.getBestSurvivorPaths();
 
-			for(VictimPath vp : victimPaths) {
-				g2d.draw(vp);
+			for(SurvivorPath sp : survivorPaths) {
+				g2d.draw(sp);
 			}
 
 		}

@@ -85,7 +85,8 @@ public class Bot extends Rectangle {
 	private int botID;
 	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
-	private List<Victim> knownVicitms; //keep a list of vicitms that have already been found, so we don't double up on one vic
+	private List<Survivor> knownSurvivors; //keep a list of vicitms that have already been found, so we don't double up on one vic
+	
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -116,7 +117,7 @@ public class Bot extends Rectangle {
 
 		baseZone = homeBase;
 
-		knownVicitms = new ArrayList<Victim>();
+		knownSurvivors = new ArrayList<Survivor>();
 
 		boundingBox = _bounds;
 
@@ -250,8 +251,8 @@ public class Bot extends Rectangle {
 				int foundTime = s.nextInt();
 
 				//see if we have seen this victim yet, and if this is a better path than the one we know about
-				Victim vic = new Victim(vicX, vicY, vicStatus);
-				java.lang.Double storedRating = knownVicitms.get(vic);
+				Survivor sur = new Survivor(vicX, vicY, vicStatus);
+				java.lang.Double storedRating = knownSurvivors.get(sur);
 
 				//we've determined that this path is worth continuing, so finish reading the message
 				List<BotInfo> pathBots = new ArrayList<BotInfo>();
@@ -261,7 +262,7 @@ public class Bot extends Rectangle {
 				}
 
 				//add this information into our map of Victims
-				knownVicitms.put(vic, new java.lang.Double(newAvgRating));
+				knownSurvivors.put(sur, new java.lang.Double(newAvgRating));
 
 				//make the message
 				//start it off with the vic info
@@ -311,20 +312,20 @@ public class Bot extends Rectangle {
 
 		//1) See if we can detect a victim, first by sight and then by sound head towards them if we can 
 		if(!haveMoved) {
-			List<Victim> visibleVics = lookForVictims();
+			List<Survivor> visibleSurs = lookForSurvivors();
 			//if we find some, go towards one of them
-			if(visibleVics.size() > 0) {
+			if(visibleSurs.size() > 0) {
 				//want to go towards the nearest victim
 				Vector nearestVicVect = null;
 				double nearestDistSquare = java.lang.Double.MAX_VALUE;
 
 
 				//so, we need to figure out which one is the nearest one
-				for(Victim v : visibleVics) {
-					Vector vicVect = new Vector(this.getCenterLocation(), v.getCenterLocation());
-					if(vicVect.getMagSquare() < nearestDistSquare) {
-						nearestVicVect = vicVect;
-						nearestDistSquare = vicVect.getMagSquare();
+				for(Survivor s : visibleSurs) {
+					Vector surVect = new Vector(this.getCenterLocation(), s.getCenterLocation());
+					if(surVect.getMagSquare() < nearestDistSquare) {
+						nearestVicVect = surVect;
+						nearestDistSquare = surVect.getMagSquare();
 					}
 				}
 
@@ -336,7 +337,7 @@ public class Bot extends Rectangle {
 		}
 
 		if(!haveMoved) {
-			List<Shout> audibleShouts = listenForVictims();
+			List<Shout> audibleShouts = listenForSurvivors();
 			//if we can hear anything, go towards one of them
 			if(audibleShouts.size() > 0) {
 				//want to go towards the nearest shout
@@ -701,22 +702,22 @@ public class Bot extends Rectangle {
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<Victim> lookForVictims() {
+	private List<Survivor> lookForSurvivors() {
 		//first, get our visibility radius
 		Shape visibilityRange = getVisibibleArea();
 
 		//see if the location of any of our victims intersects this range
-		List<Victim> visibleVictims = (List<Victim>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allVictims);
+		List<Survivor> visibleVictims = (List<Survivor>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allSurvivors);
 
 		if(LOOK_BOT_DEBUG)
 			print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
 
 		//ignore any vicitms we already know about
 		//use a list iterator for the reasons described below
-		ListIterator<Victim> vicIteratior = visibleVictims.listIterator();
+		ListIterator<Survivor> vicIteratior = visibleVictims.listIterator();
 		while(vicIteratior.hasNext()) {
-			Victim curVic = vicIteratior.next();
-			if(knownVicitms.containsKey(curVic)) {
+			Survivor curSur = vicIteratior.next();
+			if(knownSurvivors.containsKey(curSur)) {
 				vicIteratior.remove();
 			}
 		}
@@ -741,7 +742,7 @@ public class Bot extends Rectangle {
 	}
 
 	@SuppressWarnings("unchecked")
-	private List<Shout> listenForVictims() {
+	private List<Shout> listenForSurvivors() {
 		listeningForShouts = false;
 
 		//first, get our auditory radius
@@ -758,7 +759,7 @@ public class Bot extends Rectangle {
 		ListIterator<Shout> shoutIterator = audibleShouts.listIterator();
 		while(shoutIterator.hasNext()) {
 			Shout curShout = shoutIterator.next();
-			if(knownVicitms.containsKey(curShout.getShouter())) {
+			if(knownSurvivors.containsKey(curShout.getShouter())) {
 				shoutIterator.remove();
 			}
 		}
@@ -836,49 +837,49 @@ public class Bot extends Rectangle {
 		}
 	}
 
-	private double assesVictim(Victim v) {
+	private double assesSurvivor(Survivor s) {
 		//with some probability we'll get it wrong
 		if(numGen.nextDouble() < ASSES_VICTIM_CORRECTLY_PROB) {
-			return v.getDamage();
+			return s.getDamage();
 		} else {
 			return numGen.nextInt(101)/100.0;
 		}
 	}
 
 
-	private void findAndAssesVictim() {
+	private void findAndAssesSurvivor() {
 		//first, see if there are any victims that we can see
-		List<Victim> visibleVictims = lookForVictims();
+		List<Survivor> visibleSurvivors = lookForSurvivors();
 
 		//see if any of them are within the FOUND_RANGE
-		List<Victim> foundVictims = new ArrayList<Victim>();
+		List<Survivor> foundSurvivors = new ArrayList<Survivor>();
 
-		for(Victim v : visibleVictims) {
+		for(Survivor v : visibleSurvivors) {
 			if(v.getCenterLocation().distance(this.getCenterLocation()) < DEFAULT_FOUND_RANGE) {
-				foundVictims.add(v);
+				foundSurvivors.add(v);
 			}
 		}
 		
 		
 		//we now know what victims we have found
 		//evaluate each of them in turn
-		for(Victim v : foundVictims) {
-			double vicDamage = assesVictim(v);
+		for(Survivor s : foundSurvivors) {
+			double surDamage = assesSurvivor(s);
 
 			//send out a message letting everyone know where the victim is, what condition they are in, and how safe the zones is
-			double vicDistance = v.getCenterLocation().distance(this.getCenterLocation());
+			double vicDistance = s.getCenterLocation().distance(this.getCenterLocation());
 			double currentSegmentRating;
 			if(zoneAssesment == ZONE_SAFE) currentSegmentRating = vicDistance;
 			else currentSegmentRating = vicDistance * DANGER_MULTIPLIER;
 
 			double avgPathRating = currentSegmentRating/(vicDistance*DANGER_MULTIPLIER);
 
-			String message = "fv " + this.getID() + " " + vicDamage + " " + v.getCenterX() + " " + v.getCenterY() + World.currentTimestep + "\n";
+			String message = "fv " + this.getID() + " " + surDamage + " " + s.getCenterX() + " " + s.getCenterY() + World.currentTimestep + "\n";
 
 			broadcastMessage(message);
 
 			//add this entry to our know victims so we go onto other victims
-			knownVicitms.put(v, new java.lang.Double(avgPathRating));
+			knownSurvivors.put(s, new java.lang.Double(avgPathRating));
 
 		}
 	}
@@ -895,7 +896,7 @@ public class Bot extends Rectangle {
 		move();
 
 		//now that we have moved, find out if we can see any victims
-		findAndAssesVictim();
+		findAndAssesSurvivor();
 
 		//now, just some housekeeping
 		//we shouldn't hang onto shouts for too long

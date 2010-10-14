@@ -10,8 +10,8 @@ import java.util.Scanner;
 import simulation.Bot;
 import simulation.BotInfo;
 import simulation.Shout;
-import simulation.Victim;
-import simulation.VictimPath;
+import simulation.Survivor;
+import simulation.SurvivorPath;
 import simulation.World;
 
 
@@ -20,7 +20,7 @@ public class BaseZone extends Zone {
 	private static final long serialVersionUID = 1L;
 	private final static Color BaseZoneColor = new Color(0, 100, 0);
 	private String messageBuffer;
-	private List<VictimPath> victimPaths;
+	private List<SurvivorPath> survivorPaths;
 	
 	public BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
 		this(xPoints, yPoints, numPoints, _zoneID, BaseZoneColor);
@@ -29,7 +29,7 @@ public class BaseZone extends Zone {
 	protected BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
 		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
 		messageBuffer = "";
-		victimPaths = new ArrayList<VictimPath>();
+		survivorPaths = new ArrayList<SurvivorPath>();
 	}
 	
 	
@@ -60,7 +60,7 @@ public class BaseZone extends Zone {
 	}
 
 	@Override
-	public Shout getShout(Victim shouter) {
+	public Shout getShout(Survivor shouter) {
 		//for now, the shout is a circle of the default radius
 
 		//calculate it's corner
@@ -154,41 +154,41 @@ public class BaseZone extends Zone {
 				
 				//make a new VictimPath and add it to our list
 				//First, find the actual victim that this message refers to
-				Victim vic = World.allVictims.get(World.allVictims.indexOf(new Victim(vicX, vicY, vicStatus)));
+				Survivor vic = World.allSurvivors.get(World.allSurvivors.indexOf(new Survivor(vicX, vicY, vicStatus)));
 				
 				//now, make the path and add it to our list
-				victimPaths.add(new VictimPath(vic, pathLength, pathRating, avgRating, pathBots, this.getCenterLocation()));				
+				survivorPaths.add(new SurvivorPath(vic, pathLength, pathRating, avgRating, pathBots, this.getCenterLocation()));				
 			} else continue;
 
 		}
 	}
 	
 	
-	public List<VictimPath> getVictimPaths() {
+	public List<SurvivorPath> getSurvivorPaths() {
 		//first, check to make sure we don't have any waiting in the message buffer
 		readMessages();
 		//now, return the list of paths
-		return victimPaths;
+		return survivorPaths;
 	}
 	
 	
-	public List<VictimPath> getBestVictimPaths() {
+	public List<SurvivorPath> getBestSurvivorPaths() {
 		//first, get all the victim paths
-		List<VictimPath> allPaths = getVictimPaths();
+		List<SurvivorPath> allPaths = getSurvivorPaths();
 		
-		List<VictimPath> bestPaths = new ArrayList<VictimPath>();
+		List<SurvivorPath> bestPaths = new ArrayList<SurvivorPath>();
 		
 		//now, pick out the best ones
 		for(int allIndex = 0; allIndex < allPaths.size(); allIndex++) {
 			
-			VictimPath curPath = allPaths.get(allIndex);
+			SurvivorPath curPath = allPaths.get(allIndex);
 			
 			boolean foundPathToSameVic = false;
 			
 			for(int bestIndex = 0; bestIndex < bestPaths.size(); bestIndex++) {
-				VictimPath curFromBest = bestPaths.get(bestIndex);
+				SurvivorPath curFromBest = bestPaths.get(bestIndex);
 				
-				if(curPath.getVic().equals(curFromBest.getVic())) {
+				if(curPath.getSur().equals(curFromBest.getSur())) {
 					foundPathToSameVic = true;
 					
 					if(curPath.getAvgRating() < curFromBest.getAvgRating()) {
