@@ -74,6 +74,8 @@ public class World extends JFrame {
 	public static List<Shape> debugShapesToDraw;
 
 	private Zone baseZone;
+	
+	public static int currentTimestep; //keep track of what time it is
 
 
 	public World() {
@@ -248,8 +250,8 @@ public class World extends JFrame {
 		}
 		
 		//then, start with timesteps
-		for(int curTimestep = 0; curTimestep < numTimestepsToRun; curTimestep++) {
-			System.out.println("On timestep " + curTimestep);
+		for(currentTimestep = 0; currentTimestep < numTimestepsToRun; currentTimestep++) {
+			System.out.println("On timestep " + currentTimestep);
 			//do all the victims
 			for(Victim v : allVictims) {
 				v.doOneTimestep();

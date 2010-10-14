@@ -85,7 +85,7 @@ public class Bot extends Rectangle {
 	private int botID;
 	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
-	private HashMap<Victim, java.lang.Double> knownVicitms; //keep a list of map we have been told about, so we don't duplicate efforts.  Values are the avg rating of the best path we've seen to them
+	private List<Victim> knownVicitms; //keep a list of vicitms that have already been found, so we don't double up on one vic
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -116,7 +116,7 @@ public class Bot extends Rectangle {
 
 		baseZone = homeBase;
 
-		knownVicitms = new HashMap<Victim, java.lang.Double>();
+		knownVicitms = new ArrayList<Victim>();
 
 		boundingBox = _bounds;
 
@@ -205,28 +205,14 @@ public class Bot extends Rectangle {
 	/***************************************************************************
 	 * METHODS
 	 **************************************************************************/
-	private boolean recieveMessages = true;
-
-	public void recieveMessage(String message) throws InterruptedException {
-		//bad way to do this, but it'll be OK
-		while(!recieveMessages) {
-			wait(10);
-		}
+	public void recieveMessage(String message) {
 		messageBuffer = messageBuffer + message;
 	}
 
-	public void readMessages() {
-		//make sure that we don't recieve any messages while we're coping the buffer
-		recieveMessages = false;
-
-		String newMessages = messageBuffer;
-		messageBuffer = "";
-
-		recieveMessages = true;
-
+	private void readMessages() {
 		//go through all the messages
 		//messages should be split up by '\n'
-		String[] messageArray = newMessages.split("\n");
+		String[] messageArray = messageBuffer.split("\n");
 
 		//make a scanner to make going through the messages a bit easier
 		Scanner s;
@@ -257,12 +243,11 @@ public class Bot extends Rectangle {
 				if(FIND_VICTIM_DEBUG)
 					print("Reading message '" + mes + "'");
 
+				double vicId = s.nextDouble();
 				double vicStatus = s.nextDouble();
 				double vicX = s.nextDouble();
 				double vicY = s.nextDouble();
-				double pathLengthSoFar = s.nextDouble();
-				double pathRating = s.nextDouble();
-				double avgRating = s.nextDouble();
+				int foundTime = s.nextInt();
 
 				//see if we have seen this victim yet, and if this is a better path than the one we know about
 				Victim vic = new Victim(vicX, vicY, vicStatus);
@@ -273,27 +258,6 @@ public class Bot extends Rectangle {
 
 				while(s.hasNextInt()) {
 					pathBots.add(new BotInfo(s.nextInt(), s.nextDouble(), s.nextDouble(), s.nextInt()));
-				}
-
-				//we now have read all the information from the message, so add on our part and send it out
-				//first, calculate our added distance and path rating
-				BotInfo endOfPathBot = pathBots.get(pathBots.size() - 1);
-				double newSegmentLength = endOfPathBot.getCenterLocation().distance(this.getCenterLocation());
-				double newPathLength = pathLengthSoFar + newSegmentLength;				
-				double ourDangerMultipler;
-				if(zoneAssesment == ZONE_DANGEROUS || endOfPathBot.getZoneAssessment() == ZONE_DANGEROUS) ourDangerMultipler = DANGER_MULTIPLIER;
-				else ourDangerMultipler = 1;
-				double newPathRating = pathRating + (newSegmentLength * ourDangerMultipler);
-				double newAvgRating = newPathRating;
-				//				double newAvgRating = newPathRating / (newPathLength * DANGER_MULTIPLIER);
-
-				//skip it if we know about this victim already and have already added data to a better path
-				if(storedRating != null && newAvgRating > storedRating.doubleValue()) continue;
-
-				if(storedRating != null) {
-					print("Stored value is " + storedRating.doubleValue() + " newValue is " + newAvgRating);
-				} else {
-					print("Frist time seeing this");
 				}
 
 				//add this information into our map of Victims
@@ -715,14 +679,7 @@ public class Bot extends Rectangle {
 			if(b.getID() == this.getID()) {
 				continue;
 			}
-			try {
-				b.recieveMessage(mes);
-				//				if(MESSAGE_BOT_DEBUG)
-				//					print("Sucessfully sent message to " + b.getID());
-			} catch (InterruptedException e) {
-				//				if(MESSAGE_BOT_DEBUG)
-				//					print("Failed to send message to " + b.getID());
-			}
+			b.recieveMessage(mes);
 		}
 
 		//also, send it to any BaseZones
@@ -901,7 +858,8 @@ public class Bot extends Rectangle {
 				foundVictims.add(v);
 			}
 		}
-
+		
+		
 		//we now know what victims we have found
 		//evaluate each of them in turn
 		for(Victim v : foundVictims) {
@@ -915,8 +873,7 @@ public class Bot extends Rectangle {
 
 			double avgPathRating = currentSegmentRating/(vicDistance*DANGER_MULTIPLIER);
 
-			String message = "fv " + vicDamage + " " + v.getCenterX() + " " + v.getCenterY() + " " + vicDistance + " " + currentSegmentRating  + " " +  currentSegmentRating 
-			+ " " + this.getID() + " " + this.getCenterX() + " " + this.getCenterY()  + " " + zoneAssesment + "\n";
+			String message = "fv " + this.getID() + " " + vicDamage + " " + v.getCenterX() + " " + v.getCenterY() + World.currentTimestep + "\n";
 
 			broadcastMessage(message);
 
