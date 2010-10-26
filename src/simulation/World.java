@@ -84,7 +84,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 50;
+		int numBots = 40;
 		int numVic = 2;
 
 		//initialize the zones
@@ -125,8 +125,8 @@ public class World extends JFrame {
 		//only 2 for now, so we'll hard code them	
 		allSurvivors = new ArrayList<Survivor>();
 
-		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
-		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
+//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		debugShapesToDraw = new ArrayList<Shape>();
 
@@ -417,7 +417,7 @@ public class World extends JFrame {
 
 		//make a new World
 		World w = new World();
-		w.go(100);
+		w.go(500);
 	}
 
 }

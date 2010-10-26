@@ -6,7 +6,6 @@ import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -240,6 +239,7 @@ public class Bot extends Rectangle {
 				BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
 
 				otherBotInfo.add(newBotInfo);
+				//TODO need to sort out this message case
 			} else if(messageType.equals("fv")) {
 				if(FIND_VICTIM_DEBUG)
 					print("Reading message '" + mes + "'");
@@ -252,34 +252,35 @@ public class Bot extends Rectangle {
 
 				//see if we have seen this victim yet, and if this is a better path than the one we know about
 				Survivor sur = new Survivor(vicX, vicY, vicStatus);
-				java.lang.Double storedRating = knownSurvivors.get(sur);
 
-				//we've determined that this path is worth continuing, so finish reading the message
-				List<BotInfo> pathBots = new ArrayList<BotInfo>();
-
-				while(s.hasNextInt()) {
-					pathBots.add(new BotInfo(s.nextInt(), s.nextDouble(), s.nextDouble(), s.nextInt()));
+				//check if we know about this survivor already
+				//if we don't, store it's info
+				if(! knownSurvivors.contains(sur)) {
+					knownSurvivors.add(sur);
 				}
+				
+				//TODO determine how or if we should rebroadcast this
+				
 
-				//add this information into our map of Victims
-				knownSurvivors.put(sur, new java.lang.Double(newAvgRating));
-
-				//make the message
-				//start it off with the vic info
-				String message = "fv " + vicStatus + " " + vicX + " " + vicY + " " + newPathLength + " " + newPathRating + " " + newAvgRating + " ";
-				//add all the bots on the path so far
-				for(BotInfo bi : pathBots) {
-					message = message + bi.getBotID() + " " + bi.getCenterX() + " " + bi.getCenterY() + " " + bi.getZoneAssessment() + " ";
-				}
-				//add this bot
-				message = message + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + " " + this.zoneAssesment + "\n";				
-
-				//broadcast the message
-				broadcastMessage(message);
+//				//make the message
+//				//start it off with the vic info
+//				String message = "fv " + vicStatus + " " + vicX + " " + vicY + " " + newPathLength + " " + newPathRating + " " + newAvgRating + " ";
+//				//add all the bots on the path so far
+//				for(BotInfo bi : pathBots) {
+//					message = message + bi.getBotID() + " " + bi.getCenterX() + " " + bi.getCenterY() + " " + bi.getZoneAssessment() + " ";
+//				}
+//				//add this bot
+//				message = message + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + " " + this.zoneAssesment + "\n";				
+//
+//				//broadcast the message
+//				broadcastMessage(message);
 
 			} else continue;
 
 		}
+		
+		//once we are done reading, we should clear the buffer
+		messageBuffer = "";
 	}
 
 	private boolean listeningForShouts = true;
@@ -675,6 +676,8 @@ public class Bot extends Rectangle {
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
+		print("There are " + nearbyBots.size() + " nearby bots");
+		
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
 			if(b.getID() == this.getID()) {
@@ -717,7 +720,7 @@ public class Bot extends Rectangle {
 		ListIterator<Survivor> vicIteratior = visibleVictims.listIterator();
 		while(vicIteratior.hasNext()) {
 			Survivor curSur = vicIteratior.next();
-			if(knownSurvivors.containsKey(curSur)) {
+			if(knownSurvivors.contains(curSur)) {
 				vicIteratior.remove();
 			}
 		}
@@ -759,7 +762,7 @@ public class Bot extends Rectangle {
 		ListIterator<Shout> shoutIterator = audibleShouts.listIterator();
 		while(shoutIterator.hasNext()) {
 			Shout curShout = shoutIterator.next();
-			if(knownSurvivors.containsKey(curShout.getShouter())) {
+			if(knownSurvivors.contains(curShout.getShouter())) {
 				shoutIterator.remove();
 			}
 		}
@@ -878,8 +881,8 @@ public class Bot extends Rectangle {
 
 			broadcastMessage(message);
 
-			//add this entry to our know victims so we go onto other victims
-			knownSurvivors.put(s, new java.lang.Double(avgPathRating));
+			//TODO handle this survivor stuff too
+			knownSurvivors.add(s);
 
 		}
 	}
@@ -902,7 +905,10 @@ public class Bot extends Rectangle {
 		//we shouldn't hang onto shouts for too long
 		heardShouts.clear();
 		//also don't want to hang on to bot info for too long
+		print(otherBotInfo.size() + " other bot infos before");
 		otherBotInfo.clear();
+		print(otherBotInfo.size() + " other bot infos after clear");
+
 
 		//make sure we are still in the zones we think we are in
 		if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
