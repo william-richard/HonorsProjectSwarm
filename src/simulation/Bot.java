@@ -83,7 +83,7 @@ public class Bot extends Rectangle {
 	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
 	private List<Survivor> knownSurvivors; //keep a list of vicitms that have already been found, so we don't double up on one vic
-	
+
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -256,27 +256,27 @@ public class Bot extends Rectangle {
 				if(! knownSurvivors.contains(sur)) {
 					knownSurvivors.add(sur);
 				}
-				
-				//TODO determine how or if we should rebroadcast this
-				
 
-//				//make the message
-//				//start it off with the vic info
-//				String message = "fv " + vicStatus + " " + vicX + " " + vicY + " " + newPathLength + " " + newPathRating + " " + newAvgRating + " ";
-//				//add all the bots on the path so far
-//				for(BotInfo bi : pathBots) {
-//					message = message + bi.getBotID() + " " + bi.getCenterX() + " " + bi.getCenterY() + " " + bi.getZoneAssessment() + " ";
-//				}
-//				//add this bot
-//				message = message + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + " " + this.zoneAssesment + "\n";				
-//
-//				//broadcast the message
-//				broadcastMessage(message);
+				//TODO determine how or if we should rebroadcast this
+
+
+				//				//make the message
+				//				//start it off with the vic info
+				//				String message = "fv " + vicStatus + " " + vicX + " " + vicY + " " + newPathLength + " " + newPathRating + " " + newAvgRating + " ";
+				//				//add all the bots on the path so far
+				//				for(BotInfo bi : pathBots) {
+				//					message = message + bi.getBotID() + " " + bi.getCenterX() + " " + bi.getCenterY() + " " + bi.getZoneAssessment() + " ";
+				//				}
+				//				//add this bot
+				//				message = message + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + " " + this.zoneAssesment + "\n";				
+				//
+				//				//broadcast the message
+				//				broadcastMessage(message);
 
 			} else continue;
 
 		}
-		
+
 		//once we are done reading, we should clear the buffer
 		messageBuffer = "";
 	}
@@ -539,11 +539,7 @@ public class Bot extends Rectangle {
 		//first, make an Area that is all the obstacles we can see
 		Area obstacleArea = new Area();
 		for(Zone curObstacle : visibleObstacles) {
-			if(curObstacle instanceof Building) {
-				obstacleArea.add(new Area(((Building) curObstacle).getFloorplan()));
-			} else {
-				obstacleArea.add(new Area(curObstacle));
-			}
+			obstacleArea.add(new Area(curObstacle));
 		}
 
 		//start by finding it's edges that we can see
@@ -675,7 +671,7 @@ public class Bot extends Rectangle {
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
 		print("There are " + nearbyBots.size() + " nearby bots");
-		
+
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
 			if(b.getID() == this.getID()) {
@@ -860,8 +856,8 @@ public class Bot extends Rectangle {
 				foundSurvivors.add(v);
 			}
 		}
-		
-		
+
+
 		//we now know what victims we have found
 		//evaluate each of them in turn
 		for(Survivor s : foundSurvivors) {

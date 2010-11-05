@@ -46,7 +46,7 @@ public class BaseZone extends Zone {
 	@Override
 	public Circle2D getBroadcastRange(Point2D originator) {
 		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS);
+		return new Circle2D(originator, Bot.DEFAULT_BROADCAST_RADIUS);
 	}
 
 	@Override

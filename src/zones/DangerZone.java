@@ -36,13 +36,8 @@ public class DangerZone extends Zone {
 
 	@Override
 	public Circle2D getBroadcastRange(Point2D originator) {
-		//in this case, return a circle
-		//know the center of the circle, and the radius - need to find the corner
-		double broadcastRangeCornerX = originator.getX() - Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS;
-		double broadcastRangeCornerY = originator.getY() - Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS;
-
 		//now, make the broadcast range shape
-		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS*2, Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS*2);
+		return new Circle2D(originator, Bot.DEFAULT_BROADCAST_RADIUS);
 
 	}
 
@@ -60,24 +55,15 @@ public class DangerZone extends Zone {
 
 	@Override
 	public Circle2D getVisibilityRange(Point2D originator) {
-		//in this case, return a circle
-		//know the center of the circle, and the radius - need to find the corner
-		double broadcastRangeCornerX = originator.getX() - Bot.DEFALUT_VISIBILITY_RADIUS;
-		double broadcastRangeCornerY = originator.getY() - Bot.DEFALUT_VISIBILITY_RADIUS;
-
 		//now, make the broadcast range shape
-		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFALUT_VISIBILITY_RADIUS*2, Bot.DEFALUT_VISIBILITY_RADIUS*2);
+		return new Circle2D(originator, Bot.DEFALUT_VISIBILITY_RADIUS);
 	}
 	
 	@Override
 	public Circle2D getFoundRange(Point2D originator) {
-		//in this case, return a circle
-		//know the center of the circle, and the radius - need to find the corner
-		double foundRangeCornerX = originator.getX() - Bot.DEFAULT_FOUND_RANGE;
-		double foundRangeCornerY = originator.getY() - Bot.DEFAULT_FOUND_RANGE;
-
 		//now, make the broadcast range shape
-		return new Ellipse2D.Double(foundRangeCornerX, foundRangeCornerY, Bot.DEFAULT_FOUND_RANGE*2, Bot.DEFAULT_FOUND_RANGE*2);
+		return new Circle2D(originator, Bot.DEFAULT_FOUND_RANGE);
+		
 	}
 
 	@Override

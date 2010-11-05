@@ -10,8 +10,6 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
-import zones.Building;
-
 public class Utilities {
 	
 	//finds all shapes in the shapeList that intersect the base shape
@@ -252,11 +250,6 @@ public class Utilities {
 	
 	@Deprecated
 	public static List<Point2D> getDiscontinuityPoints(Shape base, Shape outsider) {
-		//if the outsider is a building, we need to consider it's floorplan
-		if(outsider instanceof Building) {
-			outsider = ((Building) outsider).getFloorplan();
-		}
-		
 		//first, get the intersection of the two shapes
 		Area baseArea = new Area(base);
 		Area outsiderArea = new Area(outsider);
