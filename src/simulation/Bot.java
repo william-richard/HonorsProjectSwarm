@@ -14,9 +14,9 @@ import java.util.concurrent.CopyOnWriteArrayList;
 
 import util.Utilities;
 import util.Vector;
+import util.shapes.Circle2D;
 import zones.BaseZone;
 import zones.BoundingBox;
-import zones.Building;
 import zones.Fire;
 import zones.SafeZone;
 import zones.Zone;
@@ -35,11 +35,9 @@ public class Bot extends Rectangle {
 	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; //the probability that the bot will asses the zones correctly
 
-	public static final double DEFAULT_OUTDOOR_BROADCAST_RADIUS = 95;
-	public static final double DEFAULT_INDOOR_BROADCAST_RADIUS = 32;
+	public static final double DEFAULT_BROADCAST_RADIUS = 95;
 	public static final double DEFALUT_VISIBILITY_RADIUS = 15;
 	public static final double DEFAULT_AUDITORY_RADIUS = 50;
-	public static final double DEFAULT_AUDITORY_RADIS_THROUGH_WALL = 20;
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 8;
 
@@ -139,17 +137,17 @@ public class Bot extends Rectangle {
 		return new Point2D.Double(getCenterX(), getCenterY());
 	}
 
-	public Shape getBroadcastArea() {
+	public Circle2D getBroadcastArea() {
 		//see how far the current zones thinks we can broadcast
 		return currentZone.getBroadcastRange(getCenterLocation());
 	}
 
-	public Shape getVisibibleArea() {
+	public Circle2D getVisibibleArea() {
 		//see how far the current zones thinks we can see
 		return currentZone.getVisibilityRange(getCenterLocation());
 	}
 
-	public Shape getAuditbleArea() {
+	public Circle2D getAuditbleArea() {
 		//see how far the current zones thinks we can hear
 		return currentZone.getAudibleRange(getCenterLocation());
 	}

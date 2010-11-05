@@ -1,13 +1,13 @@
 package zones;
 
 import java.awt.Color;
-import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 
 import simulation.Bot;
 import simulation.Shout;
 import simulation.Survivor;
+import util.shapes.Circle2D;
 
 
 public class DangerZone extends Zone {
@@ -29,18 +29,13 @@ public class DangerZone extends Zone {
 //	}
 	
 	@Override
-	public Shape getAudibleRange(Point2D originator) {
-		//in this case, return a circle
-		//know the center of the circle, and the radius - need to find the corner
-		double broadcastRangeCornerX = originator.getX() - Bot.DEFAULT_AUDITORY_RADIUS;
-		double broadcastRangeCornerY = originator.getY() - Bot.DEFAULT_AUDITORY_RADIUS;
-
+	public Circle2D getAudibleRange(Point2D originator) {
 		//now, make the broadcast range shape
-		return new Ellipse2D.Double(broadcastRangeCornerX, broadcastRangeCornerY, Bot.DEFAULT_AUDITORY_RADIUS*2, Bot.DEFAULT_AUDITORY_RADIUS*2);
+		return new Circle2D(originator, Bot.DEFAULT_AUDITORY_RADIUS);
 	}
 
 	@Override
-	public Shape getBroadcastRange(Point2D originator) {
+	public Circle2D getBroadcastRange(Point2D originator) {
 		//in this case, return a circle
 		//know the center of the circle, and the radius - need to find the corner
 		double broadcastRangeCornerX = originator.getX() - Bot.DEFAULT_OUTDOOR_BROADCAST_RADIUS;
@@ -64,7 +59,7 @@ public class DangerZone extends Zone {
 	}
 
 	@Override
-	public Shape getVisibilityRange(Point2D originator) {
+	public Circle2D getVisibilityRange(Point2D originator) {
 		//in this case, return a circle
 		//know the center of the circle, and the radius - need to find the corner
 		double broadcastRangeCornerX = originator.getX() - Bot.DEFALUT_VISIBILITY_RADIUS;
@@ -75,7 +70,7 @@ public class DangerZone extends Zone {
 	}
 	
 	@Override
-	public Shape getFoundRange(Point2D originator) {
+	public Circle2D getFoundRange(Point2D originator) {
 		//in this case, return a circle
 		//know the center of the circle, and the radius - need to find the corner
 		double foundRangeCornerX = originator.getX() - Bot.DEFAULT_FOUND_RANGE;

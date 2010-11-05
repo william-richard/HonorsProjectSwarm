@@ -19,7 +19,6 @@ import javax.swing.JFrame;
 import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
-import zones.Building;
 import zones.DangerDebris;
 import zones.DangerZone;
 import zones.SafeDebris;
@@ -292,9 +291,6 @@ public class World extends JFrame {
 			//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
-			if(z instanceof Building) {
-				g2d.draw(((Building) z).getFloorplan());
-			}
 		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
