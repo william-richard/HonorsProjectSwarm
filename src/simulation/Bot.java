@@ -6,6 +6,8 @@ import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -15,6 +17,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import util.Utilities;
 import util.Vector;
 import util.shapes.Circle2D;
+import util.shapes.LineSegment;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.Fire;
@@ -139,21 +142,29 @@ public class Bot extends Rectangle {
 
 	public Circle2D getBroadcastArea() {
 		//see how far the current zones thinks we can broadcast
-		return currentZone.getBroadcastRange(getCenterLocation());
+		return currentZone.getBroadcastArea(getCenterLocation());
 	}
 
-	public Circle2D getVisibibleArea() {
+	public Circle2D getVisibleArea() {
 		//see how far the current zones thinks we can see
-		return currentZone.getVisibilityRange(getCenterLocation());
+		return currentZone.getVisibilityArea(getCenterLocation());
+	}
+
+	public double getVisibityRange() {
+		return currentZone.getVisiblityRange(getCenterLocation());
 	}
 
 	public Circle2D getAuditbleArea() {
 		//see how far the current zones thinks we can hear
-		return currentZone.getAudibleRange(getCenterLocation());
+		return currentZone.getAudibleArea(getCenterLocation());
 	}
 
 	public ListIterator<Shout> getShoutIterator() {
 		return heardShouts.listIterator();
+	}
+
+	public double getMaxVelocity() {
+		return DEFAULT_MAX_VELOCITY;
 	}
 
 	public ListIterator<BotPathMemoryPoint> getPathMemoryIterator() {
@@ -490,7 +501,7 @@ public class Bot extends Rectangle {
 
 
 		//don't hit the walls of the bounding box 
-		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityRange(getCenterLocation()))) {
+		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityArea(getCenterLocation()))) {
 			//this means we can "see" the edge of the bounding box
 			//try to move such that we don't hit it
 			v = boundingBox.getPathThatStaysInside(v);
@@ -514,16 +525,16 @@ public class Bot extends Rectangle {
 
 	//makes sure that the passed movement vector is OK i.e. it isn't too long
 	private Vector verifyMovementVector(Vector v) {
-		if(v.getMagSquare() > currentZone.getBotMaxVelocitySquared()) {
-			v = v.rescale(currentZone.getBotMaxVelocity());
+		if(v.getMagSquare() > getMaxVelocity()) {
+			v = v.rescale(getMaxVelocity());
 		}
 		return v;
 	}
-
+	
 	private Vector avoidObstacles(Vector intendedPath) {
 
 		//first, look for any obstacles nearby
-		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibibleArea(), World.allZones);
+		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones);
 
 		List<Zone> visibleObstacles = new ArrayList<Zone>();
 		for(Shape s : visibleZones) {
@@ -535,88 +546,200 @@ public class Bot extends Rectangle {
 		//don't do anything if we're not going to run into anything.
 		if(visibleObstacles.size() == 0) return intendedPath;
 
-		//Try to avoid any obstacles we might run into
-		//first, make an Area that is all the obstacles we can see
-		Area obstacleArea = new Area();
-		for(Zone curObstacle : visibleObstacles) {
-			obstacleArea.add(new Area(curObstacle));
-		}
-
-		//start by finding it's edges that we can see
-		List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(obstacleArea);
-
-		World.debugShapesToDraw.addAll(visibleObstacleEdges);
-
-		//now, check all those edges, and find the one we're heading into
-		for(Line2D curEdge : visibleObstacleEdges) {
-			if(intendedPath.intersectsLine(curEdge)) {
-				//choose to head towards one of the endpoints of the edge
-				//whichever one is closer to our P2
-				if(intendedPath.getP2().distanceSq(curEdge.getP1()) < intendedPath.getP2().distanceSq(curEdge.getP2())) {
-					intendedPath.setLine(intendedPath.getP1(), curEdge.getP1());
-				} else {
-					intendedPath.setLine(intendedPath.getP1(), curEdge.getP2());
+		//we may need to avoid at least 1 obstacle
+		//get all the visible segments of those obstacles
+		List<LineSegment> visibleObstacleEdges = getVisibleObstacleEdges(visibleObstacles);
+		
+		//see if our path goes into any of them
+		//if it does, adjust our path so that it misses that segment and any other segment it may run into
+		for(LineSegment s : visibleObstacleEdges) {
+			if(intendedPath.intersectsLine(s)) {
+				//we need to adjust our path
+				//see which end of the line segment is closer to our intended position
+				Point2D closerPoint = (s.getP1().distanceSq(intendedPath.getP2()) < s.getP2().distanceSq(intendedPath.getP2()) ? s.getP1() : s.getP2());
+				//see if any other sides would get in the way of making a path going toward that closer point
+				Vector newIntendedPath = new Vector(this.getCenterLocation(), closerPoint);
+				newIntendedPath = verifyMovementVector(newIntendedPath);
+				
+				//go through all of the segments, continuing to go in the same direction until we have a clear path
+				//to go in the same direction, try to go to the far end of the line
+				boolean passNeeded = true;
+				LineSegment prevSegment = s;
+				while(passNeeded) {
+					passNeeded = false;
+					
+					for(LineSegment t : visibleObstacleEdges) {
+						if(t.equals(prevSegment)) continue;
+						
+						if(newIntendedPath.intersectsLine(t)) {
+							passNeeded = true;
+							Point2D furtherPoint = (t.getP1().distanceSq(newIntendedPath.getP2()) > t.getP2().distanceSq(newIntendedPath.getP2()) ? t.getP1() : t.getP2());
+							newIntendedPath = new Vector(this.getCenterLocation(), furtherPoint);
+							newIntendedPath = verifyMovementVector(newIntendedPath);
+						}
+					}
 				}
-
-				//also, add a bit of buffer around the obstacle so that we don't get too near to it
-				//to get the buffer, we're going to add a small vector going out from the current edge
-				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVectorPointedTowards(intendedPath.getP2(), this.getObstacleBufferRange(), this.getCenterLocation());
-
-				intendedPath = intendedPath.add(bufferVect);
-
-				break;
+				
+				return newIntendedPath;
 			}
 		}
-
+		
+		//no changes need to be made
 		return intendedPath;
+
+
+
+
+		//		//Try to avoid any obstacles we might run into
+		//		//first, make an Area that is all the obstacles we can see
+		//		Area obstacleArea = new Area();
+		//		for(Zone curObstacle : visibleObstacles) {
+		//			obstacleArea.add(new Area(curObstacle));
+		//		}
+		//
+		//		//start by finding it's edges that we can see
+		//		List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(obstacleArea);
+		//
+		//		World.debugShapesToDraw.addAll(visibleObstacleEdges);
+		//
+		//		//now, check all those edges, and find the one we're heading into
+		//		for(Line2D curEdge : visibleObstacleEdges) {
+		//			if(intendedPath.intersectsLine(curEdge)) {
+		//				//choose to head towards one of the endpoints of the edge
+		//				//whichever one is closer to our P2
+		//				if(intendedPath.getP2().distanceSq(curEdge.getP1()) < intendedPath.getP2().distanceSq(curEdge.getP2())) {
+		//					intendedPath.setLine(intendedPath.getP1(), curEdge.getP1());
+		//				} else {
+		//					intendedPath.setLine(intendedPath.getP1(), curEdge.getP2());
+		//				}
+		//
+		//				//also, add a bit of buffer around the obstacle so that we don't get too near to it
+		//				//to get the buffer, we're going to add a small vector going out from the current edge
+		//				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVectorPointedTowards(intendedPath.getP2(), this.getObstacleBufferRange(), this.getCenterLocation());
+		//
+		//				intendedPath = intendedPath.add(bufferVect);
+		//
+		//				break;
+		//			}
+		//		}
+		//
+		//		return intendedPath;
 	}
 
-	private List<Line2D> getVisibleObstacleEdges(Area obstacleArea) {
-		//essentially, we're going to do a radial sweep around our view range
-		//and see where the obstacle starts and stops
 
-		Area viewRangeArea = new Area(this.getVisibibleArea());
-		Area obstacleInViewRange = (Area) obstacleArea.clone();
-		obstacleInViewRange.intersect(viewRangeArea);
+	private List<LineSegment> getVisibleObstacleEdges(List<Zone> obstacles) {
 
-		//		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
+		//get all the visible segments of the obstacles that we can see
+		List<LineSegment> potentiallyVisibleEdges = new ArrayList<LineSegment>();
 
-		//		World.debugShapesToDraw.add(obstacleInViewRange);
-
-		List<Line2D> visibleObstacleSegments = new ArrayList<Line2D>();
-
-		//start at 0 radians, and go around the full circle
-		//when you hit part of the obstacle you can see, store that point
-		//use just the part of the obstacle in our view range to make the calculation easier
-		//keep going until you can't see it any more
-		//add those 2 points in an array into the list edgePoints
-
-		Line2D curSeg = new Line2D.Double();
-		boolean currentlyAddingSegment = false;
-		Point2D curPoint = null;
-		Point2D prevPoint = null;
-
-		for(double curRad = 0.0; curRad < 2*Math.PI; curRad += RADIAL_SWEEP_INCREMENT_RADIANS) {
-			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
-
-
-			//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
-
-
-			if( (! currentlyAddingSegment) && curPoint != null) {
-				curSeg = new Line2D.Double();
-				curSeg.setLine(curPoint, curSeg.getP2());
-				currentlyAddingSegment = true;
-			} else if(currentlyAddingSegment && curPoint == null) {
-				curSeg.setLine(curSeg.getP1(), prevPoint);
-				visibleObstacleSegments.add(curSeg);
-				currentlyAddingSegment = false;
-			}
-
-			if(curPoint != null) {
-				prevPoint = (Point2D) curPoint.clone();
-			}
+		for(Zone o : obstacles) {
+			potentiallyVisibleEdges.addAll(Utilities.getDiscontinuitySegments(this.getVisibleArea(), o));
 		}
+
+		//more often that not, we will not have overlapping obstacle edges
+		//so don't deal with them and see if it still works
+		return potentiallyVisibleEdges;
+		
+//		final Point2D viewpoint = this.getCenterLocation();
+//
+//		//sort the edges by starting angle
+//		Collections.sort(potentiallyVisibleEdges,
+//				new Comparator<LineSegment>() {
+//			@Override
+//			public int compare(LineSegment o1, LineSegment o2) {
+//				//a line segment is less than another line segment if the angle to one of it's endpoints is less than the smaller angle of the other segments endpoints as viewed from viewpoint
+//				double a1 = o1.getLeastAngleToEndpoint(viewpoint);
+//				double a2 = o2.getLeastAngleToEndpoint(viewpoint);
+//				if(a1 > a2) return 1;
+//				else if(a1 == a2) return 0;
+//				else return -1;
+//			}
+//		});
+//		
+//		List<LineSegment> activeSegments = new ArrayList<LineSegment>();
+//		List<LineSegment> definatlyVisibleEdges = new ArrayList<LineSegment>();
+//		
+//		//go through all the potentially visible segments in order and determine which one is closest in any direction
+//		for(int i = 0; i < potentiallyVisibleEdges.size(); i++) {
+//			//get the potentially visible segment
+//			LineSegment curSegment = potentiallyVisibleEdges.get(i);
+//			
+//			//add it to the active segements
+//			activeSegments.add(curSegment);
+//			
+//			//remove any segments that are no longer active
+//			//i.e. have an end angle before this segment's start angle
+//			ListIterator<LineSegment> activeIterator = activeSegments.listIterator();
+//			double curSegmentStartAngle = curSegment.getLeastAngleToEndpoint(viewpoint);
+//			while(activeIterator.hasNext()) {
+//				LineSegment s = activeIterator.next();
+//				if(s.getGreatestAngleToEndpoint(viewpoint) < curSegmentStartAngle) {
+//					activeIterator.remove();
+//				}
+//			}
+//			
+//			//get the segment that should be visible at this angle
+//			
+//			
+//			
+//		}
+		
+		
+		
+		
+
+
+
+
+
+
+
+
+		//		//essentially, we're going to do a radial sweep around our view range
+		//		//and see where the obstacle starts and stops
+		//
+		//		Area viewRangeArea = new Area(this.getVisibleArea());
+		//		Area obstacleInViewRange = (Area) obstacleArea.clone();
+		//		obstacleInViewRange.intersect(viewRangeArea);
+		//
+		//		//		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
+		//
+		//		//		World.debugShapesToDraw.add(obstacleInViewRange);
+		//
+		//		List<Line2D> visibleObstacleSegments = new ArrayList<Line2D>();
+		//
+		//		//start at 0 radians, and go around the full circle
+		//		//when you hit part of the obstacle you can see, store that point
+		//		//use just the part of the obstacle in our view range to make the calculation easier
+		//		//keep going until you can't see it any more
+		//		//add those 2 points in an array into the list edgePoints
+		//
+		//		Line2D curSeg = new Line2D.Double();
+		//		boolean currentlyAddingSegment = false;
+		//		Point2D curPoint = null;
+		//		Point2D prevPoint = null;
+		//
+		//		for(double curRad = 0.0; curRad < 2*Math.PI; curRad += RADIAL_SWEEP_INCREMENT_RADIANS) {
+		//			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
+		//
+		//
+		//			//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
+		//
+		//
+		//			if( (! currentlyAddingSegment) && curPoint != null) {
+		//				curSeg = new Line2D.Double();
+		//				curSeg.setLine(curPoint, curSeg.getP2());
+		//				currentlyAddingSegment = true;
+		//			} else if(currentlyAddingSegment && curPoint == null) {
+		//				curSeg.setLine(curSeg.getP1(), prevPoint);
+		//				visibleObstacleSegments.add(curSeg);
+		//				currentlyAddingSegment = false;
+		//			}
+		//
+		//			if(curPoint != null) {
+		//				prevPoint = (Point2D) curPoint.clone();
+		//			}
+		//		}
 
 		//if we come out of this, and we're still adding a segment, then we have a segment that goes over 0 radians
 		//so, we should only have one segment rather than 2
@@ -631,23 +754,23 @@ public class Bot extends Rectangle {
 		//			visibleObstacleSegments.add(firstSeg);
 		//		}
 
-		//make sure we close any segemnts if we are still adding them
-		if(currentlyAddingSegment) {
-			curSeg.setLine(curSeg.getP1(), prevPoint);
-			visibleObstacleSegments.add(curSeg);
-		}
-
-		for(Line2D l :visibleObstacleSegments) {
-			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-		}
-
-		List<Line2D> obstacleSides = Utilities.getSides(obstacleArea);
-		for(Line2D l : obstacleSides) {
-			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-		}
-
-		//return the list of segments
-		return visibleObstacleSegments;
+		//		//make sure we close any segemnts if we are still adding them
+		//		if(currentlyAddingSegment) {
+		//			curSeg.setLine(curSeg.getP1(), prevPoint);
+		//			visibleObstacleSegments.add(curSeg);
+		//		}
+		//
+		//		for(Line2D l :visibleObstacleSegments) {
+		//			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+		//		}
+		//
+		//		List<LineSegment> obstacleSides = Utilities.getSides(obstacleArea);
+		//		for(Line2D l : obstacleSides) {
+		//			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
+		//		}
+		//
+		//		//return the list of segments
+		//		return visibleObstacleSegments;
 	}
 
 	private Point2D getClosestPointOnShapeInDirection(double direction, Shape s) {
@@ -669,9 +792,7 @@ public class Bot extends Rectangle {
 
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
-
-		print("There are " + nearbyBots.size() + " nearby bots");
-
+		
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
 			if(b.getID() == this.getID()) {
@@ -701,7 +822,7 @@ public class Bot extends Rectangle {
 	@SuppressWarnings("unchecked")
 	private List<Survivor> lookForSurvivors() {
 		//first, get our visibility radius
-		Shape visibilityRange = getVisibibleArea();
+		Shape visibilityRange = getVisibleArea();
 
 		//see if the location of any of our victims intersects this range
 		List<Survivor> visibleVictims = (List<Survivor>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allSurvivors);
@@ -899,9 +1020,7 @@ public class Bot extends Rectangle {
 		//we shouldn't hang onto shouts for too long
 		heardShouts.clear();
 		//also don't want to hang on to bot info for too long
-		print(otherBotInfo.size() + " other bot infos before");
 		otherBotInfo.clear();
-		print(otherBotInfo.size() + " other bot infos after clear");
 
 
 		//make sure we are still in the zones we think we are in

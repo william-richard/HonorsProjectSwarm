@@ -13,11 +13,6 @@ public class Fire extends DangerZone {
 	public Fire(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
 		super(xPoints, yPoints, numPoints, _zoneID, FireColor);
 	}
-
-	@Override
-	public double getBotMaxVelocity() {
-		return Bot.DEFAULT_MAX_VELOCITY/5;
-	}		
 	
 	@Override
 	public boolean isObstacle() {

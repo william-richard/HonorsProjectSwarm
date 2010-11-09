@@ -10,8 +10,8 @@ import util.shapes.Circle2D;
 
 public abstract class Zone extends Polygon {
 
-	private static final long serialVersionUID = 1L;
-	
+	private static final long serialVersionUID = -3828823916299213104L;
+
 	protected int zoneID;
 	protected Color zoneColor;
 	
@@ -46,20 +46,32 @@ public abstract class Zone extends Polygon {
 		return new Point2D.Double(getCenterX(), getCenterY());
 	}
 	
-	public double getBotMaxVelocitySquared() {
-		return getBotMaxVelocity() * getBotMaxVelocity();
-	}
-
 	protected void setColor(Color newColor) {
 		zoneColor = newColor;
 	}
 	
+	public Circle2D getBroadcastArea(Point2D originator) {
+		return new Circle2D(originator, getBroadcastRange(originator));
+	}
 	
-	public abstract Circle2D getBroadcastRange(Point2D originator);
-	public abstract Circle2D getVisibilityRange(Point2D originator);
-	public abstract Circle2D getAudibleRange(Point2D originator);
+	public Circle2D getVisibilityArea(Point2D originator) {
+		return new Circle2D(originator, getVisiblityRange(originator));
+	}
+	
+	public Circle2D getAudibleArea(Point2D originator) {
+		return new Circle2D(originator, getAudibleRange(originator));
+	}
+	
+	public Circle2D getFoundArea(Point2D originator) {
+		return new Circle2D(originator, getFoundRange(originator));
+	}
+
+	
 	public abstract Shout getShout(Survivor shouter);
-	public abstract Circle2D getFoundRange(Point2D originator);
-	public abstract double getBotMaxVelocity();
+	public abstract double getBroadcastRange(Point2D originator);
+	public abstract double getVisiblityRange(Point2D originator);
+	public abstract double getAudibleRange(Point2D originator);
+	public abstract double getFoundRange(Point2D originator);
+	
 	public abstract boolean isObstacle();
 }

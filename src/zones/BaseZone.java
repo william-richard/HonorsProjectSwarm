@@ -1,6 +1,5 @@
 package zones;
 import java.awt.Color;
-import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
@@ -36,47 +35,6 @@ public class BaseZone extends Zone {
 //	public BaseZone(Area a, int _zoneid) {
 //		super(a, _zoneid, BaseZone.BaseZoneColor);
 //	}
-
-	@Override
-	public Circle2D getAudibleRange(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_AUDITORY_RADIUS);
-	}
-
-	@Override
-	public Circle2D getBroadcastRange(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_BROADCAST_RADIUS);
-	}
-
-	@Override
-	public Shout getShout(Survivor shouter) {
-		//for now, the shout is a circle of the default radius
-
-		//calculate it's corner
-		double cornerX = shouter.getCenterX() - Shout.DEFAULT_SHOUT_RADIUS;
-		double cornerY = shouter.getCenterY() - Shout.DEFAULT_SHOUT_RADIUS;
-
-		//return the circular shout
-		return new Shout(new Ellipse2D.Double(cornerX, cornerY, Shout.DEFAULT_SHOUT_RADIUS*2, Shout.DEFAULT_SHOUT_RADIUS*2), shouter);	
-	}
-
-	@Override
-	public Circle2D getVisibilityRange(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFALUT_VISIBILITY_RADIUS);
-	}
-
-	@Override
-	public Circle2D getFoundRange(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_FOUND_RANGE);
-	}
-
-	@Override
-	public double getBotMaxVelocity() {
-		return Bot.DEFAULT_MAX_VELOCITY;
-	}
 
 	@Override
 	public boolean isObstacle() {
@@ -185,5 +143,30 @@ public class BaseZone extends Zone {
 		}
 		
 		return bestPaths;
+	}
+
+	@Override
+	public double getAudibleRange(Point2D originator) {
+		return Bot.DEFAULT_AUDITORY_RADIUS;
+	}
+
+	@Override
+	public double getBroadcastRange(Point2D originator) {
+		return Bot.DEFAULT_BROADCAST_RADIUS;
+	}
+
+	@Override
+	public double getFoundRange(Point2D originator) {
+		return Bot.DEFAULT_FOUND_RANGE;
+	}
+
+	@Override
+	public double getVisiblityRange(Point2D originator) {
+		return Bot.DEFALUT_VISIBILITY_RADIUS;
+	}
+
+	@Override
+	public Shout getShout(Survivor shouter) {
+		return new Shout(new Circle2D(shouter.getCenterLocation(), Shout.DEFAULT_SHOUT_RADIUS), shouter);
 	}
 }

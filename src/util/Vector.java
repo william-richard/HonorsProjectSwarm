@@ -6,6 +6,8 @@ import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import util.shapes.LineSegment;
+
 public class Vector extends Line2D{
 
 	private Point2D p1;
@@ -208,7 +210,7 @@ public class Vector extends Line2D{
 
 	public Point2D getClosestIntersectionToStart(Shape withThisShape) {
 		//first, get the sides of the shape
-		List<Line2D> shapeSides = Utilities.getSides(withThisShape);
+		List<LineSegment> shapeSides = Utilities.getSides(withThisShape);
 
 		//go through all the sides, and see if there are any intersections
 		//there may be more than 1

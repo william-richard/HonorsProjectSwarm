@@ -15,9 +15,4 @@ public class SafeDebris extends SafeZone {
 		super(xPoints, yPoints, numPoints, _zoneID, SafeDebrisColor);
 	}
 	
-	@Override
-	public double getBotMaxVelocity() {
-		return Bot.DEFAULT_MAX_VELOCITY/2.0;
-	}
-
 }

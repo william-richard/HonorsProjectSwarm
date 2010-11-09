@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
+import javax.sql.rowset.spi.SyncResolver;
 import javax.swing.JFrame;
 
 import util.Utilities;
@@ -21,6 +22,7 @@ import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerDebris;
 import zones.DangerZone;
+import zones.Fire;
 import zones.SafeDebris;
 import zones.SafeZone;
 import zones.Zone;
@@ -56,7 +58,7 @@ public class World extends JFrame {
 	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 
-	private static final Stroke VICTIM_PATH_STROKE = new BasicStroke((float) 2.0);	
+	private static final Stroke VICTIM_PATH_STROKE = new BasicStroke((float) 2.0);
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
@@ -73,7 +75,7 @@ public class World extends JFrame {
 	public static List<Shape> debugShapesToDraw;
 
 	private Zone baseZone;
-	
+
 	public static int currentTimestep; //keep track of what time it is
 
 
@@ -83,7 +85,7 @@ public class World extends JFrame {
 		setupFrame();
 
 		//this is with default values, mostly for debugging
-		int numBots = 40;
+		int numBots = 30;
 		int numVic = 2;
 
 		//initialize the zones
@@ -124,8 +126,8 @@ public class World extends JFrame {
 		//only 2 for now, so we'll hard code them	
 		allSurvivors = new ArrayList<Survivor>();
 
-//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
-//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+		//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
+		//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		debugShapesToDraw = new ArrayList<Shape>();
 
@@ -137,6 +139,8 @@ public class World extends JFrame {
 		setResizable(false);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		setBackground(BACKGROUND_COLOR);
+
+		//TODO add button to proceed 1 timestep & add a text box and a button to proceed a typed-in number of timesteps - maybe in a seperate window?
 	}
 
 	public void checkZoneSanity() {
@@ -165,6 +169,8 @@ public class World extends JFrame {
 
 	}
 
+	//TODO combine same type zones?
+	
 	private void fillInZones() {
 		//first, get all unfilled zones
 		Area filledAreas = new Area();
@@ -215,12 +221,21 @@ public class World extends JFrame {
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
 			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
-			//			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
+			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
 			//make sure it doesn't intersect any existing zones
-			if(Utilities.findAreaIntersectionsInList(newZone, allZones).size() > 0) {
+			try {
+				if(Utilities.findAreaIntersectionsInList(newZone, allZones).size() > 0) {
+					zoneVerticies.add(p1);
+					zoneVerticies.add(p2);
+					zoneVerticies.add(p3);
+					continue;
+				}
+			} catch(IllegalArgumentException e) {
+				//if we got an IllegalArgument exception, it means we tried to pass an arealess shape
+				//try again
 				zoneVerticies.add(p1);
 				zoneVerticies.add(p2);
 				zoneVerticies.add(p3);
@@ -242,14 +257,15 @@ public class World extends JFrame {
 	}
 
 
-	public void go(int numTimestepsToRun) {
+	public synchronized void go(int numTimestepsToRun) {
 		//First, need to randomly distribute the bots a bit
 		for(Bot b : allBots) {
 			b.moveRandomly();
 		}
-		
+
 		//then, start with timesteps
 		for(currentTimestep = 0; currentTimestep < numTimestepsToRun; currentTimestep++) {
+			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
 			//do all the victims
 			for(Survivor v : allSurvivors) {
@@ -259,11 +275,20 @@ public class World extends JFrame {
 			//do all the bots
 			for(Bot b : allBots) {
 				b.doOneTimestep();
+				//TODO fix issue where some bots move before others?
 			}
 			System.out.println("Done with bots");
 			//repaint the scenario
 			repaint();
+//			System.out.println(debugShapesToDraw.size() + " debug shapes this timestep");
 			System.out.println("Done with repaint");
+			debugShapesToDraw.clear();
+
+			try {
+				wait(5000);
+			} catch (InterruptedException e) {
+
+			}
 		}
 
 	}
@@ -304,7 +329,7 @@ public class World extends JFrame {
 		while(shoutIterator.hasNext()) {
 			g2d.draw(shoutIterator.next());
 		}
-		
+
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
@@ -318,7 +343,7 @@ public class World extends JFrame {
 				g2d.draw(curBot.getAuditbleArea());
 
 				g2d.setColor(VISIBLE_RANGE_COLOR);
-				g2d.draw(curBot.getVisibibleArea());
+				g2d.draw(curBot.getVisibleArea());
 
 				g2d.setColor(BROADCAST_RANGE_COLOR);
 				g2d.draw(curBot.getBroadcastArea());
@@ -361,6 +386,7 @@ public class World extends JFrame {
 		if(WORLD_DEBUG) {
 			//draw the shapes in the debug arraylist
 			g2d.setColor(Color.white);
+			g2d.setStroke(new BasicStroke(2));
 			for(Shape s : debugShapesToDraw) {
 				g2d.draw(s);
 			}

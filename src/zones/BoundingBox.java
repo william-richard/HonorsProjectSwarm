@@ -8,11 +8,12 @@ import java.util.List;
 
 import util.Utilities;
 import util.Vector;
+import util.shapes.LineSegment;
 
 public class BoundingBox extends Rectangle2D.Double {
 	
 	private static final long serialVersionUID = 1L;
-	private List<Line2D> sides;
+	private List<LineSegment> sides;
 
 	public BoundingBox(double x, double y, double w, double h) {
 		super(x, y, w, h);

@@ -14,9 +14,4 @@ public class DangerDebris extends DangerZone {
 		super(xPoints, yPoints, numPoints, _zoneID, DangerDebrisColor);
 	}
 	
-	@Override
-	public double getBotMaxVelocity() {
-		return Bot.DEFAULT_MAX_VELOCITY/2.0;
-	}	
-
 }

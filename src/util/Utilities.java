@@ -1,6 +1,5 @@
 package util;
 
-import java.awt.Polygon;
 import java.awt.Shape;
 import java.awt.geom.Area;
 import java.awt.geom.FlatteningPathIterator;
@@ -8,12 +7,17 @@ import java.awt.geom.Line2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+
+import simulation.World;
+import util.shapes.Circle2D;
+import util.shapes.LineSegment;
 
 public class Utilities {
 	
 	//finds all shapes in the shapeList that intersect the base shape
-	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, List<? extends Shape> shapeList) {
+	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, List<? extends Shape> shapeList) {		
 		//we're going to take advantage of Area's intersect method
 		// so we need to turn base into an area		
 		Area baseArea = new Area(base);
@@ -21,10 +25,9 @@ public class Utilities {
 		//some Shapes are area-less like lines
 		//need to deal with that case
 		if(baseArea.isEmpty()) {
-			//we have a line or a curve or something on our hands
-			//make the line have a very small width so it has an area
-			baseArea = new Area(giveArealessShapeArea(base));
+			throw new IllegalArgumentException("Base shape doesn't have an area");
 		}
+
 
 		//make the list of shapes that we'll end up returning
 		List<Shape> intersectingShapes = new ArrayList<Shape>();
@@ -47,7 +50,19 @@ public class Utilities {
 		//return the list
 		return intersectingShapes;
 	}
-
+	
+	public static List<? extends Shape> findLineIntersectionInList(Line2D line, List<? extends Shape> shapeList){
+		ArrayList<Shape> resultList = new ArrayList<Shape>();
+		
+		for(Shape s : shapeList) {
+			if(lineIntersectsShape(line, s)) {
+				resultList.add(s);
+			}
+		}
+		
+		return resultList;
+	}
+	
 	/*can figure out if the edges of these 2 intersect if
 	 * 1) Their intersection (defined mathematically as the area shared by both of the shapes) is non empty.  If this is the case, they are not touching at all.
 	 * 2) they intersection is not equal to the total area of either of the shapes.  In this case, one is completely within the other.
@@ -84,7 +99,7 @@ public class Utilities {
 	
 	public static boolean lineIntersectsShape(Line2D l, Shape s) {
 		//get all the edges of the shape
-		List<Line2D> edges = getSides(s);
+		List<LineSegment> edges = getSides(s);
 		
 		for(int i = 0; i < edges.size(); i++) {
 			Line2D curEdge = edges.get(i);
@@ -95,28 +110,28 @@ public class Utilities {
 	}
 	
 	
-	public static Polygon giveArealessShapeArea(Shape s) {
-		//get all the verticies of the shape
-		List<Point2D> shapeVerticies = getVerticies(s);
-		
-		//now, make a polygon with those verticies
-		Polygon sWithArea = new Polygon();
-		Point2D curPoint;
-		for(int i = 0; i < shapeVerticies.size(); i++) {
-			curPoint = shapeVerticies.get(i);
-			//Polygon only takes ints, so this is a VERY rough estimate
-			sWithArea.addPoint((int)curPoint.getX(), (int)curPoint.getY());
-		}
-		
-		//now, go through again and add the sames points again, but offset by a bit
-		//this way, we'll get the polygon to have some area
-		for(int i = shapeVerticies.size()-1; i >= 0; i--) {
-			curPoint = shapeVerticies.get(i);
-			sWithArea.addPoint((int)curPoint.getX() + 1, (int) curPoint.getY() + 1);
-		}
-		
-		return sWithArea;
-	}
+//	public static Polygon giveArealessShapeArea(Shape s) {
+//		//get all the verticies of the shape
+//		List<Point2D> shapeVerticies = getVerticies(s);
+//		
+//		//now, make a polygon with those verticies
+//		Polygon sWithArea = new Polygon();
+//		Point2D curPoint;
+//		for(int i = 0; i < shapeVerticies.size(); i++) {
+//			curPoint = shapeVerticies.get(i);
+//			//Polygon only takes ints, so this is a VERY rough estimate
+//			sWithArea.addPoint((int)curPoint.getX(), (int)curPoint.getY());
+//		}
+//		
+//		//now, go through again and add the sames points again, but offset by a bit
+//		//this way, we'll get the polygon to have some area
+//		for(int i = shapeVerticies.size()-1; i >= 0; i--) {
+//			curPoint = shapeVerticies.get(i);
+//			sWithArea.addPoint((int)curPoint.getX() + 1, (int) curPoint.getY() + 1);
+//		}
+//		
+//		return sWithArea;
+//	}
 	
 	
 	/*
@@ -125,7 +140,7 @@ public class Utilities {
 	 */
 	public static List<Point2D> getVerticies(Shape s) {
 		//get all the sides
-		List<Line2D> sides = getSides(s);
+		List<LineSegment> sides = getSides(s);
 		
 		//get all the points from the sides
 		List<Point2D> verticies = new ArrayList<Point2D>();
@@ -147,13 +162,13 @@ public class Utilities {
 
 	}
 	
-	public static List<Line2D> getSides(Shape s) {
+	public static List<LineSegment> getSides(Shape s) {
 		//get s's PathIterator
 		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .01);
 		
 		//now, go through the iterator and extract the sides
 		double[] curCoords = new double[6];
-		List<Line2D> sides = new ArrayList<Line2D>();
+		List<LineSegment> sides = new ArrayList<LineSegment>();
 		
 		Point2D moveToPoint = new Point2D.Double();
 		Point2D lastPoint = new Point2D.Double();
@@ -169,10 +184,10 @@ public class Utilities {
 				moveToPoint = (Point2D) nextPoint.clone();
 			} else if(segType == PathIterator.SEG_LINETO) {
 				//store a line from the last point to the point we just got
-				sides.add(new Line2D.Double(lastPoint, nextPoint));
+				sides.add(new LineSegment(lastPoint, nextPoint));
 			} else if(segType == PathIterator.SEG_CLOSE) {
 				//store a line from the last point to the last point we moved to
-				sides.add(new Line2D.Double(lastPoint, moveToPoint));
+				sides.add(new LineSegment(lastPoint, moveToPoint));
 			} else if(segType == PathIterator.SEG_CUBICTO || segType == PathIterator.SEG_QUADTO) {
 				System.out.println("GOT A CURVE WHEN GETTING SIDES!!!! SHOULD NOT HAPPEN!!!");
 			}
@@ -224,7 +239,7 @@ public class Utilities {
 	
 	public static Line2D getNearestSide(Shape onThisShape, Point2D toThisPoint) {
 		//get all the sides of this shape
-		List<Line2D> sides = getSides(onThisShape);
+		List<LineSegment> sides = getSides(onThisShape);
 		
 		//figure out which side is closest to us
 		Line2D closestSide = sides.get(0);
@@ -247,6 +262,33 @@ public class Utilities {
 		Vector v2 = new Vector(fromThisPoint, andThisOtherPoint);
 		return v1.getAngleBetween(v2);
 	}
+	
+	public static List<LineSegment> getDiscontinuitySegments(Circle2D base, Shape outsider) {
+		//first, get the sides of the outsider
+		List<LineSegment> outsiderSides = Utilities.getSides(outsider);
+		
+//		System.out.println("Outsider has " + outsiderSides.size() + " sides");
+		
+		List<LineSegment> results = new ArrayList<LineSegment>(); 
+		
+		//take a look at each segment
+		for(LineSegment curSide : outsiderSides) {
+			//get any intersection segments this side has with the circle
+			//and add them to the result points
+			LineSegment newSegment = base.getLineIntersectionSegment(curSide);
+			
+//			System.out.println("Full line is " + Utilities.lineToString(curSide));
+//			System.out.println("Part we can see " + Utilities.lineToString(newSegment));
+			
+			if(newSegment != null) {
+				World.debugShapesToDraw.add(newSegment);
+				results.add(newSegment);
+			}
+		}
+		
+		return results;
+	}
+	
 	
 	@Deprecated
 	public static List<Point2D> getDiscontinuityPoints(Shape base, Shape outsider) {
@@ -319,36 +361,7 @@ public class Utilities {
 		//it is possible we will get passed a line of length 0, where the start point and end point are the same
 		//if this happens, return one of the points, as we have already determined that the other line intersects that point
 		if(l1.getP1().equals(l1.getP2())) return l1.getP1();
-		if(l2.getP1().equals(l2.getP2())) return l2.getP2();
-		
-//		System.out.println("Trying to find intersection between '" + Utilities.lineToString(l1) + "' and '" + Utilities.lineToString(l2) + "'");
-		
-//		//first, need to handle vertcial and horizontal lines
-//		//if either of the lines are horizontal, just get the point on the other line at the first line's x value
-//		if(Utilities.isHorizontal(l1)) {
-//			
-//		}
-//		
-//		
-//		
-//		
-//		//according to wikipedia, the following formula solves for the x intersection point and the y intersection point
-//		//if l1 has points x1,y1 and x2,y2 and l2 has points x3,y3 and x4,y4 then
-//		//intersection x = ((x1y2-y1x2)(x3-x4) - (x1-x2)(x3y4-y3x4))/((x1-x2)(y3-y4)-(y1-y2)(x3-x4))
-//		//intersection y = ((x1y2-y1x2)(y3-y4) - (y1-y2)(x3y4-y3x4))/((x1-x2)(y3-y4)-(y1-y2)(x3-x4)
-//		//so lets do it
-//		double intersectionX = ((l1.getX1()*l1.getY2() - l1.getY1()*l1.getX2())*(l2.getX1() - l2.getX2()) - (l1.getX1() - l1.getX2())*(l2.getX1()*l2.getY2()-l2.getY1()*l2.getX2()))
-//								/ ((l1.getX1()-l1.getX2())*(l2.getY1()-l2.getY2())-(l1.getY1()-l1.getY2())*(l2.getX1()-l2.getX2()));
-//		double intersectionY = ((l1.getX1()*l1.getY2() - l1.getY1()*l1.getX2())*(l2.getY1() - l2.getY2()) - (l1.getY1() - l1.getY2())*(l2.getX1()*l2.getY2()-l2.getY1()*l2.getX2()))
-//								/ ((l1.getX1()-l1.getX2())*(l2.getY1()-l2.getY2())-(l1.getY1()-l1.getY2())*(l2.getX1()-l2.getX2()));
-//		Point2D intersectionPoint = new Point2D.Double(intersectionX, intersectionY);
-//		
-//		System.out.println("Found the intersection is " + Utilities.pointToString(intersectionPoint));
-//		
-//		return intersectionPoint;
-		
-		
-		
+		if(l2.getP1().equals(l2.getP2())) return l2.getP2();		
 		
 		//also need to handle the case of the vertical line i.e. the X1 and X2 are equal
 		//again, we have already determined that the lines inersect at some point,
