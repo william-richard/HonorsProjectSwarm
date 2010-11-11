@@ -6,6 +6,8 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Shape;
 import java.awt.Stroke;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowListener;
 import java.awt.geom.Area;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -16,6 +18,7 @@ import java.util.Random;
 
 import javax.sql.rowset.spi.SyncResolver;
 import javax.swing.JFrame;
+import javax.swing.RepaintManager;
 
 import util.Utilities;
 import zones.BaseZone;
@@ -28,7 +31,9 @@ import zones.SafeZone;
 import zones.Zone;
 
 
-public class World extends JFrame {
+public class World extends JFrame implements WindowListener {
+
+	private static final long serialVersionUID = -2526080354915012922L;
 
 	/***************************************************************************
 	 * CONSTANTS
@@ -63,8 +68,6 @@ public class World extends JFrame {
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
 
-	private static final long serialVersionUID = 1L;
-
 	/** VARIABLES */
 	public static List<Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
@@ -76,17 +79,17 @@ public class World extends JFrame {
 
 	private Zone baseZone;
 
-	public static int currentTimestep; //keep track of what time it is
-
+	private static int currentTimestep; //keep track of what time it is
+	private long timeBetweenTimesteps;
 
 	public World() {
+		this(40, 2, 5000);
+	}
+	
+	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps) {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
-
-		//this is with default values, mostly for debugging
-		int numBots = 30;
-		int numVic = 2;
 
 		//initialize the zones
 		allZones = new ArrayList<Zone>();
@@ -122,6 +125,12 @@ public class World extends JFrame {
 			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
 		}
 
+		//need to randomly distribute the bots a bit
+		for(Bot b : allBots) {
+			b.moveRandomly();
+		}
+
+		
 		//initialize the victims
 		//only 2 for now, so we'll hard code them	
 		allSurvivors = new ArrayList<Survivor>();
@@ -130,17 +139,16 @@ public class World extends JFrame {
 		//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
 
 		debugShapesToDraw = new ArrayList<Shape>();
-
-		setVisible(true);
+		
+		currentTimestep = 0;
+		setTimeBetweenTimesteps(_timeBetweenTimesteps);
 	}
 
 	private void setupFrame() {
 		setSize(FRAME_WIDTH, FRAME_HEIGHT);
 		setResizable(false);
-		setDefaultCloseOperation(EXIT_ON_CLOSE);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setBackground(BACKGROUND_COLOR);
-
-		//TODO add button to proceed 1 timestep & add a text box and a button to proceed a typed-in number of timesteps - maybe in a seperate window?
 	}
 
 	public void checkZoneSanity() {
@@ -256,15 +264,40 @@ public class World extends JFrame {
 		}
 	}
 
+	/**
+	 * @return the currentTimestep
+	 */
+	public static int getCurrentTimestep() {
+		return currentTimestep;
+	}
 
-	public synchronized void go(int numTimestepsToRun) {
-		//First, need to randomly distribute the bots a bit
-		for(Bot b : allBots) {
-			b.moveRandomly();
-		}
+	/**
+	 * @return the timeBetweenTimesteps
+	 */
+	public long getTimeBetweenTimesteps() {
+		return timeBetweenTimesteps;
+	}
+
+	/**
+	 * @param timeBetweenTimesteps the timeBetweenTimesteps to set
+	 */
+	public void setTimeBetweenTimesteps(long timeBetweenTimesteps) {
+		this.timeBetweenTimesteps = timeBetweenTimesteps;
+	}
+
+	private boolean keepGoing = false;
+	
+	public boolean isGoing() {
+		return keepGoing;
+	}
+
+	public synchronized void go() {		
+		repaint();
+		
+		keepGoing = true;
 
 		//then, start with timesteps
-		for(currentTimestep = 0; currentTimestep < numTimestepsToRun; currentTimestep++) {
+		for(; keepGoing; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
 			//do all the victims
@@ -284,20 +317,26 @@ public class World extends JFrame {
 			System.out.println("Done with repaint");
 			debugShapesToDraw.clear();
 
+			System.out.println("Time between timesteps is " + timeBetweenTimesteps);
 			try {
-				wait(5000);
+				wait(timeBetweenTimesteps);
 			} catch (InterruptedException e) {
 
 			}
 		}
 
 	}
-
+	
+	public void stopSimulation() {
+		keepGoing = false;
+	}
+	
+	
 	public void paint(Graphics g) {		
-		g = getGraphics();
+		super.paint(g);
+		
+		g = this.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
-
-		//		System.out.println("REPAINTING");
 
 		//clear everything
 		g2d.setColor(BACKGROUND_COLOR);
@@ -430,16 +469,40 @@ public class World extends JFrame {
 		return null;
 	}
 
-
-
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-
-		//make a new World
+	public static void createAndShowGUI() {
+		//create a new World
 		World w = new World();
-		w.go(500);
+		w.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		w.pack();
+		w.setVisible(true);		
 	}
+
+	@Override
+	public void windowActivated(WindowEvent e) {
+		repaint();
+	}
+
+	@Override
+	public void windowClosed(WindowEvent e) {}
+
+	@Override
+	public void windowClosing(WindowEvent e) {
+		stopSimulation();
+		setVisible(false);
+	}
+	@Override
+	public void windowDeactivated(WindowEvent e) {
+		repaint();
+	}
+
+	@Override
+	public void windowDeiconified(WindowEvent e) {}
+
+	@Override
+	public void windowIconified(WindowEvent e) {}
+
+	@Override
+	public void windowOpened(WindowEvent e) {}
 
 }

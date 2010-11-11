@@ -62,7 +62,7 @@ public class Bot extends Rectangle {
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
-	private boolean MOVE_BOT_DEBUG = 		false;
+	private boolean MOVE_BOT_DEBUG = 		true;
 	private boolean FIND_VICTIM_DEBUG = 	false;
 
 
@@ -533,16 +533,18 @@ public class Bot extends Rectangle {
 	
 	private Vector avoidObstacles(Vector intendedPath) {
 
+		print("Starting avoidObstacles");
+		
 		//first, look for any obstacles nearby
 		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones);
-
+		
 		List<Zone> visibleObstacles = new ArrayList<Zone>();
 		for(Shape s : visibleZones) {
 			if(s instanceof Zone && ((Zone) s).isObstacle()) {
 				visibleObstacles.add((Zone)s);
 			}
 		}
-
+		
 		//don't do anything if we're not going to run into anything.
 		if(visibleObstacles.size() == 0) return intendedPath;
 
@@ -636,6 +638,11 @@ public class Bot extends Rectangle {
 			potentiallyVisibleEdges.addAll(Utilities.getDiscontinuitySegments(this.getVisibleArea(), o));
 		}
 
+		for(LineSegment s : potentiallyVisibleEdges) {
+			print("Can see : " + Utilities.lineToString(s));
+		}
+		
+		
 		//more often that not, we will not have overlapping obstacle edges
 		//so don't deal with them and see if it still works
 		return potentiallyVisibleEdges;
@@ -992,7 +999,7 @@ public class Bot extends Rectangle {
 
 			double avgPathRating = currentSegmentRating/(vicDistance*DANGER_MULTIPLIER);
 
-			String message = "fv " + this.getID() + " " + surDamage + " " + s.getCenterX() + " " + s.getCenterY() + World.currentTimestep + "\n";
+			String message = "fv " + this.getID() + " " + surDamage + " " + s.getCenterX() + " " + s.getCenterY() + World.getCurrentTimestep() + "\n";
 
 			broadcastMessage(message);
 
