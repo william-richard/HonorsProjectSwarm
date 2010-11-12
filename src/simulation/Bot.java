@@ -843,6 +843,8 @@ public class Bot extends Rectangle {
 				}
 			}
 		}
+		
+
 
 //		//around corners, we will have overlapping edges
 //		//do it roughly for now, see if it works OK
