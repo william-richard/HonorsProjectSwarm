@@ -613,19 +613,18 @@ public class Bot extends Rectangle {
 				boolean passNeeded = true;
 				//				LineSegment previousSegment = s;
 
-//				int numPasses = 0;
+				int numPasses = 0;
 				
 				while(passNeeded && ! Utilities.shouldEqualsZero(newIntendedPath.getMagnitude())) {
 					passNeeded = false;
 					
-//					numPasses++;
+					numPasses++;
 					
-//					if(numPasses > (2*Math.PI / AVOID_OBSTACLES_OVERROTATE_RADIANS) ) {
-//						//gone in a full circle (ish) - something is wrong
-//						//try shortening the vector a bit
-//						newIntendedPath = newIntendedPath.rescaleRatio(.1);
-//						numPasses = 0;
-//					}
+					if(numPasses > (2*Math.PI / AVOID_OBSTACLES_OVERROTATE_RADIANS) ) {
+						//gone in a full circle (ish) - something is wrong
+						newIntendedPath = new Vector(this.getCenterLocation(), this.getCenterLocation());
+						break;
+					}
 					
 					
 
@@ -904,7 +903,9 @@ public class Bot extends Rectangle {
 				
 		for(LineSegment curEdge : obstacleEdges) {
 			if(curEdge.segmentsIntersect(visibleRay)) {
-				visiblePoints.add(curEdge.intersectionPoint(curEdge));
+				Point2D intersectionPoint = curEdge.intersectionPoint(visibleRay);
+				if(intersectionPoint != null)
+				visiblePoints.add(intersectionPoint);
 			}
 		}
 		
