@@ -27,7 +27,7 @@ import zones.Zone;
 
 public class Bot extends Rectangle {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -3272426964314356266L;
 
 	/***************************************************************************
 	 * CONSTANTS
@@ -44,9 +44,8 @@ public class Bot extends Rectangle {
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 8;
 
-	public static final double RADIAL_SWEEP_INCREMENT_DEGREES = 1.0;
-	public static final double RADIAL_SWEEP_INCREMENT_RADIANS = RADIAL_SWEEP_INCREMENT_DEGREES * Math.PI / 180.0;
-
+	private final double AVOID_OBSTACLES_OVERROTATE_RADIANS = 2.0 * Math.PI / 180.0;
+	private final double RADIAL_SWEEP_INCREMENT_RADIANS = AVOID_OBSTACLES_OVERROTATE_RADIANS / 2.0;
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
@@ -86,13 +85,16 @@ public class Bot extends Rectangle {
 	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
 	private List<Survivor> knownSurvivors; //keep a list of vicitms that have already been found, so we don't double up on one vic
+	private World world;
 
 
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
-	public Bot(double centerX, double centerY, int _numBots, int _botID, Zone homeBase, BoundingBox _bounds) {
+	public Bot(World _world, double centerX, double centerY, int _numBots, int _botID, Zone homeBase, BoundingBox _bounds) {
 		super();
+
+		world = _world;
 
 		//first, in order to store our location, we need to find our top left corner
 		double cornerX = centerX - DIMENSION/2;
@@ -492,13 +494,12 @@ public class Bot extends Rectangle {
 			v = v.moveTo(this.getCenterLocation());
 		}
 
-		if(MOVE_BOT_DEBUG) 
-			print("Moving along vector '" + v + "'");
-
 		//make sure the vector isn't too long i.e. assert our max velocity
 		//this basically allows us to move to the end of the vector as 1 step
 		v = verifyMovementVector(v);
 
+		if(MOVE_BOT_DEBUG) 
+			print("Moving along vector '" + v + "'");
 
 		//don't hit the walls of the bounding box 
 		if(Utilities.edgeIntersects(this.boundingBox, currentZone.getVisibilityArea(getCenterLocation()))) {
@@ -530,104 +531,290 @@ public class Bot extends Rectangle {
 		}
 		return v;
 	}
-	
+
 	private Vector avoidObstacles(Vector intendedPath) {
 
-		print("Starting avoidObstacles");
-		
+		if(MOVE_BOT_DEBUG)
+			print("Starting avoidObstacles");
+
 		//first, look for any obstacles nearby
 		List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones);
-		
+
 		List<Zone> visibleObstacles = new ArrayList<Zone>();
 		for(Shape s : visibleZones) {
 			if(s instanceof Zone && ((Zone) s).isObstacle()) {
 				visibleObstacles.add((Zone)s);
 			}
 		}
-		
+
 		//don't do anything if we're not going to run into anything.
 		if(visibleObstacles.size() == 0) return intendedPath;
+
+		if(MOVE_BOT_DEBUG) {
+			print(visibleZones.size() + " visible zones.\t" + visibleObstacles.size() + " are obstacles");
+		}
 
 		//we may need to avoid at least 1 obstacle
 		//get all the visible segments of those obstacles
 		List<LineSegment> visibleObstacleEdges = getVisibleObstacleEdges(visibleObstacles);
-		
+
+		if(MOVE_BOT_DEBUG) {
+			for(LineSegment s : visibleObstacleEdges) {
+				print("Can see : " + Utilities.lineToString(s));
+				World.debugShapesToDraw.add(s);
+			}
+		}
+
 		//see if our path goes into any of them
 		//if it does, adjust our path so that it misses that segment and any other segment it may run into
 		for(LineSegment s : visibleObstacleEdges) {
-			if(intendedPath.intersectsLine(s)) {
+			if(s.segmentsIntersect(intendedPath)) {
 				//we need to adjust our path
-				//see which end of the line segment is closer to our intended position
-				Point2D closerPoint = (s.getP1().distanceSq(intendedPath.getP2()) < s.getP2().distanceSq(intendedPath.getP2()) ? s.getP1() : s.getP2());
+				//see which end of the line segment is closer to our intended position by angle
+				Point2D closerPoint = (Math.abs(intendedPath.getAngleBetween(s.getP1())) < Math.abs(intendedPath.getAngleBetween(s.getP2())) ? s.getP1() : s.getP2());
 				//see if any other sides would get in the way of making a path going toward that closer point
 				Vector newIntendedPath = new Vector(this.getCenterLocation(), closerPoint);
-				newIntendedPath = verifyMovementVector(newIntendedPath);
+				if(MOVE_BOT_DEBUG) {
+					print("Originally, considering " + s);
+					print("new intended path before overrotating = " + newIntendedPath);
+					print("Angle between this intended path and the original path is " + intendedPath.getAngleBetween(newIntendedPath));
+				}
+
+				//go a bit farther, just in case
+				boolean goInPositiveDirection = true; //assume we should
+				//see which way is clear
+				Vector overshootPath = newIntendedPath.rotate(AVOID_OBSTACLES_OVERROTATE_RADIANS);
 				
+				for(Zone o : visibleObstacles) {
+					if(o.contains(overshootPath.getP2())) {
+						//don't go positive
+						goInPositiveDirection = false;
+					}
+				}
+				
+				
+				
+//				goInPositiveDirection = (intendedPath.getAngleBetween(newIntendedPath) > 0);
+				
+				//go whichever way we decided was best, maybe
+				newIntendedPath = newIntendedPath.rotate((goInPositiveDirection ? 1.0 : -1.0) * AVOID_OBSTACLES_OVERROTATE_RADIANS);
+
+				if(MOVE_BOT_DEBUG) {
+					print("Unscaled movement vector is " + newIntendedPath);
+					double angleBetweenNewPathAndOldPath = intendedPath.getAngleBetween(newIntendedPath);
+					print("Angle between old path and new path is " + angleBetweenNewPathAndOldPath);
+					print("Rotating in " + (goInPositiveDirection ? "POSITIVE" : "NEGATIVE") + " direction");
+				}
+
+				newIntendedPath = verifyMovementVector(newIntendedPath);
+
 				//go through all of the segments, continuing to go in the same direction until we have a clear path
 				//to go in the same direction, try to go to the far end of the line
 				boolean passNeeded = true;
-				LineSegment prevSegment = s;
-				while(passNeeded) {
+				//				LineSegment previousSegment = s;
+
+//				int numPasses = 0;
+				
+				while(passNeeded && ! Utilities.shouldEqualsZero(newIntendedPath.getMagnitude())) {
 					passNeeded = false;
 					
-					for(LineSegment t : visibleObstacleEdges) {
-						if(t.equals(prevSegment)) continue;
-						
-						if(newIntendedPath.intersectsLine(t)) {
+//					numPasses++;
+					
+//					if(numPasses > (2*Math.PI / AVOID_OBSTACLES_OVERROTATE_RADIANS) ) {
+//						//gone in a full circle (ish) - something is wrong
+//						//try shortening the vector a bit
+//						newIntendedPath = newIntendedPath.rescaleRatio(.1);
+//						numPasses = 0;
+//					}
+					
+					
+
+					for(LineSegment line : visibleObstacleEdges) {
+
+						//						//ignore the last segment we intersected
+						//						if(line.equals(previousSegment)) {
+						//							continue;
+						//						}
+
+						if(line.segmentsIntersect(newIntendedPath)) {
 							passNeeded = true;
-							Point2D furtherPoint = (t.getP1().distanceSq(newIntendedPath.getP2()) > t.getP2().distanceSq(newIntendedPath.getP2()) ? t.getP1() : t.getP2());
-							newIntendedPath = new Vector(this.getCenterLocation(), furtherPoint);
-							newIntendedPath = verifyMovementVector(newIntendedPath);
+							//							previousSegment = line;
+
+							//rotate to the farther endpoint of the line
+							double angleToP1 = newIntendedPath.getAngleBetween(line.getP1());
+							double angleToP2 = newIntendedPath.getAngleBetween(line.getP2());
+
+//							if(Utilities.shouldEqualsZero(angleToP1)) {
+//								angleToP1 = 0.0;
+//							}
+//							if(Utilities.shouldEqualsZero(angleToP2)) {
+//								angleToP2 = 0.0;
+//							}							
+							
+							//I *THINK* one *SHOULD* be positive and the other negative
+							//print just to be sure
+							if(MOVE_BOT_DEBUG) {
+								print("Looking at " + line);
+								print("Current movement vector is " + newIntendedPath);
+								print("angle 1 = " + angleToP1 + "\tangle 2 = " + angleToP2);
+							}
+							
+
+							double morePositiveAngle = (angleToP1 > angleToP2 ? angleToP1 : angleToP2);
+							double moreNegativeAngle = (angleToP1 < angleToP2 ? angleToP1 : angleToP2);
+
+							//							if(morePositiveAngle < 0 || moreNegativeAngle > 0) {
+							//								world.stopSimulation();
+							//							}
+
+							double angleToRotate = (goInPositiveDirection ? morePositiveAngle : moreNegativeAngle);
+
+							newIntendedPath = newIntendedPath.rotate(angleToRotate);
+
+							//over-rotate to make sure we're not on this line anymore
+							double overrotationAngle = (goInPositiveDirection ? 1.0 : -1.0) * AVOID_OBSTACLES_OVERROTATE_RADIANS;
+							print("Rotating by angle " + (overrotationAngle+angleToRotate));
+
+							newIntendedPath = newIntendedPath.rotate(overrotationAngle);
+							
+							break;
 						}
 					}
 				}
 				
+				if(MOVE_BOT_DEBUG) {
+					print("Avoiding obstacles vector is '" + newIntendedPath + "'");
+				}
+				
+				//make sure it actually will work
+				for(Zone o : visibleObstacles) {
+					if(o.contains(newIntendedPath.getP2())) {
+						print("AVOIDING OBSTACLES DIDN'T WORK! TRY AGAIN");
+						return avoidObstacles(newIntendedPath);
+					}
+				}
+
 				return newIntendedPath;
 			}
 		}
-		
+
 		//no changes need to be made
 		return intendedPath;
-
-
-
-
-		//		//Try to avoid any obstacles we might run into
-		//		//first, make an Area that is all the obstacles we can see
-		//		Area obstacleArea = new Area();
-		//		for(Zone curObstacle : visibleObstacles) {
-		//			obstacleArea.add(new Area(curObstacle));
-		//		}
-		//
-		//		//start by finding it's edges that we can see
-		//		List<Line2D> visibleObstacleEdges = getVisibleObstacleEdges(obstacleArea);
-		//
-		//		World.debugShapesToDraw.addAll(visibleObstacleEdges);
-		//
-		//		//now, check all those edges, and find the one we're heading into
-		//		for(Line2D curEdge : visibleObstacleEdges) {
-		//			if(intendedPath.intersectsLine(curEdge)) {
-		//				//choose to head towards one of the endpoints of the edge
-		//				//whichever one is closer to our P2
-		//				if(intendedPath.getP2().distanceSq(curEdge.getP1()) < intendedPath.getP2().distanceSq(curEdge.getP2())) {
-		//					intendedPath.setLine(intendedPath.getP1(), curEdge.getP1());
-		//				} else {
-		//					intendedPath.setLine(intendedPath.getP1(), curEdge.getP2());
-		//				}
-		//
-		//				//also, add a bit of buffer around the obstacle so that we don't get too near to it
-		//				//to get the buffer, we're going to add a small vector going out from the current edge
-		//				Vector bufferVect = (new Vector(curEdge)).getPerpendicularVectorPointedTowards(intendedPath.getP2(), this.getObstacleBufferRange(), this.getCenterLocation());
-		//
-		//				intendedPath = intendedPath.add(bufferVect);
-		//
-		//				break;
-		//			}
-		//		}
-		//
-		//		return intendedPath;
 	}
 
+	private class SegmentAngles {
+
+		Point2D pov;
+		LineSegment segment;
+		double angle1;
+		double angle2;
+
+		public SegmentAngles(Point2D _pov, LineSegment _segment) {
+			pov = _pov;
+			segment = _segment;
+			Vector povUnitVector = Vector.getHorizontalUnitVector(pov);
+
+			//mod the angles to keep them between 0 and 2pi
+			angle1 = povUnitVector.getAngleBetween(segment.getP1()) % (2*Math.PI);
+			angle2 = povUnitVector.getAngleBetween(segment.getP2()) % (2*Math.PI);
+		}
+
+		/**
+		 * @return the segment
+		 */
+		public LineSegment getSegment() {
+			return segment;
+		}
+
+		/**
+		 * @return the angle1
+		 */
+		public double getAngle1() {
+			return angle1;
+		}
+
+		/**
+		 * @return the angle2
+		 */
+		public double getAngle2() {
+			return angle2;
+		}
+
+		public double getSmallerAngle() {
+			return (angle1 < angle2 ? angle1 : angle2);
+		}
+
+		public double getLargerAngle() {
+			return (angle1 > angle2 ? angle1 : angle2);
+		}
+
+		/**
+		 * @param other
+		 * @return if this Segment totally obstructs the other segment, according to the point of view
+		 *i.e., the other segment cannot be seen because this segment is in the way
+		 */
+		public boolean obstructs(SegmentAngles other) {
+			//all angles are between 0 and 2pi
+			//need to check if this segment goes over the 0 rad line
+			//i.e. if it has one angle on one side of 0 and another angle on the other side of 0
+			//do this with a ray shooting down the 0 rad line
+			Vector zeroRadVect = Vector.getHorizontalUnitVector(pov).rescale(1000000);
+
+			if(zeroRadVect.intersectsLine(segment)) {
+				//in this case, this line has one foot on either side of 0
+				//should test if our smaller angle is bigger than the other's smaller angle
+				//and if our bigger angle is smaller than the other's bigger angle
+				return this.getSmallerAngle() > other.getSmallerAngle() &&
+				this.getLargerAngle() < other.getLargerAngle();
+			} else {
+				//need to test if our smaller angel is smaller than the other's smaller angle
+				//and if our larger angle is bigger than the other's larger angle
+				return this.getSmallerAngle() < other.getSmallerAngle() &&
+				this.getLargerAngle() > other.getLargerAngle();
+			}
+		}
+
+		/* (non-Javadoc)
+		 * @see java.lang.Object#hashCode()
+		 */
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + getOuterType().hashCode();
+			result = prime * result
+			+ ((segment == null) ? 0 : segment.hashCode());
+			return result;
+		}
+
+		/* (non-Javadoc)
+		 * @see java.lang.Object#equals(java.lang.Object)
+		 */
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (obj == null)
+				return false;
+			if (!(obj instanceof SegmentAngles))
+				return false;
+			SegmentAngles other = (SegmentAngles) obj;
+			if (!getOuterType().equals(other.getOuterType()))
+				return false;
+			if (segment == null) {
+				if (other.segment != null)
+					return false;
+			} else if (!segment.equals(other.segment))
+				return false;
+			return true;
+		}
+
+		private Bot getOuterType() {
+			return Bot.this;
+		}
+
+
+	}
 
 	private List<LineSegment> getVisibleObstacleEdges(List<Zone> obstacles) {
 
@@ -638,148 +825,109 @@ public class Bot extends Rectangle {
 			potentiallyVisibleEdges.addAll(Utilities.getDiscontinuitySegments(this.getVisibleArea(), o));
 		}
 
-		for(LineSegment s : potentiallyVisibleEdges) {
-			print("Can see : " + Utilities.lineToString(s));
+		//for some reason, we're getting duplicates
+		//remove them
+		boolean passNeeded = true;;
+		LineSegment outerSegment, innerSegment;
+		while(passNeeded) {
+			passNeeded = false;
+			for(int outer = 0; outer < potentiallyVisibleEdges.size() - 1; outer++) {
+				outerSegment = potentiallyVisibleEdges.get(outer);
+				for(int inner = outer + 1; inner < potentiallyVisibleEdges.size(); inner++) {
+					innerSegment = potentiallyVisibleEdges.get(inner);
+					if(innerSegment.equals(outerSegment)) {
+						passNeeded = true;
+						potentiallyVisibleEdges.remove(inner);
+						continue;
+					}
+				}
+			}
+		}
+
+//		//around corners, we will have overlapping edges
+//		//do it roughly for now, see if it works OK
+//		//remove edges that are completely obstructed by another edge
+//		//start off by calculating the start and end angles of each segment using the SegmentAngles helper class
+//		List<SegmentAngles> potentiallyVisibleEdgesWithAngles = new ArrayList<SegmentAngles>();
+//		for(LineSegment s : potentiallyVisibleEdges) {
+//			potentiallyVisibleEdgesWithAngles.add(new SegmentAngles(this.getCenterLocation(), s));
+//		}
+
+		//TODO ray tracing to figure out what parts of what segments we can see
+		
+		//make a ray that is the length of the distance that we can see
+		Vector visibleRay = Vector.getHorizontalUnitVector(this.getCenterLocation()).rescale(getVisibityRange());
+		
+		//swing it around until we hit a point where there is nothing in the way
+		double rayAngle = 0.0;
+		for(; rayAngle < 2 * Math.PI; rayAngle += RADIAL_SWEEP_INCREMENT_RADIANS) {
+			if(closestVisibleObstacleAlongVector(visibleRay, potentiallyVisibleEdges) == null) {
+				//stop when we find an open direction
+				break;
+			}
 		}
 		
+		//now that we have found an open direction, start creating edges
 		
-		//more often that not, we will not have overlapping obstacle edges
-		//so don't deal with them and see if it still works
-		return potentiallyVisibleEdges;
 		
-//		final Point2D viewpoint = this.getCenterLocation();
+		
+//		//now, go through the list one segment at a time
+//		//and compare that segment to all other segments in the list
+//		//if that segment completely obstructs the other segment, remove the other segment from the list
+//		ListIterator<SegmentAngles> obstructorItertaor = potentiallyVisibleEdgesWithAngles.listIterator();
+//		SegmentAngles obstructor;
+//		while(obstructorItertaor.hasNext()) {
+//			obstructor = obstructorItertaor.next();
 //
-//		//sort the edges by starting angle
-//		Collections.sort(potentiallyVisibleEdges,
-//				new Comparator<LineSegment>() {
-//			@Override
-//			public int compare(LineSegment o1, LineSegment o2) {
-//				//a line segment is less than another line segment if the angle to one of it's endpoints is less than the smaller angle of the other segments endpoints as viewed from viewpoint
-//				double a1 = o1.getLeastAngleToEndpoint(viewpoint);
-//				double a2 = o2.getLeastAngleToEndpoint(viewpoint);
-//				if(a1 > a2) return 1;
-//				else if(a1 == a2) return 0;
-//				else return -1;
-//			}
-//		});
-//		
-//		List<LineSegment> activeSegments = new ArrayList<LineSegment>();
-//		List<LineSegment> definatlyVisibleEdges = new ArrayList<LineSegment>();
-//		
-//		//go through all the potentially visible segments in order and determine which one is closest in any direction
-//		for(int i = 0; i < potentiallyVisibleEdges.size(); i++) {
-//			//get the potentially visible segment
-//			LineSegment curSegment = potentiallyVisibleEdges.get(i);
-//			
-//			//add it to the active segements
-//			activeSegments.add(curSegment);
-//			
-//			//remove any segments that are no longer active
-//			//i.e. have an end angle before this segment's start angle
-//			ListIterator<LineSegment> activeIterator = activeSegments.listIterator();
-//			double curSegmentStartAngle = curSegment.getLeastAngleToEndpoint(viewpoint);
-//			while(activeIterator.hasNext()) {
-//				LineSegment s = activeIterator.next();
-//				if(s.getGreatestAngleToEndpoint(viewpoint) < curSegmentStartAngle) {
-//					activeIterator.remove();
+//			//now, go through all the other ones
+//			ListIterator<SegmentAngles> angleIterator = potentiallyVisibleEdgesWithAngles.listIterator();
+//			SegmentAngles maybeHiddenSegment;
+//			while(angleIterator.hasNext()) {
+//				maybeHiddenSegment = angleIterator.next();
+//				if(obstructor.equals(maybeHiddenSegment)) {
+//					//don't want to remove ourselves
+//					continue;
+//				}
+//				if(obstructor.obstructs(maybeHiddenSegment)) {
+//					potentiallyVisibleEdges.remove(maybeHiddenSegment.getSegment());
 //				}
 //			}
-//			
-//			//get the segment that should be visible at this angle
-//			
-//			
-//			
 //		}
+
+		return potentiallyVisibleEdges;
+	}
+	
+	private Point2D closestVisibleObstacleAlongVector(Vector visibleRay, List<LineSegment> obstacleEdges) {
+		List<Point2D> visiblePoints = new ArrayList<Point2D>();
+				
+		for(LineSegment curEdge : obstacleEdges) {
+			if(curEdge.segmentsIntersect(visibleRay)) {
+				visiblePoints.add(curEdge.intersectionPoint(curEdge));
+			}
+		}
 		
+		if(visiblePoints.size() == 0) {
+			return null;
+		}
+		if(visiblePoints.size() == 1) {
+			return visiblePoints.get(0);
+		}
 		
+		//find the closer point
+		Point2D closestPoint = visiblePoints.get(0);
+		double closestPointDistance = closestPoint.distance(getCenterLocation());
+		for(Point2D curPoint : visiblePoints) {
+			double curDistance = curPoint.distance(getCenterLocation());
+			if(curDistance < closestPointDistance) {
+				closestPoint = curPoint;
+				closestPointDistance = curDistance;
+			}
+		}
 		
-		
-
-
-
-
-
-
-
-
-		//		//essentially, we're going to do a radial sweep around our view range
-		//		//and see where the obstacle starts and stops
-		//
-		//		Area viewRangeArea = new Area(this.getVisibleArea());
-		//		Area obstacleInViewRange = (Area) obstacleArea.clone();
-		//		obstacleInViewRange.intersect(viewRangeArea);
-		//
-		//		//		print("I see only one continuous obstacle : " + obstacleInViewRange.isSingular());
-		//
-		//		//		World.debugShapesToDraw.add(obstacleInViewRange);
-		//
-		//		List<Line2D> visibleObstacleSegments = new ArrayList<Line2D>();
-		//
-		//		//start at 0 radians, and go around the full circle
-		//		//when you hit part of the obstacle you can see, store that point
-		//		//use just the part of the obstacle in our view range to make the calculation easier
-		//		//keep going until you can't see it any more
-		//		//add those 2 points in an array into the list edgePoints
-		//
-		//		Line2D curSeg = new Line2D.Double();
-		//		boolean currentlyAddingSegment = false;
-		//		Point2D curPoint = null;
-		//		Point2D prevPoint = null;
-		//
-		//		for(double curRad = 0.0; curRad < 2*Math.PI; curRad += RADIAL_SWEEP_INCREMENT_RADIANS) {
-		//			curPoint = getClosestPointOnShapeInDirection(curRad, obstacleInViewRange);
-		//
-		//
-		//			//			print("At " + curRad + " radians I see an obstacle at " + Utilities.pointToString(curPoint));
-		//
-		//
-		//			if( (! currentlyAddingSegment) && curPoint != null) {
-		//				curSeg = new Line2D.Double();
-		//				curSeg.setLine(curPoint, curSeg.getP2());
-		//				currentlyAddingSegment = true;
-		//			} else if(currentlyAddingSegment && curPoint == null) {
-		//				curSeg.setLine(curSeg.getP1(), prevPoint);
-		//				visibleObstacleSegments.add(curSeg);
-		//				currentlyAddingSegment = false;
-		//			}
-		//
-		//			if(curPoint != null) {
-		//				prevPoint = (Point2D) curPoint.clone();
-		//			}
-		//		}
-
-		//if we come out of this, and we're still adding a segment, then we have a segment that goes over 0 radians
-		//so, we should only have one segment rather than 2
-		//		if(currentlyAddingSegment) {
-		//			//the segment at 0 radians should be the first one stored i.e. index 0
-		//			Line2D firstSeg = visibleObstacleSegments.remove(0);
-		//
-		//			//put the start point of the current segment, as that is the real start of this segment
-		//			firstSeg.setLine(curSeg.getP1(), firstSeg.getP2());
-		//
-		//			//re-add the segment
-		//			visibleObstacleSegments.add(firstSeg);
-		//		}
-
-		//		//make sure we close any segemnts if we are still adding them
-		//		if(currentlyAddingSegment) {
-		//			curSeg.setLine(curSeg.getP1(), prevPoint);
-		//			visibleObstacleSegments.add(curSeg);
-		//		}
-		//
-		//		for(Line2D l :visibleObstacleSegments) {
-		//			print("Saw a side : " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-		//		}
-		//
-		//		List<LineSegment> obstacleSides = Utilities.getSides(obstacleArea);
-		//		for(Line2D l : obstacleSides) {
-		//			print("Obstacles have sides " + l.getX1() + ", " + l.getY1() + " --> " + l.getX2() + ", " + l.getY2());
-		//		}
-		//
-		//		//return the list of segments
-		//		return visibleObstacleSegments;
+		return closestPoint;	
 	}
 
+	@Deprecated
 	private Point2D getClosestPointOnShapeInDirection(double direction, Shape s) {
 		//make a vector at 0 radians
 		Vector testRay = new Vector(this.getCenterX(), this.getCenterY(), this.getCenterX()+1.0, this.getCenterY());
@@ -799,7 +947,7 @@ public class Bot extends Rectangle {
 
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
-		
+
 		//send out the message to all the nearby bots
 		for(Bot b : nearbyBots) {
 			if(b.getID() == this.getID()) {
@@ -919,6 +1067,7 @@ public class Bot extends Rectangle {
 
 		if(currentZone instanceof Fire) {
 			print("AHHHH!!!! I'M MELTING!!!!");
+			world.stopSimulation();
 		}
 
 		int formorZoneAssessment = this.zoneAssesment;
@@ -1034,6 +1183,8 @@ public class Bot extends Rectangle {
 		if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
 			updateZoneInfo();
 		}
+		
+		print("");
 	}
 
 	private void print(String message) {

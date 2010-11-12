@@ -1,4 +1,5 @@
 package simulation;
+import java.awt.Point;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.util.List;
@@ -54,9 +55,9 @@ public class SurvivorPath extends Path2D.Double {
 	public String toString() {
 		String retStr = "Vic loc: " + sur.getCenterX() + ", " + sur.getCenterY() + "\t" + "Length = "+ pathLength + "\tRating= " + pathRating +"\tAvgRating = " + avgRating + "\t Points: ";
 		
-		List<Point2D> verticies = Utilities.getVerticies(this);
+		List<Point> verticies = Utilities.getVerticies(this);
 		
-		for(Point2D p : verticies) {
+		for(Point p : verticies) {
 			retStr += "(" + p.getX() + ", " + p.getY() + ") ";
 		}
 		

@@ -115,8 +115,8 @@ public class Vector extends Line2D{
 		double rectHeight = Math.abs(p1.getY() - p2.getY());
 
 		return new Rectangle2D.Double(rectX, rectY, rectWidth, rectHeight);
-	}
-
+	}	
+	
 	public Vector translate(double deltaX, double deltaY) {
 		Point2D newP1 = new Point2D.Double(p1.getX() + deltaX, p1.getY() + deltaY);
 		Point2D newP2 = new Point2D.Double(p2.getX() + deltaX, p2.getY() + deltaY);
@@ -143,7 +143,6 @@ public class Vector extends Line2D{
 
 	public Vector rescaleRatio(double ratio) {		
 		if(java.lang.Double.isInfinite(ratio)) {
-			//			System.out.println("Trying to rescale by infinity - ignoring");
 			return this;
 		}
 
@@ -153,6 +152,9 @@ public class Vector extends Line2D{
 	}
 
 	public Vector rescale(double newMag) {
+		if(Utilities.shouldEqualsZero(newMag)) {
+			return new Vector(this.getP1(), this.getP1());
+		}
 		return rescaleRatio(newMag/this.getMagnitude()); 
 	}
 
@@ -242,11 +244,24 @@ public class Vector extends Line2D{
 		}
 	}
 
-	/*get the angle between this and other
-	 * 
+	/**
+	 * get the angle between this and other
+	 * @param other
+	 * @return
 	 */
 	public double getAngleBetween(Vector other) {
-		return Math.acos(this.dot(other) / (this.getMagnitude() * other.getMagnitude()));
+		Vector thisUnit = this.getUnitVector();
+		Vector otherUnit = other.getUnitVector();
+		return Math.atan2(otherUnit.getY2(), otherUnit.getX2()) - Math.atan2(thisUnit.getY2(), thisUnit.getX2());
+	}
+	
+	/**get the angle between this vector 
+	 * and the vector created by going from this vectors start point to the passed point
+	 * @param other
+	 * @return
+	 */
+	public double getAngleBetween(Point2D other) {
+		return this.getAngleBetween(new Vector(this.getP1(), other));
 	}
 	
 	public Point2D getMidpoint() {
@@ -260,6 +275,10 @@ public class Vector extends Line2D{
 	}
 
 	public String toString() {
-		return "(" + this.getX1() + ", " + this.getY1() + ") (" + this.getX2() + ", " + this.getY2() + ")  " + this.getMagnitude();
+		return Utilities.lineToString(this) + "\t" + this.getMagnitude();
+	}
+	
+	public static Vector getHorizontalUnitVector(Point2D startPoint) {
+		return new Vector(startPoint.getX(), startPoint.getY(), startPoint.getX() + 1, startPoint.getY());
 	}
 }

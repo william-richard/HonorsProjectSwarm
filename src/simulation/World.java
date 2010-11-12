@@ -4,6 +4,7 @@ import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.WindowEvent;
@@ -44,7 +45,7 @@ public class World extends JFrame implements WindowListener {
 	private static final int FRAME_WIDTH = 500;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
-	private static final boolean DRAW_BOT_RADII = true;
+	private static final boolean DRAW_BOT_RADII = false;
 
 	private static final boolean WORLD_DEBUG = true;
 
@@ -122,7 +123,7 @@ public class World extends JFrame implements WindowListener {
 		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
 
 		for(int i = 0; i < numBots; i++) {
-			allBots.add(new Bot(startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
+			allBots.add(new Bot(this, startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
 		}
 
 		//need to randomly distribute the bots a bit
@@ -189,14 +190,14 @@ public class World extends JFrame implements WindowListener {
 		Area unfilledArea = new Area(BOUNDING_BOX);
 		unfilledArea.subtract(filledAreas);
 
-		List<Point2D> zoneVerticies = Utilities.getVerticies(unfilledArea);
+		List<Point> zoneVerticies = Utilities.getVerticies(unfilledArea);
 
 		//the ZONE_COMPLEXITY constant basically defines how many extra verticies in Zones we should add
 		//so add them
 		int numLeftToAdd = ZONE_COMPLEXITY;
 		while(numLeftToAdd > 0) {
 			//make a random point
-			Point2D.Double newPoint = new Point2D.Double(RAMOM_GENERATOR.nextInt(FRAME_WIDTH), RAMOM_GENERATOR.nextInt(FRAME_HEIGHT));
+			Point newPoint = new Point(RAMOM_GENERATOR.nextInt(FRAME_WIDTH), RAMOM_GENERATOR.nextInt(FRAME_HEIGHT));
 			//make sure the point is in the area
 			if(! unfilledArea.contains(newPoint)) {
 				continue;
@@ -214,9 +215,9 @@ public class World extends JFrame implements WindowListener {
 		//if they don't, add them to the zones list
 		while(! unfilledArea.isEmpty()) {
 			//choose 3 points randomly
-			Point2D p1 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
-			Point2D p2 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
-			Point2D p3 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
+			Point p1 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
+			Point p2 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
+			Point p3 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
 
 			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
 			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
@@ -315,11 +316,9 @@ public class World extends JFrame implements WindowListener {
 			repaint();
 //			System.out.println(debugShapesToDraw.size() + " debug shapes this timestep");
 			System.out.println("Done with repaint");
-			debugShapesToDraw.clear();
 
-			System.out.println("Time between timesteps is " + timeBetweenTimesteps);
 			try {
-				wait(timeBetweenTimesteps);
+				wait(timeBetweenTimesteps, 1); //stick on 1 nanosecond, so that if they want to wait for 0 seconds it doesn't freeze up
 			} catch (InterruptedException e) {
 
 			}
@@ -424,11 +423,13 @@ public class World extends JFrame implements WindowListener {
 
 		if(WORLD_DEBUG) {
 			//draw the shapes in the debug arraylist
+			System.out.println("Printing the " + debugShapesToDraw.size() + " shapes in the debug list");
 			g2d.setColor(Color.white);
-			g2d.setStroke(new BasicStroke(2));
+			g2d.setStroke(new BasicStroke(1));
 			for(Shape s : debugShapesToDraw) {
 				g2d.draw(s);
 			}
+			debugShapesToDraw.clear();
 		}
 
 

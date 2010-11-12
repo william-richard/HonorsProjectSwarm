@@ -24,9 +24,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private World world;
 
 	// initial values for fields
-	private int numBots = 40;
+	private int numBots = 10;
 	private int numSurvivors = 0;
-	private double timeBetweenTimestepsInSeconds = 5.0;
+	private double timeBetweenTimestepsInSeconds = 0.0;
 
 	// buttons to control the simulation
 	private JButton runSimulationButton;;
@@ -62,6 +62,8 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		// set up the window
 		setResizable(false);
+		
+		setFocusable(true);
 
 		setUpLables();
 
@@ -124,7 +126,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private void setUpButtons() {
 		runSimulationButton = new JButton(runSimulationString);
 		runSimulationButton.addActionListener(this);
-
+		
 		stopSimulationButton = new JButton(stopSimulationString);
 		stopSimulationButton.addActionListener(this);
 
@@ -149,8 +151,8 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 	private JPanel layoutButtons() {
 		JPanel panel = new JPanel(new GridLayout(1, 0));
-		panel.add(stopSimulationButton);
 		panel.add(resetSimulationButton);
+		panel.add(stopSimulationButton);
 		panel.add(runSimulationButton);
 
 		return panel;
@@ -184,7 +186,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 				timeBetweenTimestepsField.setValue(new Double(timeBetweenTimestepsInSeconds));
 			}
 
-			world.setTimeBetweenTimesteps((long)(timeBetweenTimestepsInSeconds * 1000)); //convert from seconds to milliseconds
+			if(world != null) {
+				world.setTimeBetweenTimesteps((long)(timeBetweenTimestepsInSeconds * 1000)); //convert from seconds to milliseconds
+			}
 		}
 	}
 
@@ -243,6 +247,10 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		simulationController.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		simulationController.pack();
+		
+		simulationController.runSimulationButton.requestFocusInWindow();
+		simulationController.setLocation(800, 20);
+		
 		simulationController.setVisible(true);
 	}
 
