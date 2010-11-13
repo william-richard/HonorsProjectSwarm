@@ -17,16 +17,13 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
-import javax.sql.rowset.spi.SyncResolver;
 import javax.swing.JFrame;
-import javax.swing.RepaintManager;
 
 import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerDebris;
 import zones.DangerZone;
-import zones.Fire;
 import zones.SafeDebris;
 import zones.SafeZone;
 import zones.Zone;
@@ -59,7 +56,6 @@ public class World extends JFrame implements WindowListener {
 	private static final Color AUDIO_RANGE_COLOR = new Color(205,102,0);
 	private static final Color BROADCAST_RANGE_COLOR = Color.yellow;
 	private static final Color BOT_LABEL_COLOR = Color.black;
-	private static final Color ZONE_LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
@@ -78,15 +74,13 @@ public class World extends JFrame implements WindowListener {
 
 	public static List<Shape> debugShapesToDraw;
 
-	private Zone baseZone;
-
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps;
 
 	public World() {
 		this(40, 2, 5000);
 	}
-	
+
 	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps) {
 		super("Swarm Simulation");
 		//start with the frame.
@@ -97,21 +91,8 @@ public class World extends JFrame implements WindowListener {
 
 		int[] xPointsBase = {225, 275, 275, 225};
 		int[] yPointsBase = {225, 225, 275, 275};
-		//		int[] xPointsBase = {MENUBAR_HEIGHT, 50, 50, MENUBAR_HEIGHT};
-		//		int[] yPointsBase = {MENUBAR_HEIGHT, MENUBAR_HEIGHT, 50, 50};
 		Zone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
-		baseZone = homeBase;
 		allZones.add(homeBase);
-
-		//		Zone building = new Building(150, 150, 150, 150, allZones.size());
-		//		allZones.add(building);
-
-
-		//		int[] xPointsFire = {0, 			275, FRAME_WIDTH,		FRAME_WIDTH};
-		//		int[] yPointsFire = {FRAME_HEIGHT,  275, MENUBAR_HEIGHT,	FRAME_HEIGHT};
-		//
-		//		Zone fireZone = new Fire(xPointsFire, yPointsFire, 4, allZones.size());
-		//		allZones.add(fireZone);
 
 		fillInZones();
 
@@ -131,16 +112,15 @@ public class World extends JFrame implements WindowListener {
 			b.moveRandomly();
 		}
 
-		
+
 		//initialize the victims
 		//only 2 for now, so we'll hard code them	
 		allSurvivors = new ArrayList<Survivor>();
 
-		//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT/4.0, .5));
-		//		allSurvivors.add(new Survivor(FRAME_WIDTH/4.0, FRAME_HEIGHT*3.0/4.0, .5));
+		//TODO implement random placement of survivors
 
 		debugShapesToDraw = new ArrayList<Shape>();
-		
+
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
 	}
@@ -179,7 +159,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	//TODO combine same type zones?
-	
+
 	private void fillInZones() {
 		//first, get all unfilled zones
 		Area filledAreas = new Area();
@@ -230,7 +210,6 @@ public class World extends JFrame implements WindowListener {
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
 			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
-//			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
@@ -287,34 +266,36 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private boolean keepGoing = false;
-	
+
 	public boolean isGoing() {
 		return keepGoing;
 	}
 
 	public synchronized void go() {		
 		repaint();
-		
+
 		keepGoing = true;
 
 		//then, start with timesteps
 		for(; keepGoing; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
-			//do all the victims
-			for(Survivor v : allSurvivors) {
-				v.doOneTimestep();
+
+			//do all the survivors
+			for(Survivor s : allSurvivors) {
+				s.doOneTimestep();
 			}
 			System.out.println("Done with victims");
+
 			//do all the bots
 			for(Bot b : allBots) {
 				b.doOneTimestep();
 				//TODO fix issue where some bots move before others?
 			}
 			System.out.println("Done with bots");
+
 			//repaint the scenario
 			repaint();
-//			System.out.println(debugShapesToDraw.size() + " debug shapes this timestep");
 			System.out.println("Done with repaint");
 
 			try {
@@ -325,15 +306,15 @@ public class World extends JFrame implements WindowListener {
 		}
 
 	}
-	
+
 	public void stopSimulation() {
 		keepGoing = false;
 	}
-	
-	
+
+
 	public void paint(Graphics g) {		
 		super.paint(g);
-		
+
 		g = this.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
 
@@ -350,8 +331,6 @@ public class World extends JFrame implements WindowListener {
 		for(Zone z : allZones) {
 			g2d.setColor(z.getColor());
 			g2d.fill(z);
-			//			g2d.setColor(ZONE_LABEL_COLOR);
-			//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 		}
@@ -435,26 +414,6 @@ public class World extends JFrame implements WindowListener {
 
 	}
 
-	private double getAverageBotDistance() {
-		//first, need to calculate it
-		double curAvg = 0.0;
-
-		ListIterator<Bot> botIt = allBots.listIterator();
-
-		int i = 0;
-
-		while(botIt.hasNext()) {
-			Bot curBot = botIt.next();
-			i++;
-
-			double curDist = baseZone.getCenterLocation().distance(curBot.getCenterLocation());
-
-			curAvg = curAvg + (curDist - curAvg)/i;
-		}
-
-		return curAvg;
-	}
-
 	//figures out which zones the passed point is in, and returns it.
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {
@@ -474,7 +433,7 @@ public class World extends JFrame implements WindowListener {
 		//create a new World
 		World w = new World();
 		w.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
+
 		w.pack();
 		w.setVisible(true);		
 	}
