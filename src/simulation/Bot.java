@@ -28,7 +28,8 @@ import zones.Zone;
 public class Bot extends Rectangle {
 
 	private static final long serialVersionUID = -3272426964314356266L;
-
+	
+	
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
