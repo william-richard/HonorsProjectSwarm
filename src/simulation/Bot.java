@@ -28,8 +28,8 @@ import zones.Zone;
 public class Bot extends Rectangle {
 
 	private static final long serialVersionUID = -3272426964314356266L;
-	
-	
+
+
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
@@ -54,15 +54,15 @@ public class Bot extends Rectangle {
 
 	private final double DANGER_MULTIPLIER = 2;
 
-	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 800;
-	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2500;
+	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000;
+	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2000;
 
 
 	private boolean OVERALL_BOT_DEBUG = 	true;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
 	private boolean MESSAGE_BOT_DEBUG = 	false;
-	private boolean MOVE_BOT_DEBUG = 		true;
+	private boolean MOVE_BOT_DEBUG = 		false;
 	private boolean FIND_VICTIM_DEBUG = 	false;
 
 
@@ -585,18 +585,18 @@ public class Bot extends Rectangle {
 				boolean goInPositiveDirection = true; //assume we should
 				//see which way is clear
 				Vector overshootPath = newIntendedPath.rotate(AVOID_OBSTACLES_OVERROTATE_RADIANS);
-				
+
 				for(Zone o : visibleObstacles) {
 					if(o.contains(overshootPath.getP2())) {
 						//don't go positive
 						goInPositiveDirection = false;
 					}
 				}
-				
-				
-				
-//				goInPositiveDirection = (intendedPath.getAngleBetween(newIntendedPath) > 0);
-				
+
+
+
+				//				goInPositiveDirection = (intendedPath.getAngleBetween(newIntendedPath) > 0);
+
 				//go whichever way we decided was best, maybe
 				newIntendedPath = newIntendedPath.rotate((goInPositiveDirection ? 1.0 : -1.0) * AVOID_OBSTACLES_OVERROTATE_RADIANS);
 
@@ -615,19 +615,19 @@ public class Bot extends Rectangle {
 				//				LineSegment previousSegment = s;
 
 				int numPasses = 0;
-				
+
 				while(passNeeded && ! Utilities.shouldEqualsZero(newIntendedPath.getMagnitude())) {
 					passNeeded = false;
-					
+
 					numPasses++;
-					
+
 					if(numPasses > (2*Math.PI / AVOID_OBSTACLES_OVERROTATE_RADIANS) ) {
 						//gone in a full circle (ish) - something is wrong
 						newIntendedPath = new Vector(this.getCenterLocation(), this.getCenterLocation());
 						break;
 					}
-					
-					
+
+
 
 					for(LineSegment line : visibleObstacleEdges) {
 
@@ -644,13 +644,13 @@ public class Bot extends Rectangle {
 							double angleToP1 = newIntendedPath.getAngleBetween(line.getP1());
 							double angleToP2 = newIntendedPath.getAngleBetween(line.getP2());
 
-//							if(Utilities.shouldEqualsZero(angleToP1)) {
-//								angleToP1 = 0.0;
-//							}
-//							if(Utilities.shouldEqualsZero(angleToP2)) {
-//								angleToP2 = 0.0;
-//							}							
-							
+							//							if(Utilities.shouldEqualsZero(angleToP1)) {
+							//								angleToP1 = 0.0;
+							//							}
+							//							if(Utilities.shouldEqualsZero(angleToP2)) {
+							//								angleToP2 = 0.0;
+							//							}							
+
 							//I *THINK* one *SHOULD* be positive and the other negative
 							//print just to be sure
 							if(MOVE_BOT_DEBUG) {
@@ -658,7 +658,7 @@ public class Bot extends Rectangle {
 								print("Current movement vector is " + newIntendedPath);
 								print("angle 1 = " + angleToP1 + "\tangle 2 = " + angleToP2);
 							}
-							
+
 
 							double morePositiveAngle = (angleToP1 > angleToP2 ? angleToP1 : angleToP2);
 							double moreNegativeAngle = (angleToP1 < angleToP2 ? angleToP1 : angleToP2);
@@ -676,16 +676,16 @@ public class Bot extends Rectangle {
 							print("Rotating by angle " + (overrotationAngle+angleToRotate));
 
 							newIntendedPath = newIntendedPath.rotate(overrotationAngle);
-							
+
 							break;
 						}
 					}
 				}
-				
+
 				if(MOVE_BOT_DEBUG) {
 					print("Avoiding obstacles vector is '" + newIntendedPath + "'");
 				}
-				
+
 				//make sure it actually will work
 				for(Zone o : visibleObstacles) {
 					if(o.contains(newIntendedPath.getP2())) {
@@ -843,23 +843,23 @@ public class Bot extends Rectangle {
 				}
 			}
 		}
-		
 
 
-//		//around corners, we will have overlapping edges
-//		//do it roughly for now, see if it works OK
-//		//remove edges that are completely obstructed by another edge
-//		//start off by calculating the start and end angles of each segment using the SegmentAngles helper class
-//		List<SegmentAngles> potentiallyVisibleEdgesWithAngles = new ArrayList<SegmentAngles>();
-//		for(LineSegment s : potentiallyVisibleEdges) {
-//			potentiallyVisibleEdgesWithAngles.add(new SegmentAngles(this.getCenterLocation(), s));
-//		}
+
+		//		//around corners, we will have overlapping edges
+		//		//do it roughly for now, see if it works OK
+		//		//remove edges that are completely obstructed by another edge
+		//		//start off by calculating the start and end angles of each segment using the SegmentAngles helper class
+		//		List<SegmentAngles> potentiallyVisibleEdgesWithAngles = new ArrayList<SegmentAngles>();
+		//		for(LineSegment s : potentiallyVisibleEdges) {
+		//			potentiallyVisibleEdgesWithAngles.add(new SegmentAngles(this.getCenterLocation(), s));
+		//		}
 
 		//TODO ray tracing to figure out what parts of what segments we can see
-		
+
 		//make a ray that is the length of the distance that we can see
 		Vector visibleRay = Vector.getHorizontalUnitVector(this.getCenterLocation()).rescale(getVisibityRange());
-		
+
 		//swing it around until we hit a point where there is nothing in the way
 		double rayAngle = 0.0;
 		for(; rayAngle < 2 * Math.PI; rayAngle += RADIAL_SWEEP_INCREMENT_RADIANS) {
@@ -868,55 +868,55 @@ public class Bot extends Rectangle {
 				break;
 			}
 		}
-		
+
 		//now that we have found an open direction, start creating edges
-		
-		
-		
-//		//now, go through the list one segment at a time
-//		//and compare that segment to all other segments in the list
-//		//if that segment completely obstructs the other segment, remove the other segment from the list
-//		ListIterator<SegmentAngles> obstructorItertaor = potentiallyVisibleEdgesWithAngles.listIterator();
-//		SegmentAngles obstructor;
-//		while(obstructorItertaor.hasNext()) {
-//			obstructor = obstructorItertaor.next();
-//
-//			//now, go through all the other ones
-//			ListIterator<SegmentAngles> angleIterator = potentiallyVisibleEdgesWithAngles.listIterator();
-//			SegmentAngles maybeHiddenSegment;
-//			while(angleIterator.hasNext()) {
-//				maybeHiddenSegment = angleIterator.next();
-//				if(obstructor.equals(maybeHiddenSegment)) {
-//					//don't want to remove ourselves
-//					continue;
-//				}
-//				if(obstructor.obstructs(maybeHiddenSegment)) {
-//					potentiallyVisibleEdges.remove(maybeHiddenSegment.getSegment());
-//				}
-//			}
-//		}
+
+
+
+		//		//now, go through the list one segment at a time
+		//		//and compare that segment to all other segments in the list
+		//		//if that segment completely obstructs the other segment, remove the other segment from the list
+		//		ListIterator<SegmentAngles> obstructorItertaor = potentiallyVisibleEdgesWithAngles.listIterator();
+		//		SegmentAngles obstructor;
+		//		while(obstructorItertaor.hasNext()) {
+		//			obstructor = obstructorItertaor.next();
+		//
+		//			//now, go through all the other ones
+		//			ListIterator<SegmentAngles> angleIterator = potentiallyVisibleEdgesWithAngles.listIterator();
+		//			SegmentAngles maybeHiddenSegment;
+		//			while(angleIterator.hasNext()) {
+		//				maybeHiddenSegment = angleIterator.next();
+		//				if(obstructor.equals(maybeHiddenSegment)) {
+		//					//don't want to remove ourselves
+		//					continue;
+		//				}
+		//				if(obstructor.obstructs(maybeHiddenSegment)) {
+		//					potentiallyVisibleEdges.remove(maybeHiddenSegment.getSegment());
+		//				}
+		//			}
+		//		}
 
 		return potentiallyVisibleEdges;
 	}
-	
+
 	private Point2D closestVisibleObstacleAlongVector(Vector visibleRay, List<LineSegment> obstacleEdges) {
 		List<Point2D> visiblePoints = new ArrayList<Point2D>();
-				
+
 		for(LineSegment curEdge : obstacleEdges) {
 			if(curEdge.segmentsIntersect(visibleRay)) {
 				Point2D intersectionPoint = curEdge.intersectionPoint(visibleRay);
 				if(intersectionPoint != null)
-				visiblePoints.add(intersectionPoint);
+					visiblePoints.add(intersectionPoint);
 			}
 		}
-		
+
 		if(visiblePoints.size() == 0) {
 			return null;
 		}
 		if(visiblePoints.size() == 1) {
 			return visiblePoints.get(0);
 		}
-		
+
 		//find the closer point
 		Point2D closestPoint = visiblePoints.get(0);
 		double closestPointDistance = closestPoint.distance(getCenterLocation());
@@ -927,7 +927,7 @@ public class Bot extends Rectangle {
 				closestPointDistance = curDistance;
 			}
 		}
-		
+
 		return closestPoint;	
 	}
 
@@ -1187,8 +1187,9 @@ public class Bot extends Rectangle {
 		if(currentZone == null || (! currentZone.contains(getCenterLocation()))) {
 			updateZoneInfo();
 		}
-		
-		print("");
+		if(MOVE_BOT_DEBUG) {
+			print("");
+		}
 	}
 
 	private void print(String message) {

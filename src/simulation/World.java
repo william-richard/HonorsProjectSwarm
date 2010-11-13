@@ -230,7 +230,7 @@ public class World extends JFrame implements WindowListener {
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
 			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
-			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
+//			case 4: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
