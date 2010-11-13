@@ -11,6 +11,8 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.sun.media.jai.opimage.ClampCRIF;
+
 import util.Utilities;
 import util.Vector;
 import util.shapes.Circle2D;
@@ -29,9 +31,9 @@ public class Bot extends Rectangle {
 	 * CONSTANTS
 	 **************************************************************************/
 	private final int DIMENSION = 6;
-	private final double VISUAL_ID_VICTIM_PROB = .70;
-	private final double HEAR_VICTIM_PROB = .75;
-	private final double ASSES_VICTIM_CORRECTLY_PROB = .9;
+	private final double VISUAL_ID_SURVIVOR_PROB = .70;
+	private final double HEAR_SURVIVOR_PROB = .75;
+	private final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; //the probability that the bot will asses the zones correctly
 
 	public static final double DEFAULT_BROADCAST_RADIUS = 95;
@@ -62,6 +64,10 @@ public class Bot extends Rectangle {
 	private final static int CREATE_PATHS_PHASE = 1;
 	private final static int AGGRIGATE_PHASE = 2;
 
+	private final static String BOT_LOCATION_MESSAGE = "loc";
+	private final static String CLAIM_SURVIVOR_MESSAGE = "cs";
+	private final static String FOUND_SURVIVOR_MESSAGE = "fs";
+
 	/***************************************************************************
 	 * VARIABLES
 	 **************************************************************************/
@@ -72,17 +78,21 @@ public class Bot extends Rectangle {
 	private final Random numGen = new Random();
 	private Vector movementVector;
 	private BoundingBox boundingBox;
-	
-//	private Bot previousBot;
+
+	//	private Bot previousBot;
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
 	private String messageBuffer; //keep a buffer of messages from other robots
 	private int botID;
 	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
-	private List<Survivor> knownSurvivors; //keep a list of vicitms that have already been found, so we don't double up on one vic
+	private List<Survivor> knownSurvivors; //keep a list of survivors that have already been found, so can go claim them
+	//TODO handle reclaiming survivors in the case of robot death
+	private List<Survivor> claimedSurvivors; //keep a list of survivors that have been claimed, so that we don't double up on one survivor
+	private Survivor mySurvivor; //the survivor I have claimed - don't know if this is useful, but it might be
 	private World world;
 	private int algorithmPhase;
 	private List<Point2D> previousLocations;
+	private boolean settledOnLocation;
 
 
 	/***************************************************************************
@@ -113,7 +123,8 @@ public class Bot extends Rectangle {
 		baseZone = homeBase;
 
 		knownSurvivors = new ArrayList<Survivor>();
-		
+		claimedSurvivors = new ArrayList<Survivor>();
+
 		previousLocations = new ArrayList<Point2D>();
 
 		boundingBox = _bounds;
@@ -122,7 +133,11 @@ public class Bot extends Rectangle {
 
 		//start in the spread out phase
 		algorithmPhase = SPREAD_OUT_PHASE;
+
+		settledOnLocation = false;
 		
+		mySurvivor = null;
+
 		//for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
 
@@ -226,7 +241,7 @@ public class Bot extends Rectangle {
 
 			String messageType = s.next();
 
-			if(messageType.equals("loc")) {
+			if(messageType.equals(BOT_LOCATION_MESSAGE)) {
 				int botNum = s.nextInt();
 
 				if(botNum == botID) {
@@ -241,7 +256,14 @@ public class Bot extends Rectangle {
 				BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
 
 				otherBotInfo.add(newBotInfo);
-			} else continue;
+			} else if (messageType.equals(FOUND_SURVIVOR_MESSAGE)) {
+				//TODO handle both survivor messages
+				//remember to give up and reset mySurvivor if someone else finds them first
+				//and maybe rebroadcast our claim message so that they get the idea
+				//otherwise, we want to rebroadcast their claim message
+				//or any found messages we get
+			}
+			else continue;
 
 		}
 
@@ -249,24 +271,26 @@ public class Bot extends Rectangle {
 		messageBuffer = "";
 	}
 
-	private boolean listeningForShouts = true;
-
-	public synchronized void hearShout(Shout s) throws InterruptedException {
-		while(! listeningForShouts) {
-			wait(500);
-		}
+	public void hearShout(Shout s) throws InterruptedException {
 		heardShouts.add(s);
+	}
+
+	private List<Survivor> getKnowButUnclaimedSurvivors() {
+		List<Survivor> results = new ArrayList<Survivor>();
+		results.addAll(knownSurvivors);
+		results.removeAll(claimedSurvivors);
+		return results;
 	}
 
 
 	private void move() {
-//		//store our current state, so we can undo it if necessary.
-//		this.previousBot = (Bot) this.clone();
+		//		//store our current state, so we can undo it if necessary.
+		//		this.previousBot = (Bot) this.clone();
 
 		/*determine what actions we want to take
 		 * there are levels to what we want to do
 		 * 
-		 * 1) See if we can detect a victim, first by sight and then by sound
+		 * 1) See if we can detect a survivor, first by sight and then by sound
 		 * 		head towards them if we can
 		 * 2) See if we are within broadcast range of any other robots by 
 		 * 		seeing what messages have come in since we last checked.
@@ -276,12 +300,12 @@ public class Bot extends Rectangle {
 
 		boolean haveMoved = false; //once we have made a movement, this will be set to true
 
-		//1) See if we can detect a victim, first by sight and then by sound head towards them if we can 
+		//1) See if we can detect a survivor, first by sight and then by sound head towards them if we can 
 		if(!haveMoved) {
 			List<Survivor> visibleSurs = lookForSurvivors();
 			//if we find some, go towards one of them
 			if(visibleSurs.size() > 0) {
-				//want to go towards the nearest victim
+				//want to go towards the nearest survivor
 				Vector nearestVicVect = null;
 				double nearestDistSquare = java.lang.Double.MAX_VALUE;
 
@@ -295,7 +319,7 @@ public class Bot extends Rectangle {
 					}
 				}
 
-				//make a bee-line for that victim!
+				//make a bee-line for that survivor!
 				actuallyMoveAlong(nearestVicVect);
 
 				haveMoved = true;
@@ -320,7 +344,7 @@ public class Bot extends Rectangle {
 					}
 				}
 
-				//make a bee-line for that victim!
+				//make a bee-line for that survivor!
 				actuallyMoveAlong(nearestShoutVect);
 
 				haveMoved = true;
@@ -507,45 +531,43 @@ public class Bot extends Rectangle {
 		//first, get our visibility radius
 		Shape visibilityRange = getVisibleArea();
 
-		//see if the location of any of our victims intersects this range
-		List<Survivor> visibleVictims = (List<Survivor>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allSurvivors);
+		//see if the location of any of our survivors intersects this range
+		List<Survivor> visiblesurvivors = (List<Survivor>) Utilities.findAreaIntersectionsInList((Shape)visibilityRange, World.allSurvivors);
 
 		if(LOOK_BOT_DEBUG)
-			print("In perfect world, would have just seen " + visibleVictims.size() + " victims");
+			print("In perfect world, would have just seen " + visiblesurvivors.size() + " survivors");
 
-		//ignore any vicitms we already know about
+		//ignore any vicitms we know have been claimed
 		//use a list iterator for the reasons described below
-		ListIterator<Survivor> vicIteratior = visibleVictims.listIterator();
+		ListIterator<Survivor> vicIteratior = visiblesurvivors.listIterator();
 		while(vicIteratior.hasNext()) {
 			Survivor curSur = vicIteratior.next();
-			if(knownSurvivors.contains(curSur)) {
+			if(claimedSurvivors.contains(curSur)) {
 				vicIteratior.remove();
 			}
 		}
 
-		//visibileVictims is now a list of all the victims the robot could see and dosen't already know about 
-		//if it was perfect but it's not, and there is some probability that it will miss some of the victims
-		//so, go through the list and remove some or all of the victims with that probability.
+		//visibilesurvivors is now a list of all the survivors the robot could see and dosen't already know about 
+		//if it was perfect but it's not, and there is some probability that it will miss some of the survivors
+		//so, go through the list and remove some or all of the survivors with that probability.
 		//need to use an iterator, because it won't let us remove as we go otherwise
-		vicIteratior = visibleVictims.listIterator();
+		vicIteratior = visiblesurvivors.listIterator();
 		while(vicIteratior.hasNext()) {
 			vicIteratior.next();
-			if(! (numGen.nextDouble() <= VISUAL_ID_VICTIM_PROB)) {
+			if(! (numGen.nextDouble() <= VISUAL_ID_SURVIVOR_PROB)) {
 				vicIteratior.remove(); //removes from the iterator AND the list
 			}
 		}
 
 		if(LOOK_BOT_DEBUG)
-			print("Actually able to see " + visibleVictims.size() + " victims");
+			print("Actually able to see " + visiblesurvivors.size() + " survivors");
 
-		//we have our list victims that the Bot saw - return it
-		return visibleVictims;
+		//we have our list survivors that the Bot saw - return it
+		return visiblesurvivors;
 	}
 
 	@SuppressWarnings("unchecked")
 	private List<Shout> listenForSurvivors() {
-		listeningForShouts = false;
-
 		//first, get our auditory radius
 		Shape auditoryRange = getAuditbleArea();
 
@@ -555,12 +577,12 @@ public class Bot extends Rectangle {
 		if(LISTEN_BOT_DEBUG)
 			print("In perfect world, would have just heard " + audibleShouts.size() + " vicitms");
 
-		//ignore any shouts that sound like they're coming from vicitms we already know about
+		//ignore any shouts that sound like they're coming from vicitims have already been claimed
 		//use a list iterator for the reasons described below
 		ListIterator<Shout> shoutIterator = audibleShouts.listIterator();
 		while(shoutIterator.hasNext()) {
 			Shout curShout = shoutIterator.next();
-			if(knownSurvivors.contains(curShout.getShouter())) {
+			if(claimedSurvivors.contains(curShout.getShouter())) {
 				shoutIterator.remove();
 			}
 		}
@@ -571,15 +593,13 @@ public class Bot extends Rectangle {
 		shoutIterator = audibleShouts.listIterator();
 		while(shoutIterator.hasNext()) {
 			shoutIterator.next();
-			if(! (numGen.nextDouble() <= HEAR_VICTIM_PROB)) {
+			if(! (numGen.nextDouble() <= HEAR_SURVIVOR_PROB)) {
 				shoutIterator.remove();  //remove from iterator AND list
 			}
 		}
 
-		listeningForShouts = true;
-
 		if(LOOK_BOT_DEBUG)
-			print("Actually just heard " + audibleShouts.size() + " victims");
+			print("Actually just heard " + audibleShouts.size() + " survivors");
 
 		//we have our list of shouts - return it
 		return audibleShouts;	
@@ -625,7 +645,7 @@ public class Bot extends Rectangle {
 
 	private double assesSurvivor(Survivor s) {
 		//with some probability we'll get it wrong
-		if(numGen.nextDouble() < ASSES_VICTIM_CORRECTLY_PROB) {
+		if(numGen.nextDouble() < ASSES_SURVIVOR_CORRECTLY_PROB) {
 			return s.getDamage();
 		} else {
 			return numGen.nextInt(101)/100.0;
@@ -634,7 +654,7 @@ public class Bot extends Rectangle {
 
 
 	private void findAndAssesSurvivor() {
-		//first, see if there are any victims that we can see
+		//first, see if there are any survivors that we can see
 		List<Survivor> visibleSurvivors = lookForSurvivors();
 
 		//see if any of them are within the FOUND_RANGE
@@ -646,48 +666,65 @@ public class Bot extends Rectangle {
 			}
 		}
 
-
-		//we now know what victims we have found
+		//we now know what survivors we have found
 		//evaluate each of them in turn
 		for(Survivor s : foundSurvivors) {
 			double surDamage = assesSurvivor(s);
 
-			//send out a message letting everyone know where the victim is, what condition they are in, and how safe the zones is
-			double vicDistance = s.getCenterLocation().distance(this.getCenterLocation());
-			double currentSegmentRating;
-			if(zoneAssesment == ZONE_SAFE) currentSegmentRating = vicDistance;
-			else currentSegmentRating = vicDistance * DANGER_MULTIPLIER;
-
-			double avgPathRating = currentSegmentRating/(vicDistance*DANGER_MULTIPLIER);
-
-			String message = "fv " + this.getID() + " " + surDamage + " " + s.getCenterX() + " " + s.getCenterY() + World.getCurrentTimestep() + "\n";
+			//send out a message letting everyone know where the survivor is, what condition they are in, and how safe the zones is
+			String message = FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + surDamage + " " + s.getCenterX() + " " + s.getCenterY() + " " + World.getCurrentTimestep() + "\n";
 
 			broadcastMessage(message);
 
 			//TODO handle this survivor stuff too
 			knownSurvivors.add(s);
+		}
 
+		//claim the one that is closest and that has not yet been claimed
+		List<Survivor> claimableSurvivors = new ArrayList<Survivor>(foundSurvivors);
+		claimableSurvivors.removeAll(claimedSurvivors);
+
+		if(claimableSurvivors.size() > 0) {
+			//figure out which one is closets
+			Survivor closestSurvivor = claimableSurvivors.get(0);
+			double closestSurvivorDist = getCenterLocation().distance(closestSurvivor.getCenterLocation());
+			for(Survivor curSur : claimableSurvivors) {
+				double curDist = getCenterLocation().distance(curSur.getCenterLocation());
+				if(curDist < closestSurvivorDist) {
+					closestSurvivor = curSur;
+					closestSurvivorDist = curDist;
+				}
+			}
+			
+			//claim the closest one
+			mySurvivor = closestSurvivor;
+			String message = CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n";
+			broadcastMessage(message);
 		}
 	}
 
 	public void doOneTimestep() {
 		//first, read any messages that have come in, and take care of them
 		readMessages();
-		
+
 		switch (algorithmPhase) {
 		case(SPREAD_OUT_PHASE):
-			//now try to move, based on the move rules.
-			move();
+			if(! settledOnLocation) {
+				//now try to move, based on the move rules.
+				move();
 
-			//now that we have moved, find out if we can see any victims
-			findAndAssesSurvivor();			
-			
-			break;
+				//now that we have moved, find out if we can see any survivors
+				findAndAssesSurvivor();
+
+				//decide if we are settled on a location yet
+
+			}
+		break;
 		case(CREATE_PATHS_PHASE):
-			
+
 			break;
 		case(AGGRIGATE_PHASE):
-			
+
 			break;
 		default:
 			/*TODO fix this so that it asks neighbor what phase it is

@@ -11,13 +11,13 @@ public class Survivor extends Rectangle2D.Double {
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
-	private final int DIMENSION = 6; //Victims are squares really, so they only need 1 dimention.
-	private final double SHOUT_PROB = .75; //The probability that victims will shout
+	private final int DIMENSION = 6; //survivors are squares really, so they only need 1 dimention.
+	private final double SHOUT_PROB = .75; //The probability that survivors will shout
 
 	/***************************************************************************
 	 * VARIABLES
 	 **************************************************************************/
-	private double damage; //damage is a percentage of how hurt the victim is, with 1.0 being dead and 0.0 being totally healthy.
+	private double damage; //damage is a percentage of how hurt the survivor is, with 1.0 being dead and 0.0 being totally healthy.
 	private Zone currentZone;
 
 
@@ -27,13 +27,13 @@ public class Survivor extends Rectangle2D.Double {
 	public Survivor(double centerX, double centerY, double _damage) {
 		super();
 
-		//determine where the top left corner of the Victim is - that's what Rectangle2D.Double wants
+		//determine where the top left corner of the survivor is - that's what Rectangle2D.Double wants
 		double cornerX = centerX - DIMENSION/2;
 		double cornerY = centerY - DIMENSION/2;
 		//set the location of the rectangle
 		setFrame(cornerX, cornerY, DIMENSION, DIMENSION);
 
-		//store the damage of this Victim
+		//store the damage of this survivor
 		damage = _damage;
 
 		//store the zones that we're in

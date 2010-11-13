@@ -74,7 +74,7 @@ public class BaseZone extends Zone {
 
 			if(! s.hasNext()) continue;
 
-			//only interested in victim path messages
+			//only interested in survivor path messages
 			if(s.next().equals("fv")) {
 				//extract all of he information about the path
 				double vicStatus = s.nextDouble();
@@ -90,8 +90,8 @@ public class BaseZone extends Zone {
 					pathBots.add(new BotInfo(s.nextInt(), s.nextDouble(), s.nextDouble(), s.nextInt()));
 				}
 				
-				//make a new VictimPath and add it to our list
-				//First, find the actual victim that this message refers to
+				//make a new survivorPath and add it to our list
+				//First, find the actual survivor that this message refers to
 				Survivor vic = World.allSurvivors.get(World.allSurvivors.indexOf(new Survivor(vicX, vicY, vicStatus)));
 				
 				//now, make the path and add it to our list
@@ -111,7 +111,7 @@ public class BaseZone extends Zone {
 	
 	
 	public List<SurvivorPath> getBestSurvivorPaths() {
-		//first, get all the victim paths
+		//first, get all the survivor paths
 		List<SurvivorPath> allPaths = getSurvivorPaths();
 		
 		List<SurvivorPath> bestPaths = new ArrayList<SurvivorPath>();

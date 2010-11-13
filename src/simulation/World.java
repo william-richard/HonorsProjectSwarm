@@ -50,17 +50,17 @@ public class World extends JFrame implements WindowListener {
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color BOT_COLOR = Color.green;
-	private static final Color VICTIM_COLOR = Color.red;
+	private static final Color SURVIVOR_COLOR = Color.red;
 	private static final Color SHOUT_COLOR = new Color(30, 144, 255);
 	private static final Color VISIBLE_RANGE_COLOR = new Color(255,106,106);
 	private static final Color AUDIO_RANGE_COLOR = new Color(205,102,0);
 	private static final Color BROADCAST_RANGE_COLOR = Color.yellow;
 	private static final Color BOT_LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
-	private static final Color VICTIM_PATH_COLOR = new Color(0,191,255);
+	private static final Color SURVIVOR_PATH_COLOR = new Color(0,191,255);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 
-	private static final Stroke VICTIM_PATH_STROKE = new BasicStroke((float) 2.0);
+	private static final Stroke survivor_PATH_STROKE = new BasicStroke((float) 2.0);
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
@@ -68,7 +68,7 @@ public class World extends JFrame implements WindowListener {
 	/** VARIABLES */
 	public static List<Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
-	public static List<Survivor> allSurvivors; //The Victims
+	public static List<Survivor> allSurvivors; //The survivors
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
 
@@ -112,9 +112,7 @@ public class World extends JFrame implements WindowListener {
 			b.moveRandomly();
 		}
 
-
-		//initialize the victims
-		//only 2 for now, so we'll hard code them	
+		//initialize the survivors
 		allSurvivors = new ArrayList<Survivor>();
 
 		//TODO implement random placement of survivors
@@ -285,7 +283,7 @@ public class World extends JFrame implements WindowListener {
 			for(Survivor s : allSurvivors) {
 				s.doOneTimestep();
 			}
-			System.out.println("Done with victims");
+			System.out.println("Done with survivors");
 
 			//do all the bots
 			for(Bot b : allBots) {
@@ -322,7 +320,7 @@ public class World extends JFrame implements WindowListener {
 		g2d.setColor(BACKGROUND_COLOR);
 		g2d.fill(BOUNDING_BOX);
 
-		//get a snapshot of the bots and victims
+		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
 
@@ -373,18 +371,18 @@ public class World extends JFrame implements WindowListener {
 			g2d.draw(curBot.getMovementVector().rescale(-5.0));
 		}
 
-		//draw all the victims
-		g2d.setColor(VICTIM_COLOR);
+		//draw all the survivors
+		g2d.setColor(SURVIVOR_COLOR);
 		while(allSurvivorSnapshot.hasNext()) {
 			Survivor curSur = allSurvivorSnapshot.next();
 
 			g2d.fill(curSur);
 		}
 
-		//paint all the victim paths
-		g2d.setColor(VICTIM_PATH_COLOR);
-		g2d.setStroke(VICTIM_PATH_STROKE);
-		//only basezones have VictimPaths
+		//paint all the survivor paths
+		g2d.setColor(SURVIVOR_PATH_COLOR);
+		g2d.setStroke(survivor_PATH_STROKE);
+		//only basezones have survivorPaths
 		for(Zone z : allZones) {
 			//skip everything that isn't a BaseZone
 			if(! (z instanceof BaseZone)) continue;

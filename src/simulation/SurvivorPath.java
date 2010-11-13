@@ -24,7 +24,7 @@ public class SurvivorPath extends Path2D.Double {
 		avgRating = _avgRating;
 
 		//now, set up the path
-		//start at the victim
+		//start at the survivor
 		this.moveTo(sur.getCenterX(), sur.getCenterY());
 		//now add all the bots
 		for(BotInfo bi: bots) {
