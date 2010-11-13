@@ -82,6 +82,7 @@ public class Bot extends Rectangle {
 	private List<Survivor> knownSurvivors; //keep a list of vicitms that have already been found, so we don't double up on one vic
 	private World world;
 	private int algorithmPhase;
+	private List<Point2D> previousLocations;
 
 
 	/***************************************************************************
@@ -112,11 +113,16 @@ public class Bot extends Rectangle {
 		baseZone = homeBase;
 
 		knownSurvivors = new ArrayList<Survivor>();
+		
+		previousLocations = new ArrayList<Point2D>();
 
 		boundingBox = _bounds;
 
 		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 
+		//start in the spread out phase
+		algorithmPhase = SPREAD_OUT_PHASE;
+		
 		//for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
 
@@ -668,11 +674,28 @@ public class Bot extends Rectangle {
 		//first, read any messages that have come in, and take care of them
 		readMessages();
 		
-		//now try to move, based on the move rules.
-		move();
+		switch (algorithmPhase) {
+		case(SPREAD_OUT_PHASE):
+			//now try to move, based on the move rules.
+			move();
 
-		//now that we have moved, find out if we can see any victims
-		findAndAssesSurvivor();
+			//now that we have moved, find out if we can see any victims
+			findAndAssesSurvivor();			
+			
+			break;
+		case(CREATE_PATHS_PHASE):
+			
+			break;
+		case(AGGRIGATE_PHASE):
+			
+			break;
+		default:
+			/*TODO fix this so that it asks neighbor what phase it is
+			 * shouldn't happen regardless, so this doesn't really matter
+			 */
+			algorithmPhase = SPREAD_OUT_PHASE;
+			break;
+		}
 
 		//now, just some housekeeping
 		//we shouldn't hang onto shouts for too long
