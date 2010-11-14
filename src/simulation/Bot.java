@@ -55,12 +55,10 @@ public class Bot extends Rectangle {
 	private final static String CLAIM_SURVIVOR_MESSAGE = "cs";
 	private final static String FOUND_SURVIVOR_MESSAGE = "fs";
 
-	private final static int MESSAGE_TIMEOUT = Integer.MAX_VALUE; //after 5 timesteps, we should be able to say ignore it
-
 	private boolean OVERALL_BOT_DEBUG = 	true;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
-	private boolean MESSAGE_BOT_DEBUG = 	true;
+	private boolean MESSAGE_BOT_DEBUG = 	false;
 	private boolean MOVE_BOT_DEBUG = 		false;
 
 	/***************************************************************************
@@ -228,12 +226,12 @@ public class Bot extends Rectangle {
 
 	private Message constructLocationMessage() {
 		return new Message(this,
-				BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
+				BOT_LOCATION_MESSAGE + " " + this.getID() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
 	}
 
 	private Message constructFoundMessage(Survivor foundSurvivor, double surDamageAssessment) {
 		return new Message(this, 
-				FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n");
+				FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n");
 	}
 
 	private Message constructClaimMessage() {
@@ -242,7 +240,7 @@ public class Bot extends Rectangle {
 			return null;
 		}
 		return new Message(this,
-				CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
+				CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
 	}
 	
 	@SuppressWarnings("unchecked")
@@ -334,14 +332,7 @@ public class Bot extends Rectangle {
 						print("got message from myself - skip it");
 					continue;
 				}
-
-				int sentTime = s.nextInt();
-				//see if the messasge has timed out
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//ignore it
-					continue;
-				}
-
+				
 				double newX = s.nextDouble();
 				double newY = s.nextDouble();
 
@@ -355,13 +346,6 @@ public class Bot extends Rectangle {
 				if(finderID == this.getID()) {
 					//message from ourselves, we can safely ignore
 					//TODO is this really safe to ignore?
-					continue;
-				}
-
-				int sentTime = s.nextInt();
-				//see if the messasge has timed out
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//ignore it
 					continue;
 				}
 				
@@ -396,13 +380,6 @@ public class Bot extends Rectangle {
 				int claimerID = s.nextInt();
 				//if it is us, ignore it
 				if(claimerID == getID()) {
-					continue;
-				}
-
-				int sentTime = s.nextInt();
-				//see if the messasge has timed out
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//ignore it
 					continue;
 				}
 
