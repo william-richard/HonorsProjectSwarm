@@ -55,15 +55,13 @@ public class Bot extends Rectangle {
 	private final static String CLAIM_SURVIVOR_MESSAGE = "cs";
 	private final static String FOUND_SURVIVOR_MESSAGE = "fs";
 
-	private final static int MESSAGE_TIMEOUT = 5; //after 5 timesteps, we should be able to say ignore it
-
+	private final static int MESSAGE_TIMEOUT = Integer.MAX_VALUE; //after 5 timesteps, we should be able to say ignore it
 
 	private boolean OVERALL_BOT_DEBUG = 	true;
 	private boolean LISTEN_BOT_DEBUG = 		false;
 	private boolean LOOK_BOT_DEBUG = 		false;
-	private boolean MESSAGE_BOT_DEBUG = 	false;
+	private boolean MESSAGE_BOT_DEBUG = 	true;
 	private boolean MOVE_BOT_DEBUG = 		false;
-
 
 	/***************************************************************************
 	 * VARIABLES
@@ -80,7 +78,7 @@ public class Bot extends Rectangle {
 
 	//	private Bot previousBot;
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
-	private List<String> messageBuffer; //keep a buffer of messages from other robots
+	private List<Message> messageBuffer; //keep a buffer of messages from other robots
 	private int botID;
 	private int zoneAssesment; //stores the bot's assessment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
@@ -91,7 +89,9 @@ public class Bot extends Rectangle {
 	private int mySurvivorClaimTime;
 	private World world;
 	private int algorithmPhase;
+	
 	private List<Point2D> previousLocations;
+	private Point2D averagePreviousLocation;
 	private boolean settledOnLocation;
 
 
@@ -114,7 +114,7 @@ public class Bot extends Rectangle {
 		otherBotInfo = new ArrayList<BotInfo>();
 
 		//set up other variables with default values
-		messageBuffer = new ArrayList<String>();
+		messageBuffer = new ArrayList<Message>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -222,28 +222,31 @@ public class Bot extends Rectangle {
 	/***************************************************************************
 	 * METHODS
 	 **************************************************************************/
-	public void recieveMessage(String message) {
+	public void recieveMessage(Message message) {
 		messageBuffer.add(message);
 	}
 
-	private String constructLocationMessage() {
-		return BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
+	private Message constructLocationMessage() {
+		return new Message(this,
+				BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
 	}
 
-	private String constructFoundMessage(Survivor foundSurvivor, double surDamageAssessment) {
-		return FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n";
+	private Message constructFoundMessage(Survivor foundSurvivor, double surDamageAssessment) {
+		return new Message(this, 
+				FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n");
 	}
 
-	private String constructClaimMessage() {
+	private Message constructClaimMessage() {
 		if(mySurvivor == null) {
 			//can't do it - no survivor to claim
 			return null;
 		}
-		return CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n";
+		return new Message(this,
+				CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
 	}
-
+	
 	@SuppressWarnings("unchecked")
-	private void broadcastMessage(String mes) {
+	private void broadcastMessage(Message mes) {
 		//TODO try to implement direction message passing? Probably will need a message wrapper class to do this
 		
 		//first, get our broadcast range
@@ -252,12 +255,44 @@ public class Bot extends Rectangle {
 		//find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
-		//send out the message to all the nearby bots
-		for(Bot b : nearbyBots) {
-			if(b.getID() == this.getID()) {
-				continue;
+		//if I am the sender, send it out in all directions
+		if(mes.getSender() == this) {
+			//send out the message to all the nearby bots
+			for(Bot b : nearbyBots) {
+				if(b.getID() == this.getID()) {
+					continue;
+				}
+				b.recieveMessage(mes);
 			}
-			b.recieveMessage(mes);
+		} else {
+			if(MESSAGE_BOT_DEBUG) {
+				print("Rebroadcasting message : " + mes);
+			}
+			//want to send it out directionally
+			//figure out what direction it came from
+			Vector senderVector = new Vector(this.getCenterLocation(), mes.getSender().getCenterLocation());
+			//send it in the opposite direction, i.e. if they are more than pi/2 radians away, send it to them
+			Vector recieverVector;
+			for(Bot b : nearbyBots) {
+				if(b.getID() == mes.getSender().getID() || b.getID() == this.getID()) {
+					//skip it
+					continue;
+				}
+				
+				recieverVector = new Vector(this.getCenterLocation(), b.getCenterLocation());
+				
+				if(MESSAGE_BOT_DEBUG) {
+					print("Angle between " + mes.getSender().getID() + " and " + b.getID() + " is " + Math.toDegrees(senderVector.getAngleBetween(recieverVector)));
+				}
+				
+				if(Math.abs(senderVector.getAngleBetween(recieverVector)) > Math.PI/2.0) {
+					if(MESSAGE_BOT_DEBUG) {
+						print("Rebroadcasting to " + b.getID());
+					}
+					//send it
+					b.recieveMessage(mes);
+				}
+			}	
 		}
 
 		//also, send it to any BaseZones
@@ -284,8 +319,8 @@ public class Bot extends Rectangle {
 		//make a scanner to make going through the messages a bit easier
 		Scanner s;
 		//go through the messages and update the stored info about the other bots
-		for(String mes : messageBuffer) {
-			s = new Scanner(mes);
+		for(Message mes : messageBuffer) {
+			s = new Scanner(mes.getText());
 
 			if(! s.hasNext()) continue;
 
@@ -329,6 +364,10 @@ public class Bot extends Rectangle {
 					//ignore it
 					continue;
 				}
+				
+				if(MESSAGE_BOT_DEBUG) {
+					print("Got a FOUND message from " + finderID);
+				}
 
 				double survivorDamage = s.nextDouble();
 				double survivorX = s.nextDouble();
@@ -367,6 +406,10 @@ public class Bot extends Rectangle {
 					continue;
 				}
 
+				if(MESSAGE_BOT_DEBUG) {
+					print("Got a Claim message from " +  claimerID);
+				}
+				
 				double survivorX = s.nextDouble();
 				double survivorY = s.nextDouble();
 				int claimTime = s.nextInt();
@@ -386,7 +429,7 @@ public class Bot extends Rectangle {
 						if(getID() < claimerID) {
 							//I get it
 							//rebroadcast my claim message
-							String myClaimMessage = constructClaimMessage();
+							Message myClaimMessage = constructClaimMessage();
 							broadcastMessage(myClaimMessage);
 						} else {
 							//he gets it
@@ -571,7 +614,7 @@ public class Bot extends Rectangle {
 
 		//we've now moved - broadcast location to nearby bots
 		//construct the message we want to send them.
-		String outgoingMessage = constructLocationMessage(); 
+		Message outgoingMessage = constructLocationMessage(); 
 
 		//broadcast it
 		broadcastMessage(outgoingMessage);
@@ -642,6 +685,11 @@ public class Bot extends Rectangle {
 			v = v.rescale(getMaxVelocity());
 		}
 		return v;
+	}
+
+	private void updateAveragePreviousLocation() {
+		//basically, we're going to take simple moving average of the previous moves
+		
 	}
 
 	@SuppressWarnings("unchecked")
@@ -795,11 +843,10 @@ public class Bot extends Rectangle {
 			}
 			
 			//send out a message letting everyone know where the survivor is, what condition they are in, and how safe the zones is
-			String message = constructFoundMessage(s, surDamage);
+			Message message = constructFoundMessage(s, surDamage);
 
 			broadcastMessage(message);
 
-			//TODO handle this survivor stuff too
 			knownSurvivors.add(s);
 		}
 
@@ -821,12 +868,12 @@ public class Bot extends Rectangle {
 
 			//claim the closest one
 			mySurvivor = closestSurvivor;
-			String message = constructClaimMessage();
+			Message message = constructClaimMessage();
 			mySurvivorClaimTime = World.getCurrentTimestep();
 			broadcastMessage(message);
 		}
 	}
-
+	
 	public void doOneTimestep() {
 		//first, read any messages that have come in, and take care of them
 		readMessages();

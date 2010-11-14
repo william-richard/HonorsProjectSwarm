@@ -36,7 +36,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	// feilds for variable entry
 	private JFormattedTextField numBotsField;
 	private JFormattedTextField numSurvivorsField;
-	private JFormattedTextField timeBetweenTimestepsField;
+	private JFormattedTextField timeBetweenTimestepsField; //TODO Make this into a slider
 
 	// Formats to parse numbers in fields
 	private NumberFormat numBotsFormat;

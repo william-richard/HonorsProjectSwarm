@@ -294,7 +294,6 @@ public class World extends JFrame implements WindowListener {
 
 			//do all the bots
 			for(Bot b : allBots) {
-				System.out.print(b.getID() + " ");
 				b.doOneTimestep();
 			}
 			System.out.println("Done with bots");

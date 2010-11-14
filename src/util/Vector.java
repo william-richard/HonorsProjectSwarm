@@ -159,7 +159,7 @@ public class Vector extends Line2D{
 	}
 
 	public Vector reverse() {
-		return this.rotate(Math.PI);
+		return new Vector(this.getP2(), this.getP1());
 	}
 
 	public Vector rotate(double radians) {
@@ -250,9 +250,29 @@ public class Vector extends Line2D{
 	 * @return
 	 */
 	public double getAngleBetween(Vector other) {
-		Vector thisUnit = this.getUnitVector();
-		Vector otherUnit = other.getUnitVector();
-		return Math.atan2(otherUnit.getY2(), otherUnit.getX2()) - Math.atan2(thisUnit.getY2(), thisUnit.getX2());
+		//make sure this and other share a point
+		//and that point is P1
+		if(! this.getP1().equals(other.getP1())) {
+			//see if they share any point
+			if(other.getP2().equals(this.getP1())) {
+				//reverse other
+				other = other.reverse();
+			} else {
+				throw new IllegalArgumentException("Vectors do not meet up");
+			}
+		}
+		
+		double dotProduct = this.dot(other);
+		double thisMag = this.getMagnitude();
+		double otherMag = other.getMagnitude();
+		
+		return Math.acos(dotProduct / (thisMag * otherMag));
+		
+		//		Vector thisUnit = this.getUnitVector();
+//		Vector otherUnit = other.getUnitVector();
+
+		//		return Math.atan2(otherUnit.getY2(), otherUnit.getX2()) - Math.atan2(thisUnit.getY2(), thisUnit.getX2());
+		//		return Math.acos(arg0)
 	}
 	
 	/**get the angle between this vector 
