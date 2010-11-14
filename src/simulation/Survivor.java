@@ -56,21 +56,23 @@ public class Survivor extends Rectangle2D.Double {
 	 **************************************************************************/
 
 	private synchronized void shout() {
-		//see if we're going to shout
-		if(World.RANDOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
-			//make and return a new shout
-			Shout ourShout = currentZone.getShout(this);
+		if(currentZone != null) {
+			//see if we're going to shout
+			if(World.RANDOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
+				//make and return a new shout
+				Shout ourShout = currentZone.getShout(this);
 
-			//send it off to all the bots - they'll determine if they can hear it or not
-			for(Bot b : World.allBots) {
-				try {
-					b.hearShout(ourShout);
-				} catch (InterruptedException e) {
-					//it didn't make it for some reason
-					//don't worry about it that much
+				//send it off to all the bots - they'll determine if they can hear it or not
+				for(Bot b : World.allBots) {
+					try {
+						b.hearShout(ourShout);
+					} catch (InterruptedException e) {
+						//it didn't make it for some reason
+						//don't worry about it that much
+					}
 				}
-			}
 
+			}
 		}
 
 	}
