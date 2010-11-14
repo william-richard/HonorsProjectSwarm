@@ -7,11 +7,11 @@ import zones.Zone;
 
 public class Survivor extends Rectangle2D.Double {
 
-	private static final long serialVersionUID = 1L;
+	private static final long serialVersionUID = -7790215006799035571L;
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
-	private final int DIMENSION = 6; //survivors are squares really, so they only need 1 dimention.
+	private final int DIMENSION = 6; //survivors are squares really, so they only need 1 dimension.
 	private final double SHOUT_PROB = .75; //The probability that survivors will shout
 
 	/***************************************************************************
@@ -57,7 +57,7 @@ public class Survivor extends Rectangle2D.Double {
 
 	private synchronized void shout() {
 		//see if we're going to shout
-		if(World.RAMOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
+		if(World.RANDOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
 			//make and return a new shout
 			Shout ourShout = currentZone.getShout(this);
 

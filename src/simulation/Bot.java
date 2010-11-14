@@ -11,8 +11,6 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.CopyOnWriteArrayList;
 
-import com.sun.media.jai.opimage.ClampCRIF;
-
 import util.Utilities;
 import util.Vector;
 import util.shapes.Circle2D;
@@ -42,23 +40,12 @@ public class Bot extends Rectangle {
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 8;
 
-	private final double AVOID_OBSTACLES_OVERROTATE_RADIANS = 2.0 * Math.PI / 180.0;
-	private final double RADIAL_SWEEP_INCREMENT_RADIANS = AVOID_OBSTACLES_OVERROTATE_RADIANS / 2.0;
-
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private final double DANGER_MULTIPLIER = 2;
-
 	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000;
 	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2000;
-
-	private boolean OVERALL_BOT_DEBUG = 	true;
-	private boolean LISTEN_BOT_DEBUG = 		false;
-	private boolean LOOK_BOT_DEBUG = 		false;
-	private boolean MESSAGE_BOT_DEBUG = 	false;
-	private boolean MOVE_BOT_DEBUG = 		false;
 
 	private final static int SPREAD_OUT_PHASE = 0;
 	private final static int CREATE_PATHS_PHASE = 1;
@@ -68,9 +55,21 @@ public class Bot extends Rectangle {
 	private final static String CLAIM_SURVIVOR_MESSAGE = "cs";
 	private final static String FOUND_SURVIVOR_MESSAGE = "fs";
 
+	private final static int MESSAGE_TIMEOUT = 5; //after 5 timesteps, we should be able to say ignore it
+
+
+	private boolean OVERALL_BOT_DEBUG = 	true;
+	private boolean LISTEN_BOT_DEBUG = 		false;
+	private boolean LOOK_BOT_DEBUG = 		false;
+	private boolean MESSAGE_BOT_DEBUG = 	false;
+	private boolean MOVE_BOT_DEBUG = 		false;
+
+
 	/***************************************************************************
 	 * VARIABLES
 	 **************************************************************************/
+
+
 
 	/** These variables the bot does not know about - we store them for our convience. */
 	private Zone currentZone; //what zones we actually are in can change some behavior
@@ -81,14 +80,15 @@ public class Bot extends Rectangle {
 
 	//	private Bot previousBot;
 	private List<BotInfo> otherBotInfo; //storage of what information we know about all of the other Bots
-	private String messageBuffer; //keep a buffer of messages from other robots
+	private List<String> messageBuffer; //keep a buffer of messages from other robots
 	private int botID;
-	private int zoneAssesment; //stores the bot's assesment of what sort of zones it is in
+	private int zoneAssesment; //stores the bot's assessment of what sort of zones it is in
 	private Zone baseZone; //the home base zones.
 	private List<Survivor> knownSurvivors; //keep a list of survivors that have already been found, so can go claim them
 	//TODO handle reclaiming survivors in the case of robot death
 	private List<Survivor> claimedSurvivors; //keep a list of survivors that have been claimed, so that we don't double up on one survivor
 	private Survivor mySurvivor; //the survivor I have claimed - don't know if this is useful, but it might be
+	private int mySurvivorClaimTime;
 	private World world;
 	private int algorithmPhase;
 	private List<Point2D> previousLocations;
@@ -114,7 +114,7 @@ public class Bot extends Rectangle {
 		otherBotInfo = new ArrayList<BotInfo>();
 
 		//set up other variables with default values
-		messageBuffer = "";
+		messageBuffer = new ArrayList<String>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -135,7 +135,7 @@ public class Bot extends Rectangle {
 		algorithmPhase = SPREAD_OUT_PHASE;
 
 		settledOnLocation = false;
-		
+
 		mySurvivor = null;
 
 		//for now, assume we're starting in a base zone
@@ -223,18 +223,68 @@ public class Bot extends Rectangle {
 	 * METHODS
 	 **************************************************************************/
 	public void recieveMessage(String message) {
-		messageBuffer = messageBuffer + message;
+		messageBuffer.add(message);
+	}
+
+	private String constructLocationMessage() {
+		return BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
+	}
+
+	private String constructFoundMessage(Survivor foundSurvivor, double surDamageAssessment) {
+		return FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n";
+	}
+
+	private String constructClaimMessage() {
+		if(mySurvivor == null) {
+			//can't do it - no survivor to claim
+			return null;
+		}
+		return CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n";
+	}
+
+	@SuppressWarnings("unchecked")
+	private void broadcastMessage(String mes) {
+		//TODO try to implement direction message passing? Probably will need a message wrapper class to do this
+		
+		//first, get our broadcast range
+		Shape broadcastRange = getBroadcastArea();
+
+		//find any nearby bots
+		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
+
+		//send out the message to all the nearby bots
+		for(Bot b : nearbyBots) {
+			if(b.getID() == this.getID()) {
+				continue;
+			}
+			b.recieveMessage(mes);
+		}
+
+		//also, send it to any BaseZones
+		List<Zone> nearbyZones = (List<Zone>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allZones);
+
+		for(Zone z : nearbyZones) {
+			//skip non-BaseZones
+			if(! (z instanceof BaseZone)) continue;
+
+			//send messages to those basezones
+			BaseZone bz = (BaseZone) z;
+
+			try {
+				bz.recieveMessage(mes);
+			} catch (InterruptedException e) {
+			}
+
+		}
 	}
 
 	private void readMessages() {
 		//go through all the messages
-		//messages should be split up by '\n'
-		String[] messageArray = messageBuffer.split("\n");
 
 		//make a scanner to make going through the messages a bit easier
 		Scanner s;
 		//go through the messages and update the stored info about the other bots
-		for(String mes : messageArray) {
+		for(String mes : messageBuffer) {
 			s = new Scanner(mes);
 
 			if(! s.hasNext()) continue;
@@ -250,6 +300,13 @@ public class Bot extends Rectangle {
 					continue;
 				}
 
+				int sentTime = s.nextInt();
+				//see if the messasge has timed out
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//ignore it
+					continue;
+				}
+
 				double newX = s.nextDouble();
 				double newY = s.nextDouble();
 
@@ -257,18 +314,104 @@ public class Bot extends Rectangle {
 
 				otherBotInfo.add(newBotInfo);
 			} else if (messageType.equals(FOUND_SURVIVOR_MESSAGE)) {
-				//TODO handle both survivor messages
+				//get all the information off the message
+				int finderID = s.nextInt();
+
+				if(finderID == this.getID()) {
+					//message from ourselves, we can safely ignore
+					//TODO is this really safe to ignore?
+					continue;
+				}
+
+				int sentTime = s.nextInt();
+				//see if the messasge has timed out
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//ignore it
+					continue;
+				}
+
+				double survivorDamage = s.nextDouble();
+				double survivorX = s.nextDouble();
+				double survivorY = s.nextDouble();
+
+				//make that into a survivor entry
+				Survivor foundSurvivor = new Survivor(survivorX, survivorY, survivorDamage);
+				//figure out if we know about it already - update if we do, add to our records if we don't
+				if(knownSurvivors.contains(foundSurvivor)) {
+					//update it
+					knownSurvivors.set(knownSurvivors.indexOf(foundSurvivor), foundSurvivor);
+				} else {
+					//add it
+					knownSurvivors.add(foundSurvivor);
+				}
+
+				//rebroadcast the message
+				broadcastMessage(mes);
+			} else if (messageType.equals(CLAIM_SURVIVOR_MESSAGE)) {
 				//remember to give up and reset mySurvivor if someone else finds them first
 				//and maybe rebroadcast our claim message so that they get the idea
 				//otherwise, we want to rebroadcast their claim message
 				//or any found messages we get
+
+				//get the information out of the message
+				int claimerID = s.nextInt();
+				//if it is us, ignore it
+				if(claimerID == getID()) {
+					continue;
+				}
+
+				int sentTime = s.nextInt();
+				//see if the messasge has timed out
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//ignore it
+					continue;
+				}
+
+				double survivorX = s.nextDouble();
+				double survivorY = s.nextDouble();
+				int claimTime = s.nextInt();
+
+				Survivor claimedSurvivor = new Survivor(survivorX, survivorY, 0);
+				if(claimedSurvivor.equals(mySurvivor)) {
+					//someone else is claiming my survivor
+					//is this valid?
+					if(claimTime < mySurvivorClaimTime) {
+						//the other guy made the claim first
+						//give it to them
+						mySurvivor = null;
+						//rebroadcast his message
+						broadcastMessage(mes);
+					} else if(claimTime == mySurvivorClaimTime) {
+						//the guy with the lower ID gets it
+						if(getID() < claimerID) {
+							//I get it
+							//rebroadcast my claim message
+							String myClaimMessage = constructClaimMessage();
+							broadcastMessage(myClaimMessage);
+						} else {
+							//he gets it
+							mySurvivor = null;
+							//rebroadcast his message
+							broadcastMessage(mes);
+						}
+					}
+				} else {
+					//store/update the survivor that they have found
+					if(claimedSurvivors.contains(claimedSurvivor)) {
+						claimedSurvivors.set(claimedSurvivors.indexOf(claimedSurvivor), claimedSurvivor);
+					} else {
+						claimedSurvivors.add(claimedSurvivor);
+					}
+					//rebroadcast their message
+					broadcastMessage(mes);
+				}
 			}
-			else continue;
+			else continue; //this else matches up to figuring out what message type we have
 
 		}
 
 		//once we are done reading, we should clear the buffer
-		messageBuffer = "";
+		messageBuffer.clear();
 	}
 
 	public void hearShout(Shout s) throws InterruptedException {
@@ -289,7 +432,7 @@ public class Bot extends Rectangle {
 
 		/*determine what actions we want to take
 		 * there are levels to what we want to do
-		 * 
+		 * 0) If we have claimed a survivor, head towards them
 		 * 1) See if we can detect a survivor, first by sight and then by sound
 		 * 		head towards them if we can
 		 * 2) See if we are within broadcast range of any other robots by 
@@ -298,7 +441,16 @@ public class Bot extends Rectangle {
 		 * 	b) If there are not, try to find robots by heading back towards base.
 		 */			
 
+		//TODO the haveMoved thing seems bad form to me - try to do it better
 		boolean haveMoved = false; //once we have made a movement, this will be set to true
+
+		//0) If we have claimed a survivor, move towards them
+		if(!haveMoved && mySurvivor != null) {
+			//make a vector towards them
+			Vector surVect = new Vector(this.getCenterLocation(), mySurvivor.getCenterLocation());
+			actuallyMoveAlong(surVect);
+			haveMoved = true;
+		}
 
 		//1) See if we can detect a survivor, first by sight and then by sound head towards them if we can 
 		if(!haveMoved) {
@@ -419,7 +571,7 @@ public class Bot extends Rectangle {
 
 		//we've now moved - broadcast location to nearby bots
 		//construct the message we want to send them.
-		String outgoingMessage = "loc " + botID + " " + this.getCenterX() + " " + this.getCenterY() + "\n";
+		String outgoingMessage = constructLocationMessage(); 
 
 		//broadcast it
 		broadcastMessage(outgoingMessage);
@@ -490,40 +642,6 @@ public class Bot extends Rectangle {
 			v = v.rescale(getMaxVelocity());
 		}
 		return v;
-	}
-
-	@SuppressWarnings("unchecked")
-	private void broadcastMessage(String mes) {
-		//first, get our broadcast range
-		Shape broadcastRange = getBroadcastArea();
-
-		//find any nearby bots
-		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
-
-		//send out the message to all the nearby bots
-		for(Bot b : nearbyBots) {
-			if(b.getID() == this.getID()) {
-				continue;
-			}
-			b.recieveMessage(mes);
-		}
-
-		//also, send it to any BaseZones
-		List<Zone> nearbyZones = (List<Zone>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allZones);
-
-		for(Zone z : nearbyZones) {
-			//skip non-BaseZones
-			if(! (z instanceof BaseZone)) continue;
-
-			//send messages to those basezones
-			BaseZone bz = (BaseZone) z;
-
-			try {
-				bz.recieveMessage(mes);
-			} catch (InterruptedException e) {
-			}
-
-		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -671,8 +789,13 @@ public class Bot extends Rectangle {
 		for(Survivor s : foundSurvivors) {
 			double surDamage = assesSurvivor(s);
 
+			//if someone has already claimed this survivor, don't bother letting everyone know about them
+			if(claimedSurvivors.contains(s)) {
+				continue;
+			}
+			
 			//send out a message letting everyone know where the survivor is, what condition they are in, and how safe the zones is
-			String message = FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + surDamage + " " + s.getCenterX() + " " + s.getCenterY() + " " + World.getCurrentTimestep() + "\n";
+			String message = constructFoundMessage(s, surDamage);
 
 			broadcastMessage(message);
 
@@ -695,10 +818,11 @@ public class Bot extends Rectangle {
 					closestSurvivorDist = curDist;
 				}
 			}
-			
+
 			//claim the closest one
 			mySurvivor = closestSurvivor;
-			String message = CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + World.getCurrentTimestep() + "\n";
+			String message = constructClaimMessage();
+			mySurvivorClaimTime = World.getCurrentTimestep();
 			broadcastMessage(message);
 		}
 	}
@@ -713,10 +837,14 @@ public class Bot extends Rectangle {
 				//now try to move, based on the move rules.
 				move();
 
-				//now that we have moved, find out if we can see any survivors
-				findAndAssesSurvivor();
+				//if we have not already claimed a survivor, find out if we can see any survivors
+				//TODO make this better - if they have heard a survivor, check it out for a few steps
+				if(mySurvivor == null) {
+					findAndAssesSurvivor();
+				}
 
-				//decide if we are settled on a location yet
+				//TODO decide if we are settled on a location yet
+				
 
 			}
 		break;

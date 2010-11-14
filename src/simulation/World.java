@@ -36,7 +36,7 @@ public class World extends JFrame implements WindowListener {
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
-	public static final Random RAMOM_GENERATOR = new Random();
+	public static final Random RANDOM_GENERATOR = new Random();
 	private static final int MENUBAR_HEIGHT = 21;
 	private static final int FRAME_HEIGHT = 500 + MENUBAR_HEIGHT;
 	private static final int FRAME_WIDTH = 500;
@@ -72,6 +72,8 @@ public class World extends JFrame implements WindowListener {
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
 
+	private BaseZone homeBase;
+	
 	public static List<Shape> debugShapesToDraw;
 
 	private static int currentTimestep; //keep track of what time it is
@@ -91,8 +93,9 @@ public class World extends JFrame implements WindowListener {
 
 		int[] xPointsBase = {225, 275, 275, 225};
 		int[] yPointsBase = {225, 225, 275, 275};
-		Zone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
+		BaseZone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
 		allZones.add(homeBase);
+		this.homeBase = homeBase;
 
 		fillInZones();
 
@@ -114,8 +117,12 @@ public class World extends JFrame implements WindowListener {
 
 		//initialize the survivors
 		allSurvivors = new ArrayList<Survivor>();
-
-		//TODO implement random placement of survivors
+		Survivor curSurvivor;
+		
+		for(int i = 0; i < numSurvivors; i++) {
+			curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*FRAME_HEIGHT, RANDOM_GENERATOR.nextDouble());
+			allSurvivors.add(curSurvivor);
+		}
 
 		debugShapesToDraw = new ArrayList<Shape>();
 
@@ -175,7 +182,7 @@ public class World extends JFrame implements WindowListener {
 		int numLeftToAdd = ZONE_COMPLEXITY;
 		while(numLeftToAdd > 0) {
 			//make a random point
-			Point newPoint = new Point(RAMOM_GENERATOR.nextInt(FRAME_WIDTH), RAMOM_GENERATOR.nextInt(FRAME_HEIGHT));
+			Point newPoint = new Point(RANDOM_GENERATOR.nextInt(FRAME_WIDTH), RANDOM_GENERATOR.nextInt(FRAME_HEIGHT));
 			//make sure the point is in the area
 			if(! unfilledArea.contains(newPoint)) {
 				continue;
@@ -193,9 +200,9 @@ public class World extends JFrame implements WindowListener {
 		//if they don't, add them to the zones list
 		while(! unfilledArea.isEmpty()) {
 			//choose 3 points randomly
-			Point p1 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
-			Point p2 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
-			Point p3 = zoneVerticies.remove(RAMOM_GENERATOR.nextInt(zoneVerticies.size()));
+			Point p1 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
+			Point p2 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
+			Point p3 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
 
 			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
 			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
@@ -203,7 +210,7 @@ public class World extends JFrame implements WindowListener {
 			//make a zones out of them
 			Zone newZone;
 
-			switch(RAMOM_GENERATOR.nextInt(5)) {
+			switch(RANDOM_GENERATOR.nextInt(5)) {
 			case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
@@ -287,8 +294,8 @@ public class World extends JFrame implements WindowListener {
 
 			//do all the bots
 			for(Bot b : allBots) {
+				System.out.print(b.getID() + " ");
 				b.doOneTimestep();
-				//TODO fix issue where some bots move before others?
 			}
 			System.out.println("Done with bots");
 
@@ -296,6 +303,10 @@ public class World extends JFrame implements WindowListener {
 			repaint();
 			System.out.println("Done with repaint");
 
+			//housekeeping
+			//TODO need to handle BaseZone stuff, especially once we start making paths
+			homeBase.clearMessageBuffer();
+			
 			try {
 				wait(timeBetweenTimesteps, 1); //stick on 1 nanosecond, so that if they want to wait for 0 seconds it doesn't freeze up
 			} catch (InterruptedException e) {

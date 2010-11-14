@@ -53,13 +53,8 @@ public class BaseZone extends Zone {
 	}
 
 	public void readMessages() {
-		//make sure that we don't recieve any messages while we're coping the buffer
-		recieveMessages = false;
-
 		String newMessages = messageBuffer;
 		messageBuffer = "";
-
-		recieveMessages = true;
 
 		//go through all the messages
 		//messages should be split up by '\n'
@@ -99,6 +94,10 @@ public class BaseZone extends Zone {
 			} else continue;
 
 		}
+	}
+	
+	public void clearMessageBuffer() {
+		messageBuffer = "";
 	}
 	
 	
