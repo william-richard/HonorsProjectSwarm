@@ -2,8 +2,6 @@ package zones;
 
 import java.awt.Color;
 
-import simulation.Bot;
-
 
 public class DangerDebris extends DangerZone {
 
