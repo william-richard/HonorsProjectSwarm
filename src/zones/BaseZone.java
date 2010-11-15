@@ -45,7 +45,7 @@ public class BaseZone extends Zone {
 
 	private boolean recieveMessages = true;
 
-	public void recieveMessage(Message message) throws InterruptedException {
+	public synchronized void recieveMessage(Message message) throws InterruptedException {
 		//bad way to do this, but it'll be OK
 		while(!recieveMessages) {
 			wait(10);

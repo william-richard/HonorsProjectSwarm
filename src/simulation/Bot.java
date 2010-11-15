@@ -5,6 +5,7 @@ import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -52,13 +53,20 @@ public class Bot extends Rectangle {
 	private final static int CREATE_PATHS_PHASE = 1;
 	private final static int AGGRIGATE_PHASE = 2;
 
-	private final static String BOT_LOCATION_MESSAGE = "loc";
-	private final static String CLAIM_SURVIVOR_MESSAGE = "cs";
-	private final static String FOUND_SURVIVOR_MESSAGE = "fs";
+	private final int MESSAGE_TIMEOUT;
+
+	private final static String BOT_LOCATION_MESSAGE = 						"loc";
+	private final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
+	private final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
+	private final static String ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE = 	"ape";
+	private final static String NOT_READY_TO_ADVANCE_MESSAGE = 				"nr";
+	private final static String ADVANCE_TO_NEXT_PHASE_MESSAGE =				"ap";
 
 	private final static int NUM_PREV_LOCATIONS_TO_CONSIDER = 10;
 	private final static double STOP_SPREADING_THRESHOLD = DEFAULT_MAX_VELOCITY / 2.0;
 	private final static double DEFAULT_AVERAGE_LOCATION_VALUE = -1 * java.lang.Double.MAX_VALUE;
+
+	private final int MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -104,6 +112,12 @@ public class Bot extends Rectangle {
 	private World world;
 	private int algorithmPhase;
 
+	private int lastMoveToNextPhaseMessageRecievedTime = -1;
+	private int numberOfElectionsStarted = 0;
+	private boolean electionLooksSuccessful = true;
+	private int myElectionStartTime = -1;
+	private HashMap<Integer, Integer> electionLeaderRecord;
+
 	private List<Point2D> previousLocations;
 	private Point2D averagePreviousLocation;
 	private boolean settledOnLocation;
@@ -111,8 +125,7 @@ public class Bot extends Rectangle {
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
-	public Bot(World _world, double centerX, double centerY, int _numBots,
-			int _botID, Zone homeBase, BoundingBox _bounds) {
+	public Bot(World _world, double centerX, double centerY, int _numBots, int _botID, Zone homeBase, BoundingBox _bounds) {
 		super();
 
 		world = _world;
@@ -153,6 +166,11 @@ public class Bot extends Rectangle {
 		settledOnLocation = false;
 
 		mySurvivor = null;
+
+		MESSAGE_TIMEOUT = (_numBots + 5) / 5;
+		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots;
+
+		electionLeaderRecord = new HashMap<Integer, Integer>();
 
 		// for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
@@ -243,16 +261,14 @@ public class Bot extends Rectangle {
 	}
 
 	private Message constructLocationMessage() {
-		return new Message(this, BOT_LOCATION_MESSAGE + " " + this.getID()
-				+ " " + this.getCenterX() + " " + this.getCenterY() + "\n");
+		return new Message(this, 
+				BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
 	}
 
 	private Message constructFoundMessage(Survivor foundSurvivor,
 			double surDamageAssessment) {
-		return new Message(this, FOUND_SURVIVOR_MESSAGE + " " + this.getID()
-				+ " " + surDamageAssessment + " " + foundSurvivor.getCenterX()
-				+ " " + foundSurvivor.getCenterY() + " "
-				+ World.getCurrentTimestep() + "\n");
+		return new Message(this, 
+				FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
 	}
 
 	private Message constructClaimMessage() {
@@ -260,9 +276,34 @@ public class Bot extends Rectangle {
 			// can't do it - no survivor to claim
 			return null;
 		}
-		return new Message(this, CLAIM_SURVIVOR_MESSAGE + " " + this.getID()
-				+ " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY()
-				+ " " + mySurvivorClaimTime + "\n");
+		return new Message(this, 
+				CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
+	}
+
+	private Message constructPhaseAdvancementElectionMessage() {
+		numberOfElectionsStarted++;
+		return new Message(this,
+				ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + numberOfElectionsStarted + "\n");
+	}
+
+	private Message constructNotReadyForPhaseAdvancementMessage(Message electionMessage) {
+		Scanner messageScanner = new Scanner(electionMessage.getText());
+
+		String messageType = messageScanner.next();
+		if(! messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE)) {
+			throw new IllegalArgumentException("Did not pass an election message to counter");
+		}
+		int starterID = messageScanner.nextInt();
+		int electionNum = messageScanner.nextInt();
+
+		return new Message(this,
+				NOT_READY_TO_ADVANCE_MESSAGE + " " + starterID + " " + World.getCurrentTimestep() + " " + electionNum + "\n");		
+
+	}
+
+	private Message constructPhaseAdvancementMessage() {
+		return new Message(this,
+				ADVANCE_TO_NEXT_PHASE_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + "\n");
 	}
 
 	@SuppressWarnings("unchecked")
@@ -350,6 +391,9 @@ public class Bot extends Rectangle {
 	private void readMessages() {
 		// go through all the messages
 
+		print("Have to read thorugh " + messageBuffer.size() + " messages");
+		long startTime = System.currentTimeMillis();
+
 		// make a scanner to make going through the messages a bit easier
 		Scanner s;
 		// go through the messages and update the stored info about the other
@@ -371,6 +415,13 @@ public class Bot extends Rectangle {
 					continue;
 				}
 
+				int sentTime = s.nextInt();
+
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//it has timed out - ignore it
+					continue;
+				}
+
 				double newX = s.nextDouble();
 				double newY = s.nextDouble();
 
@@ -384,6 +435,13 @@ public class Bot extends Rectangle {
 				if (finderID == this.getID()) {
 					// message from ourselves, we can safely ignore
 					// TODO is this really safe to ignore?
+					continue;
+				}
+
+				int sentTime = s.nextInt();
+
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//it has timed out - ignore it
 					continue;
 				}
 
@@ -426,6 +484,13 @@ public class Bot extends Rectangle {
 					continue;
 				}
 
+				int sentTime = s.nextInt();
+
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//it has timed out - ignore it
+					continue;
+				}
+
 				if (MESSAGE_BOT_DEBUG) {
 					print("Got a Claim message from " + claimerID);
 				}
@@ -450,7 +515,9 @@ public class Bot extends Rectangle {
 							// I get it
 							// rebroadcast my claim message
 							Message myClaimMessage = constructClaimMessage();
-							broadcastMessage(myClaimMessage);
+							if(myClaimMessage != null) {
+								broadcastMessage(myClaimMessage);
+							}
 						} else {
 							// he gets it
 							mySurvivor = null;
@@ -469,14 +536,103 @@ public class Bot extends Rectangle {
 					// rebroadcast their message
 					broadcastMessage(mes);
 				}
-			} else
-				continue; // this else matches up to figuring out what message
-			// type we have
+			} else if(messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE) 
+					|| messageType.equals(NOT_READY_TO_ADVANCE_MESSAGE)) {
 
+				//first, update or ignore messages based on our records of who has started what election
+				Integer starterID = new Integer(s.nextInt());
+
+				int sentTime = s.nextInt();
+
+				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+					//it has timed out - ignore it
+					continue;
+				}
+
+				Integer electionNumber = new Integer(s.nextInt());
+				if(electionLeaderRecord.containsKey(starterID)) {
+					//this sender has started an election before
+					//see what election we last saw them start
+					Integer lastKnownElectionStartedByThisSender = electionLeaderRecord.get(starterID);
+					if(electionNumber < lastKnownElectionStartedByThisSender) {
+						//this message has to do with an election that is already over
+						//ignore it
+						continue;
+					} else if(electionNumber > lastKnownElectionStartedByThisSender){ 
+						//we need to update our records - they have started a new election
+						electionLeaderRecord.put(starterID, electionNumber);
+					}
+				} else {
+					//this is the first election we have seen from this sender
+					//record it and process the message
+					electionLeaderRecord.put(starterID, electionNumber);
+				}
+
+				//now, process the message
+				if (messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE)) { 
+					//first, record that someone is trying to start an election
+					lastMoveToNextPhaseMessageRecievedTime = World.getCurrentTimestep();
+
+					//see if we are ready
+					if(settledOnLocation) {
+						//we're ready
+						//rebroadcast the message
+						broadcastMessage(mes);
+					} else {
+						//we're not ready
+						//respond with a not-ready message
+						Message notReady = constructNotReadyForPhaseAdvancementMessage(mes);
+						broadcastMessage(notReady);
+					}
+				} else if(messageType.equals(NOT_READY_TO_ADVANCE_MESSAGE)) {
+					//see if we started the elecetion
+
+					if(starterID == this.getID()) {
+						//we started the election
+						//see if we are still waiting
+						if(electionNumber == numberOfElectionsStarted) {
+							//we are still waiting for the results
+							//this means the election failed
+							electionLooksSuccessful = false;
+						} else {
+							//we are not still waiting - ignore it
+						}
+					} else {
+						//we did not start this election
+						//pass on the message so the starter eventually gets it
+						broadcastMessage(mes);
+					}
+				}
+
+			} else if(messageType.equals(ADVANCE_TO_NEXT_PHASE_MESSAGE)) {
+
+				//just need to advance past it - don't really need it
+				int senderID = s.nextInt();
+
+				int sentTime = s.nextInt();
+
+				//				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
+				//					//it has timed out - ignore it
+				//					continue;
+				//				}
+
+				//Someone has decided it is time to move onto the next phase
+				//do so
+				algorithmPhase = CREATE_PATHS_PHASE;
+			} else
+				continue; // this else matches up to figuring out what message type we have
+
+		}
+
+		long messageReadingTime = System.currentTimeMillis() - startTime;
+		print("Took " + (messageReadingTime)/1000.0 + " seconds to finish them");
+		if(messageBuffer.size() > 0) {
+			print("That's " + ((double)messageReadingTime) / messageBuffer.size() + " ms per message");
 		}
 
 		// once we are done reading, we should clear the buffer
 		messageBuffer.clear();
+
 	}
 
 	public void hearShout(Shout s) throws InterruptedException {
@@ -517,10 +673,17 @@ public class Bot extends Rectangle {
 			actuallyMoveAlong(surVect);
 			haveMoved = true;
 		}
-		
+
 		if(settledOnLocation) { 
-			//don't move
-			actuallyMoveAlong(new Vector(this.getCenterLocation(), this.getCenterLocation()));
+			//don't move unless we aren't in communication range with anyone else
+			if(otherBotInfo.size() == 0) {
+				//need to move back towards home base to get into communication range
+				Vector baseVect = new Vector(this.getCenterLocation(), baseZone.getCenterLocation());
+				actuallyMoveAlong(baseVect);
+			} else {
+				//don't move
+				actuallyMoveAlong(new Vector(this.getCenterLocation(), this.getCenterLocation()));
+			}
 			haveMoved = true;
 		}
 
@@ -932,7 +1095,9 @@ public class Bot extends Rectangle {
 			mySurvivor = closestSurvivor;
 			Message message = constructClaimMessage();
 			mySurvivorClaimTime = World.getCurrentTimestep();
-			broadcastMessage(message);
+			if(message != null) {
+				broadcastMessage(message);
+			}
 		}
 	}
 
@@ -1019,6 +1184,49 @@ public class Bot extends Rectangle {
 				.getCenterLocation()) < STOP_SPREADING_THRESHOLD;
 	}
 
+	private void handlePhaseElectionIfNeeded() {
+		//see if we are waiting on results
+		if(myElectionStartTime > 0) {
+			//see if the election is over
+			//first, check if we have gotten a no back
+			if(! electionLooksSuccessful) {
+				//the election failed
+				//start another one in a while
+				//basically, to do this, set the lastMoveToNextPhaseMessageRecievedTime such that it will start when we want it to
+				//i.e. set it at MOVE_TO_NEXT_PHASE_TIME_THRESHOLD ago
+				//so that we start before anyone else does (hopefully)
+				lastMoveToNextPhaseMessageRecievedTime = World.getCurrentTimestep() - MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+			} else {
+				//see if the election is over
+				int timeToEndElection = myElectionStartTime + 2*MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+				if(World.getCurrentTimestep() >= timeToEndElection) {
+					//the election is over, and no one has objected
+					//broadcast that we should move on
+					Message moveOnMessage = constructPhaseAdvancementMessage();
+					broadcastMessage(moveOnMessage);
+				}
+			}
+		}
+		else if(lastMoveToNextPhaseMessageRecievedTime > 0) {
+			//see if we need to start an election
+			int timeToStartElection = lastMoveToNextPhaseMessageRecievedTime + 2*MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+			if(World.getCurrentTimestep() >= timeToStartElection) {
+				startElection();
+			}
+		} else {
+			//no election has been started
+			//start it myself
+			startElection();
+		}
+	}
+
+	private void startElection() {
+		Message electionStartMesasge = constructPhaseAdvancementElectionMessage();
+		broadcastMessage(electionStartMesasge);
+		myElectionStartTime = World.getCurrentTimestep();
+		electionLooksSuccessful = true;
+	}
+
 	public void doOneTimestep() {
 		// first, read any messages that have come in, and take care of them
 		readMessages();
@@ -1036,10 +1244,18 @@ public class Bot extends Rectangle {
 			// decide if we should stop moving
 			determineIfSettledOnLocation();
 
+			if(settledOnLocation) {
+				//handle starting an election to move onto the next phase if needde
+				handlePhaseElectionIfNeeded();
+			}
+
 			break;
 			case (CREATE_PATHS_PHASE) :
-
-				break;
+				print("I am in the create paths phase");
+				//since we are settled, should just stay where we are, or move towarsd home base to get in range, but we should be in range - we'll see if this helps
+				move();
+			
+			break;
 			case (AGGRIGATE_PHASE) :
 
 				break;

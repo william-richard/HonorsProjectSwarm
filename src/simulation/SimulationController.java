@@ -24,9 +24,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private World world;
 
 	// initial values for fields
-	private int numBots = 40;
-	private int numSurvivors = 2;
-	private double timeBetweenTimestepsInSeconds = 1.0;
+	private int numBots = 20;
+	private int numSurvivors = 0;
+	private double timeBetweenTimestepsInSeconds = .5;
 
 	// buttons to control the simulation
 	private JButton runSimulationButton;;
@@ -133,6 +133,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		stopSimulationButton = new JButton(stopSimulationString);
 		stopSimulationButton.addActionListener(this);
 
+		//TODO try to make reset button really kill everything - maybe save the thread running and interrupt it?
 		resetSimulationButton = new JButton(resetSimulationString);
 		resetSimulationButton.addActionListener(this);
 	}
