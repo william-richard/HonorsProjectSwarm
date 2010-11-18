@@ -143,6 +143,7 @@ public class Vector extends Line2D{
 
 	public Vector rescaleRatio(double ratio) {		
 		if(java.lang.Double.isInfinite(ratio)) {
+			System.out.println("Asking for inifinite rescale");
 			return this;
 		}
 

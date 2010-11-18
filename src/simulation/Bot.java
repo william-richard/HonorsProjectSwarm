@@ -4,6 +4,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
+import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,10 +32,7 @@ public class Bot extends Rectangle {
 	private final double VISUAL_ID_SURVIVOR_PROB = .70;
 	private final double HEAR_SURVIVOR_PROB = .75;
 	private final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
-	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability
-	// that the bot will
-	// asses the zones
-	// correctly
+	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
 
 	public static final double DEFAULT_BROADCAST_RADIUS = 95;
 	public static final double DEFALUT_VISIBILITY_RADIUS = 15;
@@ -46,6 +44,9 @@ public class Bot extends Rectangle {
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
+	private static double SEPERATION_FACTOR = 10000.0;
+	private static double COHESION_FACTOR = 10.0;
+	
 	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000;
 	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2000;
 
@@ -72,7 +73,7 @@ public class Bot extends Rectangle {
 	private boolean LISTEN_BOT_DEBUG = false;
 	private boolean LOOK_BOT_DEBUG = false;
 	private boolean MESSAGE_BOT_DEBUG = false;
-	private boolean MOVE_BOT_DEBUG = false;
+	private boolean MOVE_BOT_DEBUG = true;
 	private boolean SETTLE_DEBUG = false;
 
 	/***************************************************************************
@@ -83,8 +84,7 @@ public class Bot extends Rectangle {
 	 * These variables the bot does not know about - we store them for our
 	 * convience.
 	 */
-	private Zone currentZone; // what zones we actually are in can change some
-	// behavior
+	private Zone currentZone; // what zones we actually are in can change some behavior
 	private List<Shout> heardShouts; // the shouts that have been heard recently
 	private final Random numGen = new Random();
 	private Vector movementVector;
@@ -391,8 +391,11 @@ public class Bot extends Rectangle {
 	private void readMessages() {
 		// go through all the messages
 
-		print("Have to read thorugh " + messageBuffer.size() + " messages");
+		if(MESSAGE_BOT_DEBUG) {
+			print("Have to read thorugh " + messageBuffer.size() + " messages");
+		}
 		long startTime = System.currentTimeMillis();
+
 
 		// make a scanner to make going through the messages a bit easier
 		Scanner s;
@@ -619,15 +622,19 @@ public class Bot extends Rectangle {
 				//Someone has decided it is time to move onto the next phase
 				//do so
 				algorithmPhase = CREATE_PATHS_PHASE;
+				//tell everyone else to move on too
+				broadcastMessage(mes);
 			} else
 				continue; // this else matches up to figuring out what message type we have
 
 		}
 
 		long messageReadingTime = System.currentTimeMillis() - startTime;
-		print("Took " + (messageReadingTime)/1000.0 + " seconds to finish them");
-		if(messageBuffer.size() > 0) {
-			print("That's " + ((double)messageReadingTime) / messageBuffer.size() + " ms per message");
+		if(MESSAGE_BOT_DEBUG) {
+			print("Took " + (messageReadingTime)/1000.0 + " seconds to finish them");
+			if(messageBuffer.size() > 0) {
+				print("That's " + ((double)messageReadingTime) / messageBuffer.size() + " ms per message");
+			}
 		}
 
 		// once we are done reading, we should clear the buffer
@@ -674,10 +681,10 @@ public class Bot extends Rectangle {
 			haveMoved = true;
 		}
 
-		if(settledOnLocation) { 
+		if(settledOnLocation || algorithmPhase == CREATE_PATHS_PHASE) { 
 			//don't move unless we aren't in communication range with anyone else
-			if(otherBotInfo.size() == 0) {
-				//need to move back towards home base to get into communication range
+			if(otherBotInfo.size() <= 0) {
+				//need to move back towards home base to get into communication range of more other bots
 				Vector baseVect = new Vector(this.getCenterLocation(), baseZone.getCenterLocation());
 				actuallyMoveAlong(baseVect);
 			} else {
@@ -751,10 +758,9 @@ public class Bot extends Rectangle {
 		}
 
 		if ((!haveMoved) && (otherBotInfo.size() > 0)) {
-
-			Vector movementVector = new Vector(this.getCenterLocation(), this
-					.getCenterLocation());
-
+			
+			Vector seperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
+			
 			for (int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
 
@@ -762,19 +768,17 @@ public class Bot extends Rectangle {
 				if (bi.getBotID() == botID)
 					continue;
 
-				// make a "force" vector from the other bot
+				// make a vector pointing away from the current bot to add to the seperation vector
 				Vector curBotVect = new Vector(this.getCenterLocation(), bi
 						.getCenterLocation());
-				// scale it based on how far away we are from the bot and the
-				// repulsion factor
+				// scale it so we feel a stronger seperation from bots that are closer
 				// also, multiply by -1 so the vector points away from the thing
 				// we want to get away from
-				curBotVect = curBotVect.rescaleRatio(-1.0
-						* REPULSION_FACTOR_FROM_OTHER_BOTS
-						/ curBotVect.getMagSquare());
+				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagSquare());
 
-				// now add it to our movement vector
-				movementVector = movementVector.add(curBotVect);
+				// now add it to the seperation vector
+				seperationVector = seperationVector.add(curBotVect);
+				
 			}
 
 			// now, also try to maximize distance from base zones
@@ -792,20 +796,38 @@ public class Bot extends Rectangle {
 					// the repulsion factor
 					// also, multiply by -1 so the vector points away from the
 					// thing we want to get away from
-					curZoneVect = curZoneVect.rescale(-1.0
-							* REPULSION_FACTOR_FROM_HOME_BASES
-							/ curZoneVect.getMagSquare());
+					curZoneVect = curZoneVect.rescale(-1.0 * SEPERATION_FACTOR / curZoneVect.getMagSquare());
 
-					// add it to our movement vector
-					movementVector = movementVector.add(curZoneVect);
+					// add it to our seperation vector
+					seperationVector = seperationVector.add(curZoneVect);
+					
 				}
 			}
+			
+			//also, make a cohesion vector, that points toward the average location of the neighboring bots
+			//start by calculating the average location of all the bots
+			double xSum = 0.0, ySum = 0.0;
+			for(BotInfo curBotInfo : otherBotInfo) {
+				xSum += curBotInfo.getCenterX();
+				ySum += curBotInfo.getCenterY();
+			}
+			double avgX = xSum / otherBotInfo.size();
+			double avgY = ySum / otherBotInfo.size();
+			
+			Point2D averageNeighborLocation = new Point2D.Double(avgX, avgY);
+			
+			Vector cohesionVector = new Vector(this.getCenterLocation(), averageNeighborLocation);
+			
+			//scale the cohesion vector based on it's scaling factor
+			cohesionVector = cohesionVector.rescaleRatio(COHESION_FACTOR);
+			
+			//we want to move along the sum of these vectors
+			Vector movementVector = seperationVector.add(cohesionVector);
 
 			// move along the vector we made
 			actuallyMoveAlong(movementVector);
 
 			haveMoved = true;
-			// }
 		}
 
 		if (!haveMoved) {
@@ -815,13 +837,15 @@ public class Bot extends Rectangle {
 				print("No bots within broadcast distance - move back towards base\nKnow location of "
 						+ otherBotInfo.size() + " other bots");
 			}
-
+			
 			Vector baseZoneVect = new Vector(this.getCenterLocation(), baseZone
 					.getCenterLocation());
 
 			actuallyMoveAlong(baseZoneVect);
 
 			haveMoved = true;
+			
+			world.stopSimulation();
 		}
 
 		// we've now moved - broadcast location to nearby bots
@@ -1252,9 +1276,10 @@ public class Bot extends Rectangle {
 			break;
 			case (CREATE_PATHS_PHASE) :
 				print("I am in the create paths phase");
-				//since we are settled, should just stay where we are, or move towarsd home base to get in range, but we should be in range - we'll see if this helps
-				move();
-			
+			//since we are settled, should just stay where we are, or move towarsd home base to get in range, but we should be in range - we'll see if this helps
+			move();
+			determineIfSettledOnLocation();
+
 			break;
 			case (AGGRIGATE_PHASE) :
 
