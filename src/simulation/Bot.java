@@ -46,7 +46,7 @@ public class Bot extends Rectangle {
 
 	private static double SEPERATION_FACTOR = 10000.0;
 	private static double COHESION_FACTOR = 10.0;
-	
+
 	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000;
 	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2000;
 
@@ -72,8 +72,8 @@ public class Bot extends Rectangle {
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
 	private boolean LOOK_BOT_DEBUG = false;
-	private boolean MESSAGE_BOT_DEBUG = false;
-	private boolean MOVE_BOT_DEBUG = true;
+	private boolean MESSAGE_BOT_DEBUG = true;
+	private boolean MOVE_BOT_DEBUG = false;
 	private boolean SETTLE_DEBUG = false;
 
 	/***************************************************************************
@@ -93,8 +93,8 @@ public class Bot extends Rectangle {
 	// private Bot previousBot;
 	private List<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
-	private List<Message> messageBuffer; // keep a buffer of messages from other
-	// robots
+	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
+	private List<Message> alreadyBroadcastedMessages;
 	private int botID;
 	private int zoneAssesment; // stores the bot's assessment of what sort of
 	// zones it is in
@@ -143,6 +143,7 @@ public class Bot extends Rectangle {
 
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
+		alreadyBroadcastedMessages = new ArrayList<Message>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -308,9 +309,16 @@ public class Bot extends Rectangle {
 
 	@SuppressWarnings("unchecked")
 	private void broadcastMessage(Message mes) {
-		// TODO try to implement direction message passing? Probably will need a
-		// message wrapper class to do this
-
+		
+		//really firstly, make sure we haven't broadcasted this message before
+		//if we have broadcastetd it before, don't do it again
+		if(alreadyBroadcastedMessages.contains(mes)) {
+			return;
+		}
+		
+		//make sure we record that we are broadcasting this message
+		alreadyBroadcastedMessages.add(mes);
+		
 		// first, get our broadcast range
 		Shape broadcastRange = getBroadcastArea();
 
@@ -470,7 +478,7 @@ public class Bot extends Rectangle {
 					knownSurvivors.add(foundSurvivor);
 				}
 
-				// rebroadcast the message
+				// rebroadcast the message if we haven't already
 				broadcastMessage(mes);
 			} else if (messageType.equals(CLAIM_SURVIVOR_MESSAGE)) {
 				// remember to give up and reset mySurvivor if someone else
@@ -758,9 +766,9 @@ public class Bot extends Rectangle {
 		}
 
 		if ((!haveMoved) && (otherBotInfo.size() > 0)) {
-			
+
 			Vector seperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
-			
+
 			for (int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
 
@@ -778,7 +786,7 @@ public class Bot extends Rectangle {
 
 				// now add it to the seperation vector
 				seperationVector = seperationVector.add(curBotVect);
-				
+
 			}
 
 			// now, also try to maximize distance from base zones
@@ -800,10 +808,10 @@ public class Bot extends Rectangle {
 
 					// add it to our seperation vector
 					seperationVector = seperationVector.add(curZoneVect);
-					
+
 				}
 			}
-			
+
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
 			//start by calculating the average location of all the bots
 			double xSum = 0.0, ySum = 0.0;
@@ -813,14 +821,14 @@ public class Bot extends Rectangle {
 			}
 			double avgX = xSum / otherBotInfo.size();
 			double avgY = ySum / otherBotInfo.size();
-			
+
 			Point2D averageNeighborLocation = new Point2D.Double(avgX, avgY);
-			
+
 			Vector cohesionVector = new Vector(this.getCenterLocation(), averageNeighborLocation);
-			
+
 			//scale the cohesion vector based on it's scaling factor
 			cohesionVector = cohesionVector.rescaleRatio(COHESION_FACTOR);
-			
+
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
 
@@ -837,14 +845,14 @@ public class Bot extends Rectangle {
 				print("No bots within broadcast distance - move back towards base\nKnow location of "
 						+ otherBotInfo.size() + " other bots");
 			}
-			
+
 			Vector baseZoneVect = new Vector(this.getCenterLocation(), baseZone
 					.getCenterLocation());
 
 			actuallyMoveAlong(baseZoneVect);
 
 			haveMoved = true;
-			
+
 			world.stopSimulation();
 		}
 
