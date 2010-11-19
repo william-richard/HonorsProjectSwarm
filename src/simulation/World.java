@@ -77,7 +77,7 @@ public class World extends JFrame implements WindowListener {
 	public static List<Shape> debugShapesToDraw;
 
 	private static int currentTimestep; //keep track of what time it is
-	private long timeBetweenTimesteps;
+	private long timeBetweenTimesteps; //store the time in milliseconds
 
 	public World() {
 		this(40, 2, 5000);
@@ -281,11 +281,15 @@ public class World extends JFrame implements WindowListener {
 
 		keepGoing = true;
 
+		long timestepStartTime, timestepStopTime, timestepDuration;
+		
 		//then, start with timesteps
 		for(; keepGoing; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
-
+			
+			timestepStartTime = System.currentTimeMillis();
+			
 			//do all the survivors
 			for(Survivor s : allSurvivors) {
 				s.doOneTimestep();
@@ -293,9 +297,20 @@ public class World extends JFrame implements WindowListener {
 			System.out.println("Done with survivors");
 
 			//do all the bots
+			//print out percent checkpoints
+			double lastPercentCheckpoint = 0.0;
+			
+			//TODO make all bots move at once rather than one at a time - put in a static Bot method
+			
 			for(Bot b : allBots) {
 				b.doOneTimestep();
+				if( (b.getID() * 100.0 / allBots.size()) > (lastPercentCheckpoint + 10)) {
+					//need to do another checkpoint
+					lastPercentCheckpoint += 10;
+					System.out.print(lastPercentCheckpoint + "% ");
+				}
 			}
+			System.out.println("");
 			System.out.println("Done with bots");
 
 			//repaint the scenario
@@ -306,10 +321,14 @@ public class World extends JFrame implements WindowListener {
 			//TODO need to handle BaseZone stuff, especially once we start making paths
 			homeBase.clearMessageBuffer();
 			
-			try {
-				wait(timeBetweenTimesteps, 1); //stick on 1 nanosecond, so that if they want to wait for 0 seconds it doesn't freeze up
-			} catch (InterruptedException e) {
-
+			timestepStopTime = System.currentTimeMillis();
+			timestepDuration = timestepStopTime - timestepStartTime;
+						
+			if(timestepDuration < timeBetweenTimesteps) {
+				//we need to wait longer
+				try {
+					wait(timeBetweenTimesteps - timestepDuration);
+				} catch (InterruptedException e) {}
 			}
 		}
 
