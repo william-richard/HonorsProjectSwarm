@@ -6,9 +6,8 @@ import java.awt.geom.Rectangle2D;
 
 public class Shout extends Area {
 	
-	private static final long serialVersionUID = 1L;
-	public static final int DEFAULT_SHOUT_RADIUS = 20;
-	public static final int DEFAULT_SHOUT_RADIUS_THROUGH_WALL = 10;
+	public static final int DEFAULT_SHOUT_RADIUS = 10;
+	public static final int DEFAULT_SHOUT_RADIUS_THROUGH_WALL = 5;
 	private Survivor shouter;
 	
 

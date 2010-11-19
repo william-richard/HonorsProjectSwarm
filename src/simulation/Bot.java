@@ -28,27 +28,26 @@ public class Bot extends Rectangle {
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
-	private final int DIMENSION = 6;
+	private final int DIMENSION = 3;
 	private final double VISUAL_ID_SURVIVOR_PROB = .70;
 	private final double HEAR_SURVIVOR_PROB = .75;
 	private final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
 
-	public static final double DEFAULT_BROADCAST_RADIUS = 95;
-	public static final double DEFALUT_VISIBILITY_RADIUS = 15;
-	public static final double DEFAULT_AUDITORY_RADIUS = 50;
+	public static final double DEFAULT_BROADCAST_RADIUS = 45;
+	public static final double DEFALUT_VISIBILITY_RADIUS = 7;
+	public static final double DEFAULT_AUDITORY_RADIUS = 25;
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
-	public static final double DEFAULT_MAX_VELOCITY = 8;
+	public static final double DEFAULT_MAX_VELOCITY = 4;
+
+	private static final Random NUM_GEN = new Random();
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private static double SEPERATION_FACTOR = 10000.0;
-	private static double COHESION_FACTOR = 10.0;
-
-	private static double REPULSION_FACTOR_FROM_OTHER_BOTS = 1000;
-	private static double REPULSION_FACTOR_FROM_HOME_BASES = 2000;
+	private final double SEPERATION_FACTOR = 50.0;
+	private final double COHESION_FACTOR = 0.5; //cohesion factor should never me more than 1
 
 	private final static int SPREAD_OUT_PHASE = 0;
 	private final static int CREATE_PATHS_PHASE = 1;
@@ -72,7 +71,7 @@ public class Bot extends Rectangle {
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
 	private boolean LOOK_BOT_DEBUG = false;
-	private boolean MESSAGE_BOT_DEBUG = true;
+	private boolean MESSAGE_BOT_DEBUG = false;
 	private boolean MOVE_BOT_DEBUG = false;
 	private boolean SETTLE_DEBUG = false;
 
@@ -86,7 +85,6 @@ public class Bot extends Rectangle {
 	 */
 	private Zone currentZone; // what zones we actually are in can change some behavior
 	private List<Shout> heardShouts; // the shouts that have been heard recently
-	private final Random numGen = new Random();
 	private Vector movementVector;
 	private BoundingBox boundingBox;
 
@@ -140,7 +138,7 @@ public class Bot extends Rectangle {
 
 		// now, set up the list of other bot information
 		otherBotInfo = new ArrayList<BotInfo>();
-
+				
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
 		alreadyBroadcastedMessages = new ArrayList<Message>();
@@ -234,12 +232,6 @@ public class Bot extends Rectangle {
 		this.setLocation(newCornerLoc);
 	}
 
-	public static void setRepulsionConstants(double botRepulsion,
-			double homeBaseRepulsion) {
-		REPULSION_FACTOR_FROM_OTHER_BOTS = botRepulsion;
-		REPULSION_FACTOR_FROM_HOME_BASES = homeBaseRepulsion;
-	}
-
 	@Override
 	public boolean equals(Object obj) {
 		if (this == obj)
@@ -326,8 +318,8 @@ public class Bot extends Rectangle {
 		List<Bot> nearbyBots = (List<Bot>) Utilities
 		.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
-		// if I am the sender, send it out in all directions
-		if (mes.getSender() == this) {
+//		// if I am the sender, send it out in all directions
+//		if (mes.getSender() == this) {
 			// send out the message to all the nearby bots
 			for (Bot b : nearbyBots) {
 				if (b.getID() == this.getID()) {
@@ -335,46 +327,46 @@ public class Bot extends Rectangle {
 				}
 				b.recieveMessage(mes);
 			}
-		} else {
-			if (MESSAGE_BOT_DEBUG) {
-				print("Rebroadcasting message : " + mes);
-			}
-			// want to send it out directionally
-			// figure out what direction it came from
-			Vector senderVector = new Vector(this.getCenterLocation(), mes
-					.getSender().getCenterLocation());
-			// send it in the opposite direction, i.e. if they are more than
-			// pi/2 radians away, send it to them
-			Vector recieverVector;
-			for (Bot b : nearbyBots) {
-				if (b.getID() == mes.getSender().getID()
-						|| b.getID() == this.getID()) {
-					// skip it
-					continue;
-				}
-
-				recieverVector = new Vector(this.getCenterLocation(), b
-						.getCenterLocation());
-
-				if (MESSAGE_BOT_DEBUG) {
-					print("Angle between "
-							+ mes.getSender().getID()
-							+ " and "
-							+ b.getID()
-							+ " is "
-							+ Math.toDegrees(senderVector
-									.getAngleBetween(recieverVector)));
-				}
-
-				if (Math.abs(senderVector.getAngleBetween(recieverVector)) > Math.PI / 2.0) {
-					if (MESSAGE_BOT_DEBUG) {
-						print("Rebroadcasting to " + b.getID());
-					}
-					// send it
-					b.recieveMessage(mes);
-				}
-			}
-		}
+//		} else {
+//			if (MESSAGE_BOT_DEBUG) {
+//				print("Rebroadcasting message : " + mes);
+//			}
+//			// want to send it out directionally
+//			// figure out what direction it came from
+//			Vector senderVector = new Vector(this.getCenterLocation(), mes
+//					.getSender().getCenterLocation());
+//			// send it in the opposite direction, i.e. if they are more than
+//			// pi/2 radians away, send it to them
+//			Vector recieverVector;
+//			for (Bot b : nearbyBots) {
+//				if (b.getID() == mes.getSender().getID()
+//						|| b.getID() == this.getID()) {
+//					// skip it
+//					continue;
+//				}
+//
+//				recieverVector = new Vector(this.getCenterLocation(), b
+//						.getCenterLocation());
+//
+//				if (MESSAGE_BOT_DEBUG) {
+//					print("Angle between "
+//							+ mes.getSender().getID()
+//							+ " and "
+//							+ b.getID()
+//							+ " is "
+//							+ Math.toDegrees(senderVector
+//									.getAngleBetween(recieverVector)));
+//				}
+//
+//				if (Math.abs(senderVector.getAngleBetween(recieverVector)) > Math.PI / 2.0) {
+//					if (MESSAGE_BOT_DEBUG) {
+//						print("Rebroadcasting to " + b.getID());
+//					}
+//					// send it
+//					b.recieveMessage(mes);
+//				}
+//			}
+//		}
 
 		// also, send it to any BaseZones
 		List<Zone> nearbyZones = (List<Zone>) Utilities
@@ -777,12 +769,11 @@ public class Bot extends Rectangle {
 					continue;
 
 				// make a vector pointing away from the current bot to add to the seperation vector
-				Vector curBotVect = new Vector(this.getCenterLocation(), bi
-						.getCenterLocation());
+				Vector curBotVect = new Vector(this.getCenterLocation(), bi.getCenterLocation());
 				// scale it so we feel a stronger seperation from bots that are closer
 				// also, multiply by -1 so the vector points away from the thing
 				// we want to get away from
-				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagSquare());
+				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagnitude());
 
 				// now add it to the seperation vector
 				seperationVector = seperationVector.add(curBotVect);
@@ -804,7 +795,7 @@ public class Bot extends Rectangle {
 					// the repulsion factor
 					// also, multiply by -1 so the vector points away from the
 					// thing we want to get away from
-					curZoneVect = curZoneVect.rescale(-1.0 * SEPERATION_FACTOR / curZoneVect.getMagSquare());
+					curZoneVect = curZoneVect.rescale(-1.0 * SEPERATION_FACTOR / curZoneVect.getMagnitude());
 
 					// add it to our seperation vector
 					seperationVector = seperationVector.add(curZoneVect);
@@ -841,10 +832,9 @@ public class Bot extends Rectangle {
 		if (!haveMoved) {
 			// move toward the base, hopefully finding other robots and/or
 			// getting messages about paths to follow
-			if (MOVE_BOT_DEBUG) {
-				print("No bots within broadcast distance - move back towards base\nKnow location of "
-						+ otherBotInfo.size() + " other bots");
-			}
+//			if (MOVE_BOT_DEBUG) {
+				print("No bots within broadcast distance - move back towards base");
+//			}
 
 			Vector baseZoneVect = new Vector(this.getCenterLocation(), baseZone
 					.getCenterLocation());
@@ -855,33 +845,33 @@ public class Bot extends Rectangle {
 
 			world.stopSimulation();
 		}
-
-		// we've now moved - broadcast location to nearby bots
-		// construct the message we want to send them.
-		Message outgoingMessage = constructLocationMessage();
-
-		// broadcast it
-		broadcastMessage(outgoingMessage);
-
 	}
 
 	protected void moveRandomly() {
 		int xChange, yChange;
-		// 50-50 chance to go left or right
-		if (numGen.nextDouble() < .5) {
+		// 1/3 chance to go left or right or stay the same in the x
+		double randomValue = NUM_GEN.nextDouble();
+		if (randomValue < (1.0/3.0)) {
 			xChange = DIMENSION;
-		} else {
+		} else if (randomValue < (2.0 / 3.0)){
 			xChange = -1 * DIMENSION;
-		}
-
-		// 50-50 chance to go up or down
-		if (numGen.nextDouble() < .5) {
-			yChange = DIMENSION;
 		} else {
-			yChange = -1 * DIMENSION;
+			xChange = 0;
 		}
 
-		this.translate(xChange, yChange);
+		// 1/3 chance to go up or down or stay in the same y
+		randomValue = NUM_GEN.nextDouble();
+		if (randomValue < (1.0 / 3.0)) {
+			yChange = DIMENSION;
+		} else if (randomValue < (2.0 / 3.0)){
+			yChange = -1 * DIMENSION;
+		} else {
+			yChange = 0;
+		}
+
+		//calculate a vector that brings us there
+		Vector randomMove = new Vector(this.getCenterX(), this.getCenterY(), this.getCenterX() + xChange, this.getCenterY() + yChange);
+		actuallyMoveAlong(randomMove);
 	}
 
 	private void actuallyMoveAlong(Vector v) {
@@ -921,7 +911,10 @@ public class Bot extends Rectangle {
 		this.setCenterLocation(v.getP2());
 
 		movementVector = v;
-
+		
+		//tell everyone where we are
+		Message locationMessage = constructLocationMessage();
+		broadcastMessage(locationMessage);
 	}
 
 	// makes sure that the passed movement vector is OK i.e. it isn't too long
@@ -967,7 +960,7 @@ public class Bot extends Rectangle {
 		vicIteratior = visiblesurvivors.listIterator();
 		while (vicIteratior.hasNext()) {
 			vicIteratior.next();
-			if (!(numGen.nextDouble() <= VISUAL_ID_SURVIVOR_PROB)) {
+			if (!(NUM_GEN.nextDouble() <= VISUAL_ID_SURVIVOR_PROB)) {
 				vicIteratior.remove(); // removes from the iterator AND the list
 			}
 		}
@@ -1012,7 +1005,7 @@ public class Bot extends Rectangle {
 		shoutIterator = audibleShouts.listIterator();
 		while (shoutIterator.hasNext()) {
 			shoutIterator.next();
-			if (!(numGen.nextDouble() <= HEAR_SURVIVOR_PROB)) {
+			if (!(NUM_GEN.nextDouble() <= HEAR_SURVIVOR_PROB)) {
 				shoutIterator.remove(); // remove from iterator AND list
 			}
 		}
@@ -1044,7 +1037,7 @@ public class Bot extends Rectangle {
 
 	private void assessZone() {
 		// with some probability, the bot will asses the zones correctly
-		if (numGen.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
+		if (NUM_GEN.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
 			if (currentZone instanceof SafeZone) {
 				zoneAssesment = ZONE_SAFE;
 			} else if (currentZone instanceof BaseZone) {
@@ -1064,10 +1057,10 @@ public class Bot extends Rectangle {
 
 	private double assesSurvivor(Survivor s) {
 		// with some probability we'll get it wrong
-		if (numGen.nextDouble() < ASSES_SURVIVOR_CORRECTLY_PROB) {
+		if (NUM_GEN.nextDouble() < ASSES_SURVIVOR_CORRECTLY_PROB) {
 			return s.getDamage();
 		} else {
-			return numGen.nextInt(101) / 100.0;
+			return NUM_GEN.nextInt(101) / 100.0;
 		}
 	}
 
@@ -1259,6 +1252,13 @@ public class Bot extends Rectangle {
 		electionLooksSuccessful = true;
 	}
 
+	private void print(String message) {
+		if (OVERALL_BOT_DEBUG) {
+			System.out.println(botID + ":\t" + message);
+			System.out.flush();
+		}
+	}
+
 	public void doOneTimestep() {
 		// first, read any messages that have come in, and take care of them
 		readMessages();
@@ -1313,13 +1313,6 @@ public class Bot extends Rectangle {
 		}
 		if (MOVE_BOT_DEBUG) {
 			print("");
-		}
-	}
-
-	private void print(String message) {
-		if (OVERALL_BOT_DEBUG) {
-			System.out.println(botID + ":\t" + message);
-			System.out.flush();
 		}
 	}
 }
