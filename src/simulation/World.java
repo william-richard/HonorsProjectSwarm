@@ -73,7 +73,7 @@ public class World extends JFrame implements WindowListener {
 	public ListIterator<Survivor> allSurvivorSnapshot;
 
 	private BaseZone homeBase;
-	
+
 	public static List<Shape> debugShapesToDraw;
 
 	private static int currentTimestep; //keep track of what time it is
@@ -118,7 +118,7 @@ public class World extends JFrame implements WindowListener {
 		//initialize the survivors
 		allSurvivors = new ArrayList<Survivor>();
 		Survivor curSurvivor;
-		
+
 		for(int i = 0; i < numSurvivors; i++) {
 			curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*FRAME_HEIGHT, RANDOM_GENERATOR.nextDouble());
 			allSurvivors.add(curSurvivor);
@@ -211,11 +211,11 @@ public class World extends JFrame implements WindowListener {
 			Zone newZone;
 
 			switch(RANDOM_GENERATOR.nextInt(5)) {
-			case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
-			case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-			case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
-			case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
-			default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
+				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
+				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
+				case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
+				case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
+				default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
 			//make sure it doesn't intersect any existing zones
@@ -282,14 +282,14 @@ public class World extends JFrame implements WindowListener {
 		keepGoing = true;
 
 		long timestepStartTime, timestepStopTime, timestepDuration;
-		
+
 		//then, start with timesteps
 		for(; keepGoing; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
-			
+
 			timestepStartTime = System.currentTimeMillis();
-			
+
 			//do all the survivors
 			for(Survivor s : allSurvivors) {
 				s.doOneTimestep();
@@ -299,9 +299,9 @@ public class World extends JFrame implements WindowListener {
 			//do all the bots
 			//print out percent checkpoints
 			double lastPercentCheckpoint = 0.0;
-			
+
 			//TODO make all bots move at once rather than one at a time - put in a static Bot method
-			
+
 			for(Bot b : allBots) {
 				b.doOneTimestep();
 				if( (b.getID() * 100.0 / allBots.size()) > (lastPercentCheckpoint + 10)) {
@@ -320,15 +320,23 @@ public class World extends JFrame implements WindowListener {
 			//housekeeping
 			//TODO need to handle BaseZone stuff, especially once we start making paths
 			homeBase.clearMessageBuffer();
-			
+
 			timestepStopTime = System.currentTimeMillis();
 			timestepDuration = timestepStopTime - timestepStartTime;
-						
+
+			//			try {
+			//				wait(timeBetweenTimesteps, 1);
+			//			} catch (InterruptedException e) {}
 			if(timestepDuration < timeBetweenTimesteps) {
 				//we need to wait longer
 				try {
 					wait(timeBetweenTimesteps - timestepDuration);
 				} catch (InterruptedException e) {}
+			} else {
+				//wai just a bit so that the simulation has time to repaint
+				try {
+					wait(0, 1);
+				} catch (InterruptedException e)  {}
 			}
 		}
 
@@ -341,6 +349,8 @@ public class World extends JFrame implements WindowListener {
 
 	public void paint(Graphics g) {		
 		super.paint(g);
+
+		System.out.println("Starting repaint");
 
 		g = this.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;

@@ -4,7 +4,6 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -46,7 +45,7 @@ public class Bot extends Rectangle {
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private final double SEPERATION_FACTOR = 50.0;
+	private final double SEPERATION_FACTOR = 20.0;
 	private final double COHESION_FACTOR = 0.5; //cohesion factor should never me more than 1
 
 	private final static int SPREAD_OUT_PHASE = 0;
