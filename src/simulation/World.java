@@ -407,7 +407,10 @@ public class World extends JFrame implements WindowListener {
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 
 			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
-			g2d.draw(curBot.getMovementVector().rescale(-5.0));
+			//only draw it if it has non-zero length
+			if(! Utilities.shouldEqualsZero(curBot.getMovementVector().getMagnitude())) {
+				g2d.draw(curBot.getMovementVector().rescale(-5.0));
+			}
 		}
 
 		//draw all the survivors

@@ -47,6 +47,8 @@ public class Bot extends Rectangle {
 
 	private final double SEPERATION_FACTOR = 20.0;
 	private final double COHESION_FACTOR = 0.5; //cohesion factor should never me more than 1
+	public static double timestepSeperationMagnitudeTotal;
+	public static double timestepCohesionMagnitudeTotal;
 
 	private final static int SPREAD_OUT_PHASE = 0;
 	private final static int CREATE_PATHS_PHASE = 1;
@@ -772,6 +774,13 @@ public class Bot extends Rectangle {
 				// scale it so we feel a stronger seperation from bots that are closer
 				// also, multiply by -1 so the vector points away from the thing
 				// we want to get away from
+				
+				//make a random vector if the other bot is right on top of us
+				if(Utilities.shouldEqualsZero(curBotVect.getMagnitude())) {
+					curBotVect = Vector.getHorizontalUnitVector(this.getCenterLocation());
+					curBotVect = curBotVect.rotate(NUM_GEN.nextDouble() * 2.0 * Math.PI);
+				}
+				
 				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagnitude());
 
 				// now add it to the seperation vector
@@ -847,29 +856,14 @@ public class Bot extends Rectangle {
 	}
 
 	protected void moveRandomly() {
-		int xChange, yChange;
-		// 1/3 chance to go left or right or stay the same in the x
-		double randomValue = NUM_GEN.nextDouble();
-		if (randomValue < (1.0/3.0)) {
-			xChange = DIMENSION;
-		} else if (randomValue < (2.0 / 3.0)){
-			xChange = -1 * DIMENSION;
-		} else {
-			xChange = 0;
-		}
-
-		// 1/3 chance to go up or down or stay in the same y
-		randomValue = NUM_GEN.nextDouble();
-		if (randomValue < (1.0 / 3.0)) {
-			yChange = DIMENSION;
-		} else if (randomValue < (2.0 / 3.0)){
-			yChange = -1 * DIMENSION;
-		} else {
-			yChange = 0;
-		}
-
-		//calculate a vector that brings us there
-		Vector randomMove = new Vector(this.getCenterX(), this.getCenterY(), this.getCenterX() + xChange, this.getCenterY() + yChange);
+		//calculate a random vector
+		//start with a vector to the right
+		Vector randomMove = Vector.getHorizontalUnitVector(this.getCenterLocation());
+		//make it a random length between our min velocity and max velocity
+		randomMove = randomMove.rescale(NUM_GEN.nextDouble() * this.getMaxVelocity());
+		//rotate it to a random direction
+		randomMove = randomMove.rotate(NUM_GEN.nextDouble() * 2.0 * Math.PI);
+		//move along it
 		actuallyMoveAlong(randomMove);
 	}
 
