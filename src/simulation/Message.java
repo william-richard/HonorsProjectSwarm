@@ -2,10 +2,10 @@ package simulation;
 
 public class Message {
 	
-	Bot sender;
+	BotInfo sender;
 	String message;
 	
-	public Message(Bot _sender, String _message) {
+	public Message(BotInfo _sender, String _message) {
 		sender = _sender;;
 		message = _message;
 	}
@@ -13,7 +13,7 @@ public class Message {
 	/**
 	 * @return the senderID
 	 */
-	public Bot getSender() {
+	public BotInfo getSender() {
 		return sender;
 	}
 

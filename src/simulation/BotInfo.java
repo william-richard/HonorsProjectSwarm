@@ -1,6 +1,5 @@
 package simulation;
 import java.awt.geom.Point2D;
-import java.util.List;
 
 
 public class BotInfo {
@@ -24,10 +23,6 @@ public class BotInfo {
 		zoneAssessment = _zoneAssessment;
 	}
 	
-	public void update(double newCenterX, double newCenterY) {
-		
-	}
-
 	/**
 	 * @return the botNum
 	 */
@@ -76,10 +71,31 @@ public class BotInfo {
 		
 	}
 
-	public static void updateBotInfoInList(List<BotInfo> botInfos, int botNum, double newCenterX, double newCenterY) {
-		BotInfo currInfo = botInfos.get(botNum);
-		currInfo.update(newCenterX, newCenterY);
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + botNum;
+		return result;
 	}
-	
 
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof BotInfo))
+			return false;
+		BotInfo other = (BotInfo) obj;
+		if (botNum != other.botNum)
+			return false;
+		return true;
+	}
 }

@@ -120,7 +120,7 @@ public class World extends JFrame implements WindowListener {
 		Survivor curSurvivor;
 
 		for(int i = 0; i < numSurvivors; i++) {
-			curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*FRAME_HEIGHT, RANDOM_GENERATOR.nextDouble());
+			curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
 			allSurvivors.add(curSurvivor);
 		}
 
@@ -299,8 +299,9 @@ public class World extends JFrame implements WindowListener {
 			//do all the bots
 			//print out percent checkpoints
 			double lastPercentCheckpoint = 0.0;
-
-			//TODO make all bots move at once rather than one at a time - put in a static Bot method
+			
+			Bot.timestepCohesionMagnitudeTotal = 0.0;
+			Bot.timestepSeperationMagnitudeTotal = 0.0;
 
 			for(Bot b : allBots) {
 				b.doOneTimestep();
@@ -312,6 +313,9 @@ public class World extends JFrame implements WindowListener {
 			}
 			System.out.println("");
 			System.out.println("Done with bots");
+			
+			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / allBots.size()));
+			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / allBots.size()));
 
 			//repaint the scenario
 			repaint();
@@ -384,6 +388,14 @@ public class World extends JFrame implements WindowListener {
 			g2d.draw(shoutIterator.next());
 		}
 
+		//draw all the survivors
+		g2d.setColor(SURVIVOR_COLOR);
+		while(allSurvivorSnapshot.hasNext()) {
+			Survivor curSur = allSurvivorSnapshot.next();
+
+			g2d.fill(curSur);
+		}
+		
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
@@ -411,14 +423,6 @@ public class World extends JFrame implements WindowListener {
 			if(! Utilities.shouldEqualsZero(curBot.getMovementVector().getMagnitude())) {
 				g2d.draw(curBot.getMovementVector().rescale(-5.0));
 			}
-		}
-
-		//draw all the survivors
-		g2d.setColor(SURVIVOR_COLOR);
-		while(allSurvivorSnapshot.hasNext()) {
-			Survivor curSur = allSurvivorSnapshot.next();
-
-			g2d.fill(curSur);
 		}
 
 		//paint all the survivor paths

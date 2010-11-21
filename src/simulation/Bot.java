@@ -1,9 +1,8 @@
 package simulation;
 
-import java.awt.Point;
-import java.awt.Rectangle;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -20,7 +19,7 @@ import zones.BoundingBox;
 import zones.SafeZone;
 import zones.Zone;
 
-public class Bot extends Rectangle {
+public class Bot extends Rectangle2D.Double {
 
 	private static final long serialVersionUID = -3272426964314356266L;
 
@@ -45,8 +44,8 @@ public class Bot extends Rectangle {
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private final double SEPERATION_FACTOR = 20.0;
-	private final double COHESION_FACTOR = 0.5; //cohesion factor should never me more than 1
+	private final double SEPERATION_FACTOR = 10.0;
+	private final double COHESION_FACTOR = 1.0; //cohesion factor should never me more than 1
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
 
@@ -56,12 +55,13 @@ public class Bot extends Rectangle {
 
 	private final int MESSAGE_TIMEOUT;
 
-	private final static String BOT_LOCATION_MESSAGE = 						"loc";
+	private final static String BOT_LOCATION_MESSAGE = 						"bloc";
 	private final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
 	private final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
-	private final static String ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE = 	"ape";
-	private final static String NOT_READY_TO_ADVANCE_MESSAGE = 				"nr";
-	private final static String ADVANCE_TO_NEXT_PHASE_MESSAGE =				"ap";
+	private final static String ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE = 	"atnpe";
+	private final static String NOT_READY_TO_ADVANCE_MESSAGE = 				"nrta";
+	private final static String ADVANCE_TO_NEXT_PHASE_MESSAGE =				"atnp";
+	private final static String CREATE_PATH_MESSAGE = 						"cp";
 
 	private final static int NUM_PREV_LOCATIONS_TO_CONSIDER = 10;
 	private final static double STOP_SPREADING_THRESHOLD = DEFAULT_MAX_VELOCITY / 2.0;
@@ -120,7 +120,7 @@ public class Bot extends Rectangle {
 	private List<Point2D> previousLocations;
 	private Point2D averagePreviousLocation;
 	private boolean settledOnLocation;
-
+	
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
@@ -176,7 +176,7 @@ public class Bot extends Rectangle {
 		zoneAssesment = ZONE_BASE;
 
 		// find out what zones we start in, and try to determine how safe it is
-		updateZoneInfo();
+		updateZoneInfo();		
 	}
 
 	/***************************************************************************
@@ -221,16 +221,20 @@ public class Bot extends Rectangle {
 		return botID;
 	}
 
+	public BotInfo getThisBotInfo() {
+		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), this.zoneAssesment);
+	}
+	
+	
 	public Vector getMovementVector() {
 		return movementVector;
 	}
 
 	public void setCenterLocation(Point2D newCenterLoc) {
 		// need find the new upper-left corner location
-		Point newCornerLoc = new Point(
-				(int) (newCenterLoc.getX() - (DIMENSION / 2.0)),
-				(int) (newCenterLoc.getY() - (DIMENSION / 2.0)));
-		this.setLocation(newCornerLoc);
+		double cornerX = newCenterLoc.getX() - (DIMENSION / 2.0);
+		double cornerY = newCenterLoc.getY() - (DIMENSION / 2.0);
+		this.setRect(cornerX, cornerY, DIMENSION, DIMENSION);
 	}
 
 	@Override
@@ -255,13 +259,13 @@ public class Bot extends Rectangle {
 	}
 
 	private Message constructLocationMessage() {
-		return new Message(this, 
+		return new Message(this.getThisBotInfo(), 
 				BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
 	}
 
 	private Message constructFoundMessage(Survivor foundSurvivor,
 			double surDamageAssessment) {
-		return new Message(this, 
+		return new Message(this.getThisBotInfo(), 
 				FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
 	}
 
@@ -270,13 +274,13 @@ public class Bot extends Rectangle {
 			// can't do it - no survivor to claim
 			return null;
 		}
-		return new Message(this, 
+		return new Message(this.getThisBotInfo(), 
 				CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
 	}
 
 	private Message constructPhaseAdvancementElectionMessage() {
 		numberOfElectionsStarted++;
-		return new Message(this,
+		return new Message(this.getThisBotInfo(),
 				ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + numberOfElectionsStarted + "\n");
 	}
 
@@ -290,13 +294,13 @@ public class Bot extends Rectangle {
 		int starterID = messageScanner.nextInt();
 		int electionNum = messageScanner.nextInt();
 
-		return new Message(this,
+		return new Message(this.getThisBotInfo(),
 				NOT_READY_TO_ADVANCE_MESSAGE + " " + starterID + " " + World.getCurrentTimestep() + " " + electionNum + "\n");		
 
 	}
 
 	private Message constructPhaseAdvancementMessage() {
-		return new Message(this,
+		return new Message(this.getThisBotInfo(),
 				ADVANCE_TO_NEXT_PHASE_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + "\n");
 	}
 
@@ -830,6 +834,9 @@ public class Bot extends Rectangle {
 
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
+			
+			timestepSeperationMagnitudeTotal += seperationVector.getMagnitude();
+			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
 
 			// move along the vector we made
 			actuallyMoveAlong(movementVector);
@@ -1216,7 +1223,7 @@ public class Bot extends Rectangle {
 				lastMoveToNextPhaseMessageRecievedTime = World.getCurrentTimestep() - MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
 			} else {
 				//see if the election is over
-				int timeToEndElection = myElectionStartTime + 2*MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+				int timeToEndElection = myElectionStartTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
 				if(World.getCurrentTimestep() >= timeToEndElection) {
 					//the election is over, and no one has objected
 					//broadcast that we should move on
@@ -1227,7 +1234,7 @@ public class Bot extends Rectangle {
 		}
 		else if(lastMoveToNextPhaseMessageRecievedTime > 0) {
 			//see if we need to start an election
-			int timeToStartElection = lastMoveToNextPhaseMessageRecievedTime + 2*MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+			int timeToStartElection = lastMoveToNextPhaseMessageRecievedTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
 			if(World.getCurrentTimestep() >= timeToStartElection) {
 				startElection();
 			}
@@ -1244,7 +1251,7 @@ public class Bot extends Rectangle {
 		myElectionStartTime = World.getCurrentTimestep();
 		electionLooksSuccessful = true;
 	}
-
+	
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
@@ -1270,16 +1277,13 @@ public class Bot extends Rectangle {
 			determineIfSettledOnLocation();
 
 			if(settledOnLocation) {
-				//handle starting an election to move onto the next phase if needde
+				//handle starting an election to move onto the next phase if needbe
 				handlePhaseElectionIfNeeded();
 			}
 
 			break;
 			case (CREATE_PATHS_PHASE) :
-				print("I am in the create paths phase");
-			//since we are settled, should just stay where we are, or move towarsd home base to get in range, but we should be in range - we'll see if this helps
-			move();
-			determineIfSettledOnLocation();
+				//if we have claimed a survivor, start making a path to them
 
 			break;
 			case (AGGRIGATE_PHASE) :
