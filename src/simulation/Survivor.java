@@ -103,7 +103,7 @@ public class Survivor extends Rectangle2D.Double {
 	public int hashCode() {
 		return this.getCenterLocation().hashCode();
 	}
-
+	
 	public void doOneTimestep() {
 		//each time, we want to try to shout
 		shout();

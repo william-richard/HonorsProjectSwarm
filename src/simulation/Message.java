@@ -3,11 +3,20 @@ package simulation;
 public class Message {
 	
 	BotInfo sender;
+	String type;
 	String message;
 	
-	public Message(BotInfo _sender, String _message) {
+	public Message(BotInfo _sender, String _type, String _message) {
 		sender = _sender;;
+		type = _type;
 		message = _message;
+	}
+
+	/**
+	 * @return the type
+	 */
+	public String getType() {
+		return type;
 	}
 
 	/**
@@ -26,7 +35,7 @@ public class Message {
 	
 	@Override
 	public String toString() {
-		return sender + "\t'" + message + "'";
+		return sender + "\t" + type + "\t'" + message + "'";
 	}
 
 	/* (non-Javadoc)

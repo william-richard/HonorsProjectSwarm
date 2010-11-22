@@ -1,73 +1,88 @@
 package simulation;
-import java.awt.Point;
 import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
 import java.util.List;
 
-import util.Utilities;
-
 
 public class SurvivorPath extends Path2D.Double {
-	
-	private static final long serialVersionUID = 1L;
-	
+
+	private static final long serialVersionUID = 269945074800423928L;
+
 	private double pathLength;
-	private double pathRating;
-	private double avgRating;
 	private Survivor sur;
-	
-	public SurvivorPath(Survivor _sur, double _pathLength, double _pathRating, double _avgRating, List<BotInfo> bots, Point2D endPoint) {
+
+	public SurvivorPath(Survivor _sur, List<Point2D> pathPoints, Point2D endPoint) {
 		super();
 		sur = _sur;
-		pathLength = _pathLength;
-		pathRating = _pathRating;
-		avgRating = _avgRating;
+		//now, construct the path
+		//path will end up looking the same if we start at the end or at the start
+		//for simplicity, start at the end
+		this.moveTo(endPoint.getX(), endPoint.getY());
+		//now, go through the rest of the points in reverse
+		//should always have at least 1 point in the rest of the path
+		//i.e. we should always have at least a start point and an end point
 
-		//now, set up the path
-		//start at the survivor
-		this.moveTo(sur.getCenterX(), sur.getCenterY());
-		//now add all the bots
-		for(BotInfo bi: bots) {
-			this.lineTo(bi.getCenterX(), bi.getCenterY());
+		for(int i = pathPoints.size() - 1; i >= 0; i--) {
+			this.lineTo(pathPoints.get(i).getX(), pathPoints.get(i).getY());
 		}
-		
-		//finally, add the end point
-		this.lineTo(endPoint.getX(), endPoint.getY());	
+		//calculate the path length
+		pathLength = 0.0;
+		if(pathPoints.size() == 0) {
+			//SHOULD never happen
+			pathLength = 0;
+		} else if(pathPoints.size() == 1) {
+			pathLength = pathPoints.get(0).distance(endPoint);
+		} else {
+			for(int i = 1 ; i < pathPoints.size(); i++) {
+				pathLength += pathPoints.get(i).distance(pathPoints.get(i-1));
+			}
+			pathLength += pathPoints.get(pathPoints.size()-1).distance(endPoint);
+		}
+	}
+
+	public SurvivorPath(Survivor _sur, List<Point2D> pathPoints) {
+		this(_sur, pathPoints.subList(0, pathPoints.size() - 1), pathPoints.get(pathPoints.size() - 1));
 	}
 
 	public double getPathLength() {
 		return pathLength;
 	}
 
-	public double getPathRating() {
-		return pathRating;
-	}
-
-	public double getAvgRating() {
-		return avgRating;
-	}
-
 	public Survivor getSur() {
 		return sur;
 	}
-	
+
+
+
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
 	@Override
-	public String toString() {
-		String retStr = "Vic loc: " + sur.getCenterX() + ", " + sur.getCenterY() + "\t" + "Length = "+ pathLength + "\tRating= " + pathRating +"\tAvgRating = " + avgRating + "\t Points: ";
-		
-		List<Point> verticies = Utilities.getVerticies(this);
-		
-		for(Point p : verticies) {
-			retStr += "(" + p.getX() + ", " + p.getY() + ") ";
-		}
-		
-		return retStr;
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((sur == null) ? 0 : sur.hashCode());
+		return result;
 	}
-	
-	
-	
-	
-	
-	
-	
+
+	/* (non-Javadoc)
+	 * @see java.lang.Object#equals(java.lang.Object)
+	 */
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (!(obj instanceof SurvivorPath))
+			return false;
+		SurvivorPath other = (SurvivorPath) obj;
+		if (sur == null) {
+			if (other.sur != null)
+				return false;
+		} else if (!sur.equals(other.sur))
+			return false;
+		return true;
+	}
 }

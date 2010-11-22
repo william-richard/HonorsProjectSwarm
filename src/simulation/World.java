@@ -42,7 +42,7 @@ public class World extends JFrame implements WindowListener {
 	private static final int FRAME_WIDTH = 500;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
-	private static final boolean DRAW_BOT_RADII = true;
+	private static final boolean DRAW_BOT_RADII = false;
 
 	private static final boolean WORLD_DEBUG = true;
 
@@ -60,7 +60,7 @@ public class World extends JFrame implements WindowListener {
 	private static final Color SURVIVOR_PATH_COLOR = new Color(0,191,255);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 
-	private static final Stroke survivor_PATH_STROKE = new BasicStroke((float) 2.0);
+	private static final Stroke SURVIVOR_PATH_STROKE = new BasicStroke((float) 2.0);
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
@@ -321,10 +321,6 @@ public class World extends JFrame implements WindowListener {
 			repaint();
 			System.out.println("Done with repaint");
 
-			//housekeeping
-			//TODO need to handle BaseZone stuff, especially once we start making paths
-			homeBase.clearMessageBuffer();
-
 			timestepStopTime = System.currentTimeMillis();
 			timestepDuration = timestepStopTime - timestepStartTime;
 
@@ -427,12 +423,14 @@ public class World extends JFrame implements WindowListener {
 
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
-		g2d.setStroke(survivor_PATH_STROKE);
+		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		//only basezones have survivorPaths
 		for(Zone z : allZones) {
 			//skip everything that isn't a BaseZone
 			if(! (z instanceof BaseZone)) continue;
 
+			System.out.println("Got a base zone - printing out it's paths");
+			
 			BaseZone bz = (BaseZone) z;
 
 			//draw all of is paths
@@ -446,7 +444,6 @@ public class World extends JFrame implements WindowListener {
 
 		if(WORLD_DEBUG) {
 			//draw the shapes in the debug arraylist
-			System.out.println("Printing the " + debugShapesToDraw.size() + " shapes in the debug list");
 			g2d.setColor(Color.white);
 			g2d.setStroke(new BasicStroke(1));
 			for(Shape s : debugShapesToDraw) {

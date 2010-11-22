@@ -1,6 +1,7 @@
 package simulation;
 
 import java.awt.Shape;
+import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
@@ -53,15 +54,13 @@ public class Bot extends Rectangle2D.Double {
 	private final static int CREATE_PATHS_PHASE = 1;
 	private final static int AGGRIGATE_PHASE = 2;
 
-	private final int MESSAGE_TIMEOUT;
-
-	private final static String BOT_LOCATION_MESSAGE = 						"bloc";
-	private final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
-	private final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
-	private final static String ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE = 	"atnpe";
-	private final static String NOT_READY_TO_ADVANCE_MESSAGE = 				"nrta";
-	private final static String ADVANCE_TO_NEXT_PHASE_MESSAGE =				"atnp";
-	private final static String CREATE_PATH_MESSAGE = 						"cp";
+	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
+	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
+	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
+	public final static String ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE = 	"atnpe";
+	public final static String NOT_READY_TO_ADVANCE_MESSAGE = 				"nrta";
+	public final static String ADVANCE_TO_NEXT_PHASE_MESSAGE =				"atnp";
+	public final static String CREATE_PATH_MESSAGE = 						"cp";
 
 	private final static int NUM_PREV_LOCATIONS_TO_CONSIDER = 10;
 	private final static double STOP_SPREADING_THRESHOLD = DEFAULT_MAX_VELOCITY / 2.0;
@@ -72,7 +71,7 @@ public class Bot extends Rectangle2D.Double {
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
 	private boolean LOOK_BOT_DEBUG = false;
-	private boolean MESSAGE_BOT_DEBUG = false;
+	private boolean MESSAGE_BOT_DEBUG = true;
 	private boolean MOVE_BOT_DEBUG = false;
 	private boolean SETTLE_DEBUG = false;
 
@@ -120,7 +119,10 @@ public class Bot extends Rectangle2D.Double {
 	private List<Point2D> previousLocations;
 	private Point2D averagePreviousLocation;
 	private boolean settledOnLocation;
-	
+
+	boolean startedCreatingMyPath = false;
+	private List<SurvivorPath> knownPaths;
+
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
@@ -139,7 +141,7 @@ public class Bot extends Rectangle2D.Double {
 
 		// now, set up the list of other bot information
 		otherBotInfo = new ArrayList<BotInfo>();
-				
+
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
 		alreadyBroadcastedMessages = new ArrayList<Message>();
@@ -167,10 +169,11 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		MESSAGE_TIMEOUT = (_numBots + 5) / 5;
-		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots;
+		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots/2;
 
 		electionLeaderRecord = new HashMap<Integer, Integer>();
+
+		knownPaths = new ArrayList<SurvivorPath>();
 
 		// for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
@@ -224,8 +227,8 @@ public class Bot extends Rectangle2D.Double {
 	public BotInfo getThisBotInfo() {
 		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), this.zoneAssesment);
 	}
-	
-	
+
+
 	public Vector getMovementVector() {
 		return movementVector;
 	}
@@ -260,13 +263,13 @@ public class Bot extends Rectangle2D.Double {
 
 	private Message constructLocationMessage() {
 		return new Message(this.getThisBotInfo(), 
-				BOT_LOCATION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
+				BOT_LOCATION_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
 	}
 
 	private Message constructFoundMessage(Survivor foundSurvivor,
 			double surDamageAssessment) {
 		return new Message(this.getThisBotInfo(), 
-				FOUND_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
+				FOUND_SURVIVOR_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
 	}
 
 	private Message constructClaimMessage() {
@@ -275,19 +278,19 @@ public class Bot extends Rectangle2D.Double {
 			return null;
 		}
 		return new Message(this.getThisBotInfo(), 
-				CLAIM_SURVIVOR_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
+				CLAIM_SURVIVOR_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
 	}
 
 	private Message constructPhaseAdvancementElectionMessage() {
 		numberOfElectionsStarted++;
 		return new Message(this.getThisBotInfo(),
-				ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + " " + numberOfElectionsStarted + "\n");
+				ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + numberOfElectionsStarted + "\n");
 	}
 
 	private Message constructNotReadyForPhaseAdvancementMessage(Message electionMessage) {
 		Scanner messageScanner = new Scanner(electionMessage.getText());
 
-		String messageType = messageScanner.next();
+		String messageType = electionMessage.getType();
 		if(! messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE)) {
 			throw new IllegalArgumentException("Did not pass an election message to counter");
 		}
@@ -295,83 +298,70 @@ public class Bot extends Rectangle2D.Double {
 		int electionNum = messageScanner.nextInt();
 
 		return new Message(this.getThisBotInfo(),
-				NOT_READY_TO_ADVANCE_MESSAGE + " " + starterID + " " + World.getCurrentTimestep() + " " + electionNum + "\n");		
+				NOT_READY_TO_ADVANCE_MESSAGE, starterID + " " + World.getCurrentTimestep() + " " + electionNum + "\n");		
 
 	}
 
 	private Message constructPhaseAdvancementMessage() {
 		return new Message(this.getThisBotInfo(),
-				ADVANCE_TO_NEXT_PHASE_MESSAGE + " " + this.getID() + " " + World.getCurrentTimestep() + "\n");
+				ADVANCE_TO_NEXT_PHASE_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + "\n");
+	}
+
+	private Message constructCreatePathsMessage(SurvivorPath pathToUse) {
+		//make a string representing the path
+		//include the damage of the survivor, and the points in the path
+		//start with the survivor
+		String messageBody = "";
+
+		Survivor pathSurvivor = pathToUse.getSur();
+
+		messageBody += pathSurvivor.getCenterX() + " " + pathSurvivor.getCenterY() + " " + pathSurvivor.getDamage() + "\t";
+
+		//now add the points in the path
+		PathIterator pathit = pathToUse.getPathIterator(null);
+
+		double[] curCoord = new double[6];
+		while(! pathit.isDone()){
+			//get the coordinates of the current point
+			int segType = pathit.currentSegment(curCoord);
+			if(segType == PathIterator.SEG_CLOSE || segType == PathIterator.SEG_CUBICTO || segType == PathIterator.SEG_QUADTO) {
+				throw new IllegalArgumentException("Got a path that has incorrect form");
+			}
+			//add the current point to the string
+			messageBody += " " + curCoord[0] + " " + curCoord[1] + " ";
+			pathit.next();
+		}
+
+		return new Message(this.getThisBotInfo(), CREATE_PATH_MESSAGE, messageBody);
 	}
 
 	@SuppressWarnings("unchecked")
 	private void broadcastMessage(Message mes) {
-		
+
 		//really firstly, make sure we haven't broadcasted this message before
 		//if we have broadcastetd it before, don't do it again
 		if(alreadyBroadcastedMessages.contains(mes)) {
 			return;
 		}
-		
+
 		//make sure we record that we are broadcasting this message
 		alreadyBroadcastedMessages.add(mes);
-		
+
 		// first, get our broadcast range
 		Shape broadcastRange = getBroadcastArea();
 
 		// find any nearby bots
-		List<Bot> nearbyBots = (List<Bot>) Utilities
-		.findAreaIntersectionsInList(broadcastRange, World.allBots);
+		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
-//		// if I am the sender, send it out in all directions
-//		if (mes.getSender() == this) {
-			// send out the message to all the nearby bots
-			for (Bot b : nearbyBots) {
-				if (b.getID() == this.getID()) {
-					continue;
-				}
-				b.recieveMessage(mes);
+		//		// if I am the sender, send it out in all directions
+		//		if (mes.getSender() == this) {
+		// send out the message to all the nearby bots
+		for (Bot b : nearbyBots) {
+			if (b.getID() == this.getID()) {
+				continue;
 			}
-//		} else {
-//			if (MESSAGE_BOT_DEBUG) {
-//				print("Rebroadcasting message : " + mes);
-//			}
-//			// want to send it out directionally
-//			// figure out what direction it came from
-//			Vector senderVector = new Vector(this.getCenterLocation(), mes
-//					.getSender().getCenterLocation());
-//			// send it in the opposite direction, i.e. if they are more than
-//			// pi/2 radians away, send it to them
-//			Vector recieverVector;
-//			for (Bot b : nearbyBots) {
-//				if (b.getID() == mes.getSender().getID()
-//						|| b.getID() == this.getID()) {
-//					// skip it
-//					continue;
-//				}
-//
-//				recieverVector = new Vector(this.getCenterLocation(), b
-//						.getCenterLocation());
-//
-//				if (MESSAGE_BOT_DEBUG) {
-//					print("Angle between "
-//							+ mes.getSender().getID()
-//							+ " and "
-//							+ b.getID()
-//							+ " is "
-//							+ Math.toDegrees(senderVector
-//									.getAngleBetween(recieverVector)));
-//				}
-//
-//				if (Math.abs(senderVector.getAngleBetween(recieverVector)) > Math.PI / 2.0) {
-//					if (MESSAGE_BOT_DEBUG) {
-//						print("Rebroadcasting to " + b.getID());
-//					}
-//					// send it
-//					b.recieveMessage(mes);
-//				}
-//			}
-//		}
+			b.recieveMessage(mes);
+		}
 
 		// also, send it to any BaseZones
 		List<Zone> nearbyZones = (List<Zone>) Utilities
@@ -392,43 +382,32 @@ public class Bot extends Rectangle2D.Double {
 
 		}
 	}
-
+	
 	private void readMessages() {
 		// go through all the messages
-
-		if(MESSAGE_BOT_DEBUG) {
-			print("Have to read thorugh " + messageBuffer.size() + " messages");
-		}
-		long startTime = System.currentTimeMillis();
-
 
 		// make a scanner to make going through the messages a bit easier
 		Scanner s;
 		// go through the messages and update the stored info about the other
 		// bots
+
 		for (Message mes : messageBuffer) {
 			s = new Scanner(mes.getText());
 
 			if (!s.hasNext())
 				continue;
 
-			String messageType = s.next();
+			String messageType = mes.getType();
 
+			//TODO change this to a switch statement
 			if (messageType.equals(BOT_LOCATION_MESSAGE)) {
 				int botNum = s.nextInt();
 
 				if (botNum == botID) {
-					if (MESSAGE_BOT_DEBUG)
-						print("got message from myself - skip it");
 					continue;
 				}
 
 				int sentTime = s.nextInt();
-
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//it has timed out - ignore it
-					continue;
-				}
 
 				double newX = s.nextDouble();
 				double newY = s.nextDouble();
@@ -448,11 +427,6 @@ public class Bot extends Rectangle2D.Double {
 
 				int sentTime = s.nextInt();
 
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//it has timed out - ignore it
-					continue;
-				}
-
 				if (MESSAGE_BOT_DEBUG) {
 					print("Got a FOUND message from " + finderID);
 				}
@@ -462,8 +436,7 @@ public class Bot extends Rectangle2D.Double {
 				double survivorY = s.nextDouble();
 
 				// make that into a survivor entry
-				Survivor foundSurvivor = new Survivor(survivorX, survivorY,
-						survivorDamage);
+				Survivor foundSurvivor = new Survivor(survivorX, survivorY, survivorDamage);
 				// figure out if we know about it already - update if we do, add
 				// to our records if we don't
 				if (knownSurvivors.contains(foundSurvivor)) {
@@ -493,11 +466,6 @@ public class Bot extends Rectangle2D.Double {
 				}
 
 				int sentTime = s.nextInt();
-
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//it has timed out - ignore it
-					continue;
-				}
 
 				if (MESSAGE_BOT_DEBUG) {
 					print("Got a Claim message from " + claimerID);
@@ -546,16 +514,11 @@ public class Bot extends Rectangle2D.Double {
 				}
 			} else if(messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE) 
 					|| messageType.equals(NOT_READY_TO_ADVANCE_MESSAGE)) {
-
+				
 				//first, update or ignore messages based on our records of who has started what election
 				Integer starterID = new Integer(s.nextInt());
 
 				int sentTime = s.nextInt();
-
-				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-					//it has timed out - ignore it
-					continue;
-				}
 
 				Integer electionNumber = new Integer(s.nextInt());
 				if(electionLeaderRecord.containsKey(starterID)) {
@@ -613,33 +576,73 @@ public class Bot extends Rectangle2D.Double {
 				}
 
 			} else if(messageType.equals(ADVANCE_TO_NEXT_PHASE_MESSAGE)) {
-
-				//just need to advance past it - don't really need it
-				int senderID = s.nextInt();
-
-				int sentTime = s.nextInt();
-
-				//				if(World.getCurrentTimestep() - sentTime > MESSAGE_TIMEOUT) {
-				//					//it has timed out - ignore it
-				//					continue;
-				//				}
-
 				//Someone has decided it is time to move onto the next phase
 				//do so
+				print("Moving onto next phase");
 				algorithmPhase = CREATE_PATHS_PHASE;
 				//tell everyone else to move on too
 				broadcastMessage(mes);
-			} else
+
+				//also, if we have a claimed survivor, start making a path to them
+				if(mySurvivor != null && !startedCreatingMyPath) {
+					List<Point2D> pointsList = new ArrayList<Point2D>();
+					pointsList.add(this.getCenterLocation());
+					SurvivorPath pathStart = new SurvivorPath(mySurvivor, pointsList, baseZone.getCenterLocation());
+					Message makeAPathMessage = constructCreatePathsMessage(pathStart);
+					broadcastMessage(makeAPathMessage);
+					print("Since we're starting create paths phase, broadcasting create paths message");
+					print("Message reads: " + makeAPathMessage);
+					startedCreatingMyPath = true;
+				}
+			} else if(messageType.equals(CREATE_PATH_MESSAGE)) {
+				//read out the survivor
+				Survivor pathSur = new Survivor(s.nextDouble(), s.nextDouble(), s.nextDouble());
+				//read out each of the points
+				List<Point2D> pathPoints = new ArrayList<Point2D>();
+				while(s.hasNextDouble()) {
+					Point2D nextPathPoint = new Point2D.Double(s.nextDouble(), s.nextDouble());
+					pathPoints.add(nextPathPoint);
+				}
+
+				//add our point to the path if it isn't already there
+				//not at the end, but one before the end
+				if(! pathPoints.contains(this.getCenterLocation())) {
+					pathPoints.add(pathPoints.size() - 2, this.getCenterLocation());
+				}
+
+
+				//make a path out of it
+				SurvivorPath sp = new SurvivorPath(pathSur, pathPoints);
+
+				//see how it compares to what path we know of that is best for this survivor
+				Message passOnMessage;
+				if(knownPaths.contains(sp)) {
+					SurvivorPath pathWeKnow = knownPaths.get(knownPaths.indexOf(sp));
+					//compare lengths
+					if(pathWeKnow.getPathLength() < sp.getPathLength()) {
+						//pass on the path we know
+						passOnMessage = constructCreatePathsMessage(pathWeKnow);
+					} else {
+						//we want to pass on the new path
+						//it is better
+						knownPaths.remove(pathWeKnow);
+						knownPaths.add(sp);
+						passOnMessage = constructCreatePathsMessage(sp);
+					}
+				} else {
+					//we haven't seen a path to this survivor before
+					//store that we have seen it, and pass it on
+					knownPaths.add(sp);
+					passOnMessage = constructCreatePathsMessage(sp);
+				}
+				if(MESSAGE_BOT_DEBUG) {
+					print("Passing on a path : " + passOnMessage);
+				}
+				broadcastMessage(passOnMessage);
+			} else {
 				continue; // this else matches up to figuring out what message type we have
-
-		}
-
-		long messageReadingTime = System.currentTimeMillis() - startTime;
-		if(MESSAGE_BOT_DEBUG) {
-			print("Took " + (messageReadingTime)/1000.0 + " seconds to finish them");
-			if(messageBuffer.size() > 0) {
-				print("That's " + ((double)messageReadingTime) / messageBuffer.size() + " ms per message");
 			}
+
 		}
 
 		// once we are done reading, we should clear the buffer
@@ -778,13 +781,13 @@ public class Bot extends Rectangle2D.Double {
 				// scale it so we feel a stronger seperation from bots that are closer
 				// also, multiply by -1 so the vector points away from the thing
 				// we want to get away from
-				
+
 				//make a random vector if the other bot is right on top of us
 				if(Utilities.shouldEqualsZero(curBotVect.getMagnitude())) {
 					curBotVect = Vector.getHorizontalUnitVector(this.getCenterLocation());
 					curBotVect = curBotVect.rotate(NUM_GEN.nextDouble() * 2.0 * Math.PI);
 				}
-				
+
 				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagnitude());
 
 				// now add it to the seperation vector
@@ -834,7 +837,7 @@ public class Bot extends Rectangle2D.Double {
 
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
-			
+
 			timestepSeperationMagnitudeTotal += seperationVector.getMagnitude();
 			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
 
@@ -847,9 +850,9 @@ public class Bot extends Rectangle2D.Double {
 		if (!haveMoved) {
 			// move toward the base, hopefully finding other robots and/or
 			// getting messages about paths to follow
-//			if (MOVE_BOT_DEBUG) {
-				print("No bots within broadcast distance - move back towards base");
-//			}
+			//			if (MOVE_BOT_DEBUG) {
+			print("No bots within broadcast distance - move back towards base");
+			//			}
 
 			Vector baseZoneVect = new Vector(this.getCenterLocation(), baseZone
 					.getCenterLocation());
@@ -911,7 +914,7 @@ public class Bot extends Rectangle2D.Double {
 		this.setCenterLocation(v.getP2());
 
 		movementVector = v;
-		
+
 		//tell everyone where we are
 		Message locationMessage = constructLocationMessage();
 		broadcastMessage(locationMessage);
@@ -1250,8 +1253,9 @@ public class Bot extends Rectangle2D.Double {
 		broadcastMessage(electionStartMesasge);
 		myElectionStartTime = World.getCurrentTimestep();
 		electionLooksSuccessful = true;
+		print("Starting move on to next phase election");
 	}
-	
+
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
@@ -1283,9 +1287,8 @@ public class Bot extends Rectangle2D.Double {
 
 			break;
 			case (CREATE_PATHS_PHASE) :
-				//if we have claimed a survivor, start making a path to them
-
-			break;
+				
+				break;
 			case (AGGRIGATE_PHASE) :
 
 				break;

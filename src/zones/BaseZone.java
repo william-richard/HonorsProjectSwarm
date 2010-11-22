@@ -6,12 +6,10 @@ import java.util.List;
 import java.util.Scanner;
 
 import simulation.Bot;
-import simulation.BotInfo;
 import simulation.Message;
 import simulation.Shout;
 import simulation.Survivor;
 import simulation.SurvivorPath;
-import simulation.World;
 import util.shapes.Circle2D;
 
 
@@ -32,10 +30,6 @@ public class BaseZone extends Zone {
 		survivorPaths = new ArrayList<SurvivorPath>();
 	}
 
-
-	//	public BaseZone(Area a, int _zoneid) {
-	//		super(a, _zoneid, BaseZone.BaseZoneColor);
-	//	}
 
 	@Override
 	public boolean isObstacle() {
@@ -62,7 +56,7 @@ public class BaseZone extends Zone {
 		messageBuffer.clear();
 		//start recieving messages again
 		recieveMessages = true;
-		
+
 		//make a scanner to make going through the messages a bit easier
 		Scanner s;
 		//go through the messages and update the stored info about the other bots
@@ -70,39 +64,28 @@ public class BaseZone extends Zone {
 
 			s = new Scanner(mes.getText());
 
-			if(! s.hasNext()) continue;
+			if(mes.getType().equals(Bot.CREATE_PATH_MESSAGE)) {
+				//read the message and add the path it has to our list of paths
+				//TODO really should have a static method (in the Message class?) that does this
+				//TODO message types should be in the Message class along with the construct methods
 
-			//only interested in survivor path messages
-			if(s.next().equals("fv")) {
-				//extract all of he information about the path
-				double vicStatus = s.nextDouble();
-				double vicX = s.nextDouble();
-				double vicY = s.nextDouble();
-				double pathLength = s.nextDouble();
-				double pathRating = s.nextDouble();
-				double avgRating = s.nextDouble();
-
-				List<BotInfo> pathBots = new ArrayList<BotInfo>();
-
-				while(s.hasNextInt()) {
-					pathBots.add(new BotInfo(s.nextInt(), s.nextDouble(), s.nextDouble(), s.nextInt()));
+				//read out the survivor
+				Survivor pathSur = new Survivor(s.nextDouble(), s.nextDouble(), s.nextDouble());
+				//read out each of the points
+				List<Point2D> pathPoints = new ArrayList<Point2D>();
+				while(s.hasNextDouble()) {
+					Point2D nextPathPoint = new Point2D.Double(s.nextDouble(), s.nextDouble());
+					pathPoints.add(nextPathPoint);
 				}
 
-				//make a new survivorPath and add it to our list
-				//First, find the actual survivor that this message refers to
-				Survivor vic = World.allSurvivors.get(World.allSurvivors.indexOf(new Survivor(vicX, vicY, vicStatus)));
+				//make a path out of it
+				SurvivorPath sp = new SurvivorPath(pathSur, pathPoints);
 
-				//now, make the path and add it to our list
-				survivorPaths.add(new SurvivorPath(vic, pathLength, pathRating, avgRating, pathBots, this.getCenterLocation()));				
-			} else continue;
-
+				//store that path if we haven't already
+				survivorPaths.add(sp);
+			}
 		}
 	}
-
-	public void clearMessageBuffer() {
-		messageBuffer.clear();
-	}
-
 
 	public List<SurvivorPath> getSurvivorPaths() {
 		//first, check to make sure we don't have any waiting in the message buffer
@@ -131,7 +114,7 @@ public class BaseZone extends Zone {
 				if(curPath.getSur().equals(curFromBest.getSur())) {
 					foundPathToSameVic = true;
 
-					if(curPath.getAvgRating() < curFromBest.getAvgRating()) {
+					if(curPath.getPathLength() < curFromBest.getPathLength()) {
 						bestPaths.remove(bestIndex);
 						bestPaths.add(curPath);
 					}
