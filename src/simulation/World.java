@@ -42,7 +42,7 @@ public class World extends JFrame implements WindowListener {
 	private static final int FRAME_WIDTH = 500;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
-	private static final boolean DRAW_BOT_RADII = false;
+	private static final boolean DRAW_BOT_RADII = true;
 
 	private static final boolean WORLD_DEBUG = true;
 
@@ -239,6 +239,8 @@ public class World extends JFrame implements WindowListener {
 			allZones.add(newZone);
 			//remove it's area from the unfilled area
 			unfilledArea.subtract(new Area(newZone));
+			
+			//TODO find a way to combine same-type zones that share sides
 
 			//only put points back into the array if they are still in the unfilled area
 			zoneVerticies.add(p1);

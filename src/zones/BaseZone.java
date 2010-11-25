@@ -154,4 +154,9 @@ public class BaseZone extends Zone {
 	public Shout getShout(Survivor shouter) {
 		return new Shout(new Circle2D(shouter.getCenterLocation(), Shout.DEFAULT_SHOUT_RADIUS), shouter);
 	}
+
+	@Override
+	public double getRepulsionForcePerLength() {
+		return 5;
+	}
 }

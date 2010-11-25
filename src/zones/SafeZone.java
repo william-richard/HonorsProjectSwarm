@@ -80,4 +80,9 @@ public class SafeZone extends Zone {
 	public double getVisiblityRange(Point2D originator) {
 		return Bot.DEFALUT_VISIBILITY_RADIUS;
 	}
+
+	@Override
+	public double getRepulsionForcePerLength() {
+		return 0.0;
+	}
 }

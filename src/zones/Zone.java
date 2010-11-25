@@ -72,6 +72,7 @@ public abstract class Zone extends Polygon {
 	public abstract double getVisiblityRange(Point2D originator);
 	public abstract double getAudibleRange(Point2D originator);
 	public abstract double getFoundRange(Point2D originator);
+	public abstract double getRepulsionForcePerLength();
 	
 	public abstract boolean isObstacle();
 }

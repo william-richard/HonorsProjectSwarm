@@ -22,10 +22,6 @@ public class DangerZone extends Zone {
 	protected DangerZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
 		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
 	}
-
-//	public DangerZone(Area a, int _zoneid) {
-//		super(a, _zoneid, DangerZone.DangerZoneColor);
-//	}
 	
 	@Override
 	public Shout getShout(Survivor shouter) {
@@ -57,5 +53,10 @@ public class DangerZone extends Zone {
 	@Override
 	public double getVisiblityRange(Point2D originator) {
 		return Bot.DEFALUT_VISIBILITY_RADIUS;
+	}
+	
+	public double getRepulsionForcePerLength() {
+		//length meeasured in pixels, not meters.
+		return 10.0;
 	}
 }
