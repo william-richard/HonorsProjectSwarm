@@ -41,6 +41,10 @@ public class Vector extends Line2D{
 	public Vector(Line2D l) {
 		this(l.getP1(), l.getP2());
 	}
+	
+	public Vector(Point2D startPoint, double xMag, double yMag) {
+		this(startPoint.getX(), startPoint.getY(), startPoint.getX() + xMag, startPoint.getY() + yMag);
+	}
 
 	@Override
 	public Point2D getP1() {	
