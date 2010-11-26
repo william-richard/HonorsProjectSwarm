@@ -50,15 +50,19 @@ public class Bot extends Rectangle2D.Double {
 
 	private final double SEPERATION_FACTOR = 				10.0;
 	private final double COHESION_FACTOR = 					1.0; //cohesion factor should never me more than 1
-	private final double DANGER_ZONE_REPULSION_FACTOR = 	5.0;
+	private final double DANGER_ZONE_REPULSION_FACTOR = 	10.0;
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
 
-	private final static int SPREAD_OUT_PHASE = 0;
-	private final static int CREATE_PATHS_PHASE = 1;
-	private final static int AGGRIGATE_PHASE = 2;
+	private final static int SPREAD_OUT_PHASE = 				0;
+	private final static int CREATE_PATHS_PHASE = 				1;
+	private final static int AGGRIGATE_PHASE =					2;
+	private final static int WAITING_TO_BE_TURNED_ON_PHASE = 	3;
 
+	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .015;
+	
+	
 	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
 	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
 	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
@@ -161,7 +165,7 @@ public class Bot extends Rectangle2D.Double {
 		claimedSurvivors = new ArrayList<Survivor>();
 
 		previousLocations = new ArrayList<Point2D>();
-		NUM_PREV_LOCATIONS_TO_CONSIDER = _numBots / 2;
+		NUM_PREV_LOCATIONS_TO_CONSIDER = 300;
 
 		boundingBox = _bounds;
 
@@ -169,13 +173,13 @@ public class Bot extends Rectangle2D.Double {
 				.getCenterLocation());
 
 		// start in the spread out phase
-		algorithmPhase = SPREAD_OUT_PHASE;
+		algorithmPhase = WAITING_TO_BE_TURNED_ON_PHASE;
 
 		settledOnLocation = false;
 
 		mySurvivor = null;
 
-		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots/2;
+		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots*2;
 
 		electionLeaderRecord = new HashMap<Integer, Integer>();
 
@@ -264,6 +268,11 @@ public class Bot extends Rectangle2D.Double {
 	 * METHODS
 	 **************************************************************************/
 	public void recieveMessage(Message message) {
+		//if we aren't on, we can't recieve
+		if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
+			return;
+		}
+		
 		messageBuffer.add(message);
 	}
 
@@ -800,30 +809,7 @@ public class Bot extends Rectangle2D.Double {
 				seperationVector = seperationVector.add(curBotVect);
 
 			}
-
-//			// now, also try to maximize distance from base zones
-//			for (Zone z : World.allZones) {
-//				if (z instanceof BaseZone) {
-//					// find the point on the edge of the zone that is closest to
-//					// us
-//					Point2D nearestBasePoint = Utilities.getNearestPoint(z,
-//							getCenterLocation());
-//
-//					// try to move away from that point
-//					Vector curZoneVect = new Vector(this.getCenterLocation(),
-//							nearestBasePoint);
-//					// scale it based on how far away we are from the base, and
-//					// the repulsion factor
-//					// also, multiply by -1 so the vector points away from the
-//					// thing we want to get away from
-//					curZoneVect = curZoneVect.rescale(-1.0 * SEPERATION_FACTOR / curZoneVect.getMagnitude());
-//
-//					// add it to our seperation vector
-//					seperationVector = seperationVector.add(curZoneVect);
-//
-//				}
-//			}
-
+			
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
 			//start by calculating the average location of all the bots
 			double xSum = 0.0, ySum = 0.0;
@@ -843,6 +829,8 @@ public class Bot extends Rectangle2D.Double {
 
 			//also, get a vector pushing us away from bad places
 			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
+			
+			World.debugShapesToDraw.add(zoneRepulsionVector);
 			
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
@@ -871,7 +859,7 @@ public class Bot extends Rectangle2D.Double {
 
 			haveMoved = true;
 
-			world.stopSimulation();
+//			world.stopSimulation();
 		}
 	}
 
@@ -1295,7 +1283,7 @@ public class Bot extends Rectangle2D.Double {
 		averagePreviousLocation = new Point2D.Double(avgX, avgY);
 	}
 
-	private void determineIfSettledOnLocation() {
+	private void determineIfSettledOnLocation() {		
 		// first, update our average location
 		updateAveragePreviousLocation();
 
@@ -1366,12 +1354,24 @@ public class Bot extends Rectangle2D.Double {
 			System.out.flush();
 		}
 	}
+	
+	private void print(int message) {
+		this.print("" + message);
+	}
 
 	public void doOneTimestep() {
 		// first, read any messages that have come in, and take care of them
 		readMessages();
 
 		switch (algorithmPhase) {
+			case (WAITING_TO_BE_TURNED_ON_PHASE):
+				//with some probability, we'll be turned on this timestep
+				//if that probability is right, turn on and move to the next phase
+				if(NUM_GEN.nextDouble() < TURNED_ON_THIS_TIMESTEP_PROB) {
+					algorithmPhase = SPREAD_OUT_PHASE;
+				}
+			
+				break;
 			case (SPREAD_OUT_PHASE) :
 				// now try to move, based on the move rules.
 				move();
@@ -1401,7 +1401,7 @@ public class Bot extends Rectangle2D.Double {
 				 * TODO fix this so that it asks neighbor what phase it is
 				 * shouldn't happen regardless, so this doesn't really matter
 				 */
-				algorithmPhase = SPREAD_OUT_PHASE;
+				algorithmPhase = WAITING_TO_BE_TURNED_ON_PHASE;
 				break;
 		}
 

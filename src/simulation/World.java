@@ -42,7 +42,7 @@ public class World extends JFrame implements WindowListener {
 	private static final int FRAME_WIDTH = 500;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
-	private static final boolean DRAW_BOT_RADII = true;
+	private static final boolean DRAW_BOT_RADII = false;
 
 	private static final boolean WORLD_DEBUG = true;
 
@@ -446,7 +446,7 @@ public class World extends JFrame implements WindowListener {
 
 		if(WORLD_DEBUG) {
 			//draw the shapes in the debug arraylist
-			g2d.setColor(Color.white);
+			g2d.setColor(Color.cyan);
 			g2d.setStroke(new BasicStroke(1));
 			for(Shape s : debugShapesToDraw) {
 				g2d.draw(s);

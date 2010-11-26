@@ -157,6 +157,6 @@ public class BaseZone extends Zone {
 
 	@Override
 	public double getRepulsionForcePerLength() {
-		return 5;
+		return 1.0;
 	}
 }

@@ -56,7 +56,7 @@ public class DangerZone extends Zone {
 	}
 	
 	public double getRepulsionForcePerLength() {
-		//length meeasured in pixels, not meters.
-		return 10.0;
+		//length measured in pixels, not meters.
+		return 2.0;
 	}
 }
