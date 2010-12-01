@@ -22,9 +22,7 @@ import javax.swing.JFrame;
 import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
-import zones.DangerDebris;
 import zones.DangerZone;
-import zones.SafeDebris;
 import zones.SafeZone;
 import zones.Zone;
 
@@ -44,7 +42,7 @@ public class World extends JFrame implements WindowListener {
 
 	private static final boolean DRAW_BOT_RADII = false;
 
-	private static final boolean WORLD_DEBUG = true;
+	private static final boolean WORLD_DEBUG = false;
 
 	private static final int ZONE_COMPLEXITY = 20;
 
@@ -210,11 +208,11 @@ public class World extends JFrame implements WindowListener {
 			//make a zones out of them
 			Zone newZone;
 
-			switch(RANDOM_GENERATOR.nextInt(5)) {
+			switch(RANDOM_GENERATOR.nextInt(2)) {
 				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-				case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
-				case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
+//				case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
+//				case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
 				default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
