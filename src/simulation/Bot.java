@@ -810,6 +810,8 @@ public class Bot extends Rectangle2D.Double {
 
 			}
 			
+			World.debugSeperationVectors.add(seperationVector);
+			
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
 			//start by calculating the average location of all the bots
 			double xSum = 0.0, ySum = 0.0;
@@ -830,7 +832,7 @@ public class Bot extends Rectangle2D.Double {
 			//also, get a vector pushing us away from bad places
 			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
 			
-			World.debugShapesToDraw.add(zoneRepulsionVector);
+			World.debugRepulsionVectors.add(zoneRepulsionVector);
 			
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
@@ -914,6 +916,8 @@ public class Bot extends Rectangle2D.Double {
 				continue;
 			}
 
+			World.debugShapesToDraw.add(visibleSegment);
+			
 			//get the values we need about the segment
 			seperation = visibleSegment.ptLineDist(this.getCenterLocation());
 			endpointDistFromMe1 = this.getCenterLocation().distance(visibleSegment.getP1());

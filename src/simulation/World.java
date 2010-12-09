@@ -42,7 +42,7 @@ public class World extends JFrame implements WindowListener {
 
 	private static final boolean DRAW_BOT_RADII = false;
 
-	private static final boolean WORLD_DEBUG = false;
+	private static final boolean WORLD_DEBUG = true;
 
 	private static final int ZONE_COMPLEXITY = 20;
 
@@ -73,6 +73,8 @@ public class World extends JFrame implements WindowListener {
 	private BaseZone homeBase;
 
 	public static List<Shape> debugShapesToDraw;
+	public static List<Shape> debugSeperationVectors;
+	public static List<Shape> debugRepulsionVectors;
 
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps; //store the time in milliseconds
@@ -123,6 +125,8 @@ public class World extends JFrame implements WindowListener {
 		}
 
 		debugShapesToDraw = new ArrayList<Shape>();
+		debugSeperationVectors = new ArrayList<Shape>();
+		debugRepulsionVectors = new ArrayList<Shape>();
 
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
@@ -450,6 +454,18 @@ public class World extends JFrame implements WindowListener {
 				g2d.draw(s);
 			}
 			debugShapesToDraw.clear();
+			
+			g2d.setColor(Color.red);
+			for(Shape s : debugSeperationVectors) {
+				g2d.draw(s);
+			}
+			debugSeperationVectors.clear();
+			
+			g2d.setColor(Color.blue);
+			for(Shape s : debugRepulsionVectors) {
+				g2d.draw(s);
+			}
+			debugRepulsionVectors.clear();
 		}
 
 
