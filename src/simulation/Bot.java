@@ -48,9 +48,10 @@ public class Bot extends Rectangle2D.Double {
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private final double SEPERATION_FACTOR = 				10.0;
-	private final double COHESION_FACTOR = 					1.0; //cohesion factor should never me more than 1
-	private final double DANGER_ZONE_REPULSION_FACTOR = 	10.0;
+	private final double SEPERATION_FACTOR = 									8.0;
+	private final double COHESION_FACTOR = 										1.0; //cohesion factor should never me more than 1
+	private final double DANGER_ZONE_REPULSION_FACTOR = 						8.0;
+	private final double DANGER_ZONE_SEPERATION_RELATIONSHIP = 					1.5;
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
@@ -60,9 +61,9 @@ public class Bot extends Rectangle2D.Double {
 	private final static int AGGRIGATE_PHASE =					2;
 	private final static int WAITING_TO_BE_TURNED_ON_PHASE = 	3;
 
-	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .015;
-	
-	
+	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .05;
+
+
 	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
 	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
 	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
@@ -272,7 +273,7 @@ public class Bot extends Rectangle2D.Double {
 		if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
 			return;
 		}
-		
+
 		messageBuffer.add(message);
 	}
 
@@ -809,9 +810,9 @@ public class Bot extends Rectangle2D.Double {
 				seperationVector = seperationVector.add(curBotVect);
 
 			}
-			
+
 			World.debugSeperationVectors.add(seperationVector);
-			
+
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
 			//start by calculating the average location of all the bots
 			double xSum = 0.0, ySum = 0.0;
@@ -831,9 +832,13 @@ public class Bot extends Rectangle2D.Double {
 
 			//also, get a vector pushing us away from bad places
 			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
+			//EXPIRIMENT - try scaling so it is the same size as the seperation vector
+			if( (! Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) && (zoneRepulsionVector.getMagnitude() > seperationVector.getMagnitude()) ) {
+				zoneRepulsionVector = zoneRepulsionVector.rescale(DANGER_ZONE_SEPERATION_RELATIONSHIP * seperationVector.getMagnitude());
+			}
 			
 			World.debugRepulsionVectors.add(zoneRepulsionVector);
-			
+
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
 			movementVector = movementVector.add(zoneRepulsionVector);
@@ -861,7 +866,7 @@ public class Bot extends Rectangle2D.Double {
 
 			haveMoved = true;
 
-//			world.stopSimulation();
+			//			world.stopSimulation();
 		}
 	}
 
@@ -910,14 +915,14 @@ public class Bot extends Rectangle2D.Double {
 		for(LineSegment s : dzSides) {
 			//get the part of the segment that we can see, since that is the only part that should be exerting a force
 			visibleSegment = this.getVisibleArea().getLineIntersectionSegment(s);
-			
+
 			if(visibleSegment == null) {
 				//no contribution from this segment
 				continue;
 			}
 
 			World.debugShapesToDraw.add(visibleSegment);
-			
+
 			//get the values we need about the segment
 			seperation = visibleSegment.ptLineDist(this.getCenterLocation());
 			endpointDistFromMe1 = this.getCenterLocation().distance(visibleSegment.getP1());
@@ -953,7 +958,7 @@ public class Bot extends Rectangle2D.Double {
 				//need to reverse it
 				partialVectAlong = partialVectAlong.rescale(-1.0);
 			}
-			
+
 			//now that both of them are pointing in the correct direction, need to combine into one vector
 			Vector resultantRepulsionFromSide = partialVectAlong.add(partialVectAway);
 
@@ -1358,7 +1363,7 @@ public class Bot extends Rectangle2D.Double {
 			System.out.flush();
 		}
 	}
-	
+
 	private void print(int message) {
 		this.print("" + message);
 	}
@@ -1374,8 +1379,8 @@ public class Bot extends Rectangle2D.Double {
 				if(NUM_GEN.nextDouble() < TURNED_ON_THIS_TIMESTEP_PROB) {
 					algorithmPhase = SPREAD_OUT_PHASE;
 				}
-			
-				break;
+
+			break;
 			case (SPREAD_OUT_PHASE) :
 				// now try to move, based on the move rules.
 				move();
