@@ -212,6 +212,7 @@ public class World extends JFrame implements WindowListener {
 			//make a zones out of them
 			Zone newZone;
 
+			
 			switch(RANDOM_GENERATOR.nextInt(2)) {
 				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
@@ -236,7 +237,7 @@ public class World extends JFrame implements WindowListener {
 				zoneVerticies.add(p3);
 				continue;
 			}
-
+			
 			//it checks out - add it
 			allZones.add(newZone);
 			//remove it's area from the unfilled area
@@ -306,6 +307,10 @@ public class World extends JFrame implements WindowListener {
 			
 			Bot.timestepCohesionMagnitudeTotal = 0.0;
 			Bot.timestepSeperationMagnitudeTotal = 0.0;
+			Bot.timestepBotsRepelledByZones = 0.0;
+			Bot.timestepZoneRepulsionMagnitudeTotal = 0.0;
+			Bot.timestepVisibleZoneSideTotal = 0.0;
+			Bot.timestepNumVisibleZoneSides = 0;
 
 			for(Bot b : allBots) {
 				b.doOneTimestep();
@@ -320,6 +325,8 @@ public class World extends JFrame implements WindowListener {
 			
 			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / allBots.size()));
 			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / allBots.size()));
+			System.out.println("Average zone repulsion vector mag (for bots near zones) = " + (Bot.timestepZoneRepulsionMagnitudeTotal / Bot.timestepBotsRepelledByZones));
+			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
 
 			//repaint the scenario
 			repaint();
@@ -455,17 +462,17 @@ public class World extends JFrame implements WindowListener {
 			}
 			debugShapesToDraw.clear();
 			
-			g2d.setColor(Color.red);
-			for(Shape s : debugSeperationVectors) {
-				g2d.draw(s);
-			}
-			debugSeperationVectors.clear();
-			
-			g2d.setColor(Color.blue);
-			for(Shape s : debugRepulsionVectors) {
-				g2d.draw(s);
-			}
-			debugRepulsionVectors.clear();
+//			g2d.setColor(Color.red);
+//			for(Shape s : debugSeperationVectors) {
+//				g2d.draw(s);
+//			}
+//			debugSeperationVectors.clear();
+//			
+//			g2d.setColor(Color.blue);
+//			for(Shape s : debugRepulsionVectors) {
+//				g2d.draw(s);
+//			}
+//			debugRepulsionVectors.clear();
 		}
 
 

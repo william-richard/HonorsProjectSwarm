@@ -101,7 +101,7 @@ public class Vector extends Line2D{
 		return p1.distance(p2);
 	}
 
-	public double getMagSquare() {
+	public double getMagnitudeSquared() {
 		return p1.distanceSq(p2);
 	}
 

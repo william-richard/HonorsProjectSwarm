@@ -37,7 +37,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
 
 	public static final double DEFAULT_BROADCAST_RADIUS = 45;
-	public static final double DEFALUT_VISIBILITY_RADIUS = 7;
+	public static final double DEFALUT_VISIBILITY_RADIUS = 8;
 	public static final double DEFAULT_AUDITORY_RADIUS = 25;
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 4;
@@ -48,20 +48,23 @@ public class Bot extends Rectangle2D.Double {
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private final double SEPERATION_FACTOR = 									8.0;
+	private final double SEPERATION_FACTOR = 									DEFAULT_BROADCAST_RADIUS*DEFAULT_BROADCAST_RADIUS / 2.0; //set this to be about the distance you want them to be apart at the maximum squared
 	private final double COHESION_FACTOR = 										1.0; //cohesion factor should never me more than 1
-	private final double DANGER_ZONE_REPULSION_FACTOR = 						8.0;
-	private final double DANGER_ZONE_SEPERATION_RELATIONSHIP = 					1.5;
+	private final double DANGER_ZONE_REPULSION_FACTOR = 						DEFALUT_VISIBILITY_RADIUS * DEFALUT_VISIBILITY_RADIUS; //set this to the distance at which you want the replsion force to be just the magnitude of the force exerted by 1 px.
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
+	public static double timestepZoneRepulsionMagnitudeTotal;
+	public static double timestepBotsRepelledByZones;
+	public static double timestepVisibleZoneSideTotal;
+	public static int timestepNumVisibleZoneSides;
 
 	private final static int SPREAD_OUT_PHASE = 				0;
 	private final static int CREATE_PATHS_PHASE = 				1;
 	private final static int AGGRIGATE_PHASE =					2;
 	private final static int WAITING_TO_BE_TURNED_ON_PHASE = 	3;
 
-	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .05;
+	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
 
 	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
@@ -130,7 +133,7 @@ public class Bot extends Rectangle2D.Double {
 	private Point2D averagePreviousLocation;
 	private boolean settledOnLocation;
 
-	boolean startedCreatingMyPath = false;
+	private boolean startedCreatingMyPath = false;
 	private List<SurvivorPath> knownPaths;
 
 	/***************************************************************************
@@ -166,7 +169,7 @@ public class Bot extends Rectangle2D.Double {
 		claimedSurvivors = new ArrayList<Survivor>();
 
 		previousLocations = new ArrayList<Point2D>();
-		NUM_PREV_LOCATIONS_TO_CONSIDER = 300;
+		NUM_PREV_LOCATIONS_TO_CONSIDER = 100;
 
 		boundingBox = _bounds;
 
@@ -180,7 +183,7 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots*2;
+		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots;
 
 		electionLeaderRecord = new HashMap<Integer, Integer>();
 
@@ -568,6 +571,9 @@ public class Bot extends Rectangle2D.Double {
 					} else {
 						//we're not ready
 						//respond with a not-ready message
+						if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
+							print("I am off and responding to election message!");
+						}
 						Message notReady = constructNotReadyForPhaseAdvancementMessage(mes);
 						broadcastMessage(notReady);
 					}
@@ -732,9 +738,9 @@ public class Bot extends Rectangle2D.Double {
 				for (Survivor s : visibleSurs) {
 					Vector surVect = new Vector(this.getCenterLocation(), s
 							.getCenterLocation());
-					if (surVect.getMagSquare() < nearestDistSquare) {
+					if (surVect.getMagnitudeSquared() < nearestDistSquare) {
 						nearestVicVect = surVect;
-						nearestDistSquare = surVect.getMagSquare();
+						nearestDistSquare = surVect.getMagnitudeSquared();
 					}
 				}
 
@@ -757,7 +763,7 @@ public class Bot extends Rectangle2D.Double {
 				for (Shout s : audibleShouts) {
 					Vector shoutVect = new Vector(this.getCenterLocation(), s
 							.getCenterLocation());
-					if (shoutVect.getMagSquare() < nearestDistSquare) {
+					if (shoutVect.getMagnitudeSquared() < nearestDistSquare) {
 						nearestShoutVect = shoutVect;
 						nearestDistSquare = s.getCenterLocation().distanceSq(
 								this.getCenterLocation());
@@ -804,7 +810,7 @@ public class Bot extends Rectangle2D.Double {
 					curBotVect = curBotVect.rotate(NUM_GEN.nextDouble() * 2.0 * Math.PI);
 				}
 
-				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagnitude());
+				curBotVect = curBotVect.rescaleRatio(-1.0 * SEPERATION_FACTOR / curBotVect.getMagnitudeSquared());
 
 				// now add it to the seperation vector
 				seperationVector = seperationVector.add(curBotVect);
@@ -832,10 +838,6 @@ public class Bot extends Rectangle2D.Double {
 
 			//also, get a vector pushing us away from bad places
 			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
-			//EXPIRIMENT - try scaling so it is the same size as the seperation vector
-			if( (! Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) && (zoneRepulsionVector.getMagnitude() > seperationVector.getMagnitude()) ) {
-				zoneRepulsionVector = zoneRepulsionVector.rescale(DANGER_ZONE_SEPERATION_RELATIONSHIP * seperationVector.getMagnitude());
-			}
 			
 			World.debugRepulsionVectors.add(zoneRepulsionVector);
 
@@ -845,6 +847,11 @@ public class Bot extends Rectangle2D.Double {
 
 			timestepSeperationMagnitudeTotal += seperationVector.getMagnitude();
 			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
+			
+			if(! Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
+				timestepZoneRepulsionMagnitudeTotal += zoneRepulsionVector.getMagnitude();
+				timestepBotsRepelledByZones++;
+			}
 
 			// move along the vector we made
 			actuallyMoveAlong(movementVector);
@@ -883,6 +890,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	private Vector getAllZonesRepulsionVector() {
+		
 		//see which zone-shapes we can see
 		List<? extends Shape> visibleShapes = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones);
 
@@ -899,7 +907,7 @@ public class Bot extends Rectangle2D.Double {
 
 	private Vector getRepulsionContributionFromOneZone(Zone z) {
 		//make sure it is a zone that creates a repulsion
-		if(! ((z instanceof DangerZone) || (z instanceof BaseZone)) ) {
+		if(Utilities.shouldEqualsZero(z.getRepulsionForcePerLength()) ) {
 			return new Vector(this.getCenterLocation(), this.getCenterLocation());
 		}
 
@@ -922,6 +930,9 @@ public class Bot extends Rectangle2D.Double {
 			}
 
 			World.debugShapesToDraw.add(visibleSegment);
+			
+			timestepVisibleZoneSideTotal += visibleSegment.getLength();
+			timestepNumVisibleZoneSides++;
 
 			//get the values we need about the segment
 			seperation = visibleSegment.ptLineDist(this.getCenterLocation());
@@ -932,9 +943,9 @@ public class Bot extends Rectangle2D.Double {
 
 			//calculate the partial forces along the direction of the segment and away from the segment
 
-			partialMagAway = DANGER_ZONE_REPULSION_FACTOR * z.getRepulsionForcePerLength() / seperation
+			partialMagAway = (DANGER_ZONE_REPULSION_FACTOR * z.getRepulsionForcePerLength() / seperation)
 			* ( endpointDistFromClosestLinePt1 / endpointDistFromMe1 + endpointDistFromClosestLinePt2 / endpointDistFromMe2);
-			partialMagAlong = DANGER_ZONE_REPULSION_FACTOR * z.getRepulsionForcePerLength() 
+			partialMagAlong = (DANGER_ZONE_REPULSION_FACTOR * z.getRepulsionForcePerLength() )
 			* (1 / endpointDistFromMe1 + 1 / endpointDistFromMe2);
 
 			//get a vector out of the segment
@@ -1023,7 +1034,7 @@ public class Bot extends Rectangle2D.Double {
 
 	// makes sure that the passed movement vector is OK i.e. it isn't too long
 	private Vector verifyMovementVector(Vector v) {
-		if (v.getMagSquare() > getMaxVelocity()) {
+		if (v.getMagnitude() > getMaxVelocity()) {
 			v = v.rescale(getMaxVelocity());
 		}
 		return v;

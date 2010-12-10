@@ -15,7 +15,7 @@ public class Circle2D extends Ellipse2D {
 
 
 	public Circle2D(double x, double y, double r) {
-		this.setFrame(x, y, r, r);
+		this.setFrame(x, y, 2*r, 2*r);
 	}
 
 	public Circle2D(Point2D center, double r) {

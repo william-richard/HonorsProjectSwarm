@@ -52,6 +52,10 @@ public class LineSegment extends Line2D {
 	public double getY2() {
 		return p2.getY();
 	}
+	
+	public double getLength() {
+		return p1.distance(p2);
+	}
 
 	@Override
 	public void setLine(double x1, double y1, double x2, double y2) {
