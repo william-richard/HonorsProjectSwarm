@@ -20,6 +20,7 @@ import java.util.Random;
 import javax.swing.JFrame;
 
 import util.Utilities;
+import util.shapes.LineSegment;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerZone;
@@ -42,9 +43,9 @@ public class World extends JFrame implements WindowListener {
 
 	private static final boolean DRAW_BOT_RADII = false;
 
-	private static final boolean WORLD_DEBUG = true;
+	private static final boolean WORLD_DEBUG = false;
 
-	private static final int ZONE_COMPLEXITY = 20;
+	private static final int ZONE_COMPLEXITY = 10;
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color BOT_COLOR = Color.green;
@@ -91,12 +92,10 @@ public class World extends JFrame implements WindowListener {
 		//initialize the zones
 		allZones = new ArrayList<Zone>();
 
-		int[] xPointsBase = {225, 275, 275, 225};
-		int[] yPointsBase = {225, 225, 275, 275};
-		BaseZone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
-		allZones.add(homeBase);
-		this.homeBase = homeBase;
-
+		//add all the default zones
+		addAllSetZones();
+	
+		//fill in the rest randomly
 		fillInZones();
 
 		checkZoneSanity();
@@ -165,6 +164,44 @@ public class World extends JFrame implements WindowListener {
 
 	}
 
+	private void addAllSetZones() {
+		//start with the base zone
+		addBaseZone();
+		
+		//the rest are not as necessary
+		//put some triangles of safe zones around the base zone
+		int[] xPointsSafe = {225, 250, 275};
+		int[] yPointsSafe = {225, 200, 225};
+		SafeZone safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+		allZones.add(safe);
+		
+		xPointsSafe = new int[] {275, 300, 275};
+		yPointsSafe = new int[] {225, 250, 275};
+		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+		allZones.add(safe);
+		
+		xPointsSafe = new int[] {275, 250, 225};
+		yPointsSafe = new int[] {275, 300, 275};
+		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+		allZones.add(safe);
+		
+		xPointsSafe = new int[] {225, 200, 225};
+		yPointsSafe = new int[] {225, 250, 275};
+		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+		allZones.add(safe);
+
+
+	}
+	
+	private void addBaseZone() {
+		int[] xPointsBase = {225, 275, 275, 225};
+		int[] yPointsBase = {225, 225, 275, 275};
+		BaseZone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
+		allZones.add(homeBase);
+		this.homeBase = homeBase;
+	}
+	
+	
 	//TODO combine same type zones?
 
 	private void fillInZones() {
@@ -205,7 +242,7 @@ public class World extends JFrame implements WindowListener {
 			Point p1 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
 			Point p2 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
 			Point p3 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
-
+			
 			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
 			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
 
@@ -408,8 +445,8 @@ public class World extends JFrame implements WindowListener {
 		while(allBotSnapshot.hasNext()) {
 			Bot curBot = allBotSnapshot.next();
 
-			g2d.setColor(BOT_COLOR);
-			g2d.fill(curBot);
+//			g2d.setColor(BOT_COLOR);
+//			g2d.fill(curBot);
 
 			if(DRAW_BOT_RADII) {
 				g2d.setColor(AUDIO_RANGE_COLOR);
@@ -422,8 +459,8 @@ public class World extends JFrame implements WindowListener {
 				g2d.draw(curBot.getBroadcastArea());
 			}
 
-			g2d.setColor(BOT_LABEL_COLOR);
-			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
+//			g2d.setColor(BOT_LABEL_COLOR);
+//			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 
 			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
 			//only draw it if it has non-zero length
@@ -432,6 +469,18 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 
+		allBotSnapshot = allBots.listIterator();
+		while(allBotSnapshot.hasNext()) {
+			Bot curBot = allBotSnapshot.next();
+
+			g2d.setColor(BOT_COLOR);
+			g2d.fill(curBot);
+			
+			g2d.setColor(BOT_LABEL_COLOR);
+			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
+		}
+		
+		
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);

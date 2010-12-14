@@ -1,7 +1,6 @@
 package simulation;
 
 import java.awt.Shape;
-import java.awt.geom.Line2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
@@ -19,7 +18,6 @@ import util.shapes.Circle2D;
 import util.shapes.LineSegment;
 import zones.BaseZone;
 import zones.BoundingBox;
-import zones.DangerZone;
 import zones.SafeZone;
 import zones.Zone;
 
@@ -30,27 +28,29 @@ public class Bot extends Rectangle2D.Double {
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
-	private final int DIMENSION = 3;
+	private final int DIMENSION = 2;
 	private final double VISUAL_ID_SURVIVOR_PROB = .70;
 	private final double HEAR_SURVIVOR_PROB = .75;
 	private final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
 	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
 
-	public static final double DEFAULT_BROADCAST_RADIUS = 45;
-	public static final double DEFALUT_VISIBILITY_RADIUS = 8;
-	public static final double DEFAULT_AUDITORY_RADIUS = 25;
+	//1 px = 2 m
+	public static final double DEFAULT_BROADCAST_RADIUS = 40; //40 px = 80 m
+	public static final double DEFALUT_VISIBILITY_RADIUS = 12; //12 px = 24 m
+	public static final double DEFAULT_AUDITORY_RADIUS = 24; //24 px = 48 m
 	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
-	public static final double DEFAULT_MAX_VELOCITY = 4;
+	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
 
-	private static final Random NUM_GEN = new Random();
+	private static Random NUM_GEN = new Random();
 
 	private final int ZONE_SAFE = 1;
 	private final int ZONE_DANGEROUS = 2;
 	private final int ZONE_BASE = 3;
 
-	private final double SEPERATION_FACTOR = 									DEFAULT_BROADCAST_RADIUS*DEFAULT_BROADCAST_RADIUS / 2.0; //set this to be about the distance you want them to be apart at the maximum squared
+	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
+	private final double SEPERATION_FACTOR = 									Math.pow(DEFAULT_BROADCAST_RADIUS / 2.0, 2.0); //set this to be about the distance you want them to be apart at the maximum squared
 	private final double COHESION_FACTOR = 										1.0; //cohesion factor should never me more than 1
-	private final double DANGER_ZONE_REPULSION_FACTOR = 						DEFALUT_VISIBILITY_RADIUS * DEFALUT_VISIBILITY_RADIUS; //set this to the distance at which you want the replsion force to be just the magnitude of the force exerted by 1 px.
+	private final double DANGER_ZONE_REPULSION_FACTOR = 						Math.pow(DEFALUT_VISIBILITY_RADIUS, 2.0); //set this to the distance at which you want the repulsion force to be just the magnitude of the force exerted by 1 px.
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
@@ -183,7 +183,7 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots;
+		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots * 2;
 
 		electionLeaderRecord = new HashMap<Integer, Integer>();
 
@@ -273,9 +273,9 @@ public class Bot extends Rectangle2D.Double {
 	 **************************************************************************/
 	public void recieveMessage(Message message) {
 		//if we aren't on, we can't recieve
-		if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
-			return;
-		}
+//		if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
+//			return;
+//		}
 
 		messageBuffer.add(message);
 	}
@@ -571,9 +571,6 @@ public class Bot extends Rectangle2D.Double {
 					} else {
 						//we're not ready
 						//respond with a not-ready message
-						if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
-							print("I am off and responding to election message!");
-						}
 						Message notReady = constructNotReadyForPhaseAdvancementMessage(mes);
 						broadcastMessage(notReady);
 					}
@@ -839,6 +836,10 @@ public class Bot extends Rectangle2D.Double {
 			//also, get a vector pushing us away from bad places
 			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
 			
+			if(zoneRepulsionVector.getMagnitude() > seperationVector.getMagnitude()) {
+				zoneRepulsionVector = zoneRepulsionVector.rescale(seperationVector.getMagnitude() * 1.1);
+			}
+			
 			World.debugRepulsionVectors.add(zoneRepulsionVector);
 
 			//we want to move along the sum of these vectors
@@ -890,7 +891,6 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	private Vector getAllZonesRepulsionVector() {
-		
 		//see which zone-shapes we can see
 		List<? extends Shape> visibleShapes = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones);
 
@@ -1336,6 +1336,7 @@ public class Bot extends Rectangle2D.Double {
 				//i.e. set it at MOVE_TO_NEXT_PHASE_TIME_THRESHOLD ago
 				//so that we start before anyone else does (hopefully)
 				lastMoveToNextPhaseMessageRecievedTime = World.getCurrentTimestep() - MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+				myElectionStartTime = -1;
 			} else {
 				//see if the election is over
 				int timeToEndElection = myElectionStartTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
@@ -1349,7 +1350,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 		else if(lastMoveToNextPhaseMessageRecievedTime > 0) {
 			//see if we need to start an election
-			int timeToStartElection = lastMoveToNextPhaseMessageRecievedTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
+			int timeToStartElection = lastMoveToNextPhaseMessageRecievedTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD*2;
 			if(World.getCurrentTimestep() >= timeToStartElection) {
 				startElection();
 			}
