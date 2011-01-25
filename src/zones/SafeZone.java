@@ -24,31 +24,6 @@ public class SafeZone extends Zone {
 	
 	
 	@Override
-	public Circle2D getAudibleArea(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_AUDITORY_RADIUS);
-	}
-
-	@Override
-	public Circle2D getBroadcastArea(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_BROADCAST_RADIUS);
-	}
-
-	@Override
-	public Circle2D getVisibilityArea(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFALUT_VISIBILITY_RADIUS);
-	}
-
-
-	@Override
-	public Circle2D getFoundArea(Point2D originator) {
-		//now, make the broadcast range shape
-		return new Circle2D(originator, Bot.DEFAULT_FOUND_RANGE);
-	}
-	
-	@Override
 	public Shout getShout(Survivor shouter) {
 		//for now, the shout is a circle of the default radius
 		
