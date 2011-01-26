@@ -54,7 +54,7 @@ public class Circle2D extends Ellipse2D {
 		}
 
 		center = new Point2D.Double(x, y);
-		radius = w;
+		radius = w/2.0;
 	}
 
 	@Override

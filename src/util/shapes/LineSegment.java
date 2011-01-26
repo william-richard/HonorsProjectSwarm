@@ -272,4 +272,12 @@ public class LineSegment extends Line2D {
 		return Math.max(a1, a2);
 	}
 
+	public Point2D getMidpoint() {
+		double midX = (p1.getX() + p2.getX()) / 2.0;
+		double midY = (p1.getY() + p2.getY()) / 2.0;
+		
+		return new Point2D.Double(midX, midY);
+	}
+	
+	
 }

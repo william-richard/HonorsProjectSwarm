@@ -131,23 +131,23 @@ public class BaseZone extends Zone {
 	}
 
 	@Override
-	public double getAudibleRange(Point2D originator) {
+	public double getAudibleRange() {
 		return Bot.DEFAULT_AUDITORY_RADIUS;
 	}
 
 	@Override
-	public double getBroadcastRange(Point2D originator) {
+	public double getBroadcastRange() {
 		return Bot.DEFAULT_BROADCAST_RADIUS;
 	}
 
 	@Override
-	public double getFoundRange(Point2D originator) {
+	public double getFoundRange() {
 		return Bot.DEFAULT_FOUND_RANGE;
 	}
 
 	@Override
-	public double getVisiblityRange(Point2D originator) {
-		return Bot.DEFALUT_VISIBILITY_RADIUS;
+	public double getVisiblityRange() {
+		return Bot.DEFAULT_VISIBILITY_RADIUS;
 	}
 
 	@Override
@@ -156,7 +156,23 @@ public class BaseZone extends Zone {
 	}
 
 	@Override
-	public double getRepulsionForcePerLength() {
-		return 0.0;
+	public boolean causesRepulsion() {
+		return false;
 	}
+
+	@Override
+	public double repulsionMinDist() {
+		return 0;
+	}
+
+	@Override
+	public double repulsionMaxDist() {
+		return 0;
+	}
+
+	@Override
+	public double repulsionCurveShape() {
+		return 0;
+	}
+	
 }

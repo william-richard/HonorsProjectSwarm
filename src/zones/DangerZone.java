@@ -1,7 +1,6 @@
 package zones;
 
 import java.awt.Color;
-import java.awt.geom.Point2D;
 
 import simulation.Bot;
 import simulation.Shout;
@@ -36,27 +35,42 @@ public class DangerZone extends Zone {
 	}
 
 	@Override
-	public double getAudibleRange(Point2D originator) {
+	public double getAudibleRange() {
 		return Bot.DEFAULT_AUDITORY_RADIUS;
 	}
 
 	@Override
-	public double getBroadcastRange(Point2D originator) {
+	public double getBroadcastRange() {
 		return Bot.DEFAULT_BROADCAST_RADIUS;
 	}
 
 	@Override
-	public double getFoundRange(Point2D originator) {
+	public double getFoundRange() {
 		return Bot.DEFAULT_FOUND_RANGE;
 	}
 
 	@Override
-	public double getVisiblityRange(Point2D originator) {
-		return Bot.DEFALUT_VISIBILITY_RADIUS;
+	public double getVisiblityRange() {
+		return Bot.DEFAULT_VISIBILITY_RADIUS;
 	}
-	
-	public double getRepulsionForcePerLength() {
-		//length measured in pixels, not meters.
-		return 1.5;
+
+	@Override
+	public boolean causesRepulsion() {
+		return true;
+	}
+
+	@Override
+	public double repulsionMinDist() {
+		return 0.1;
+	}
+
+	@Override
+	public double repulsionMaxDist() {
+		return Bot.DEFAULT_VISIBILITY_RADIUS;
+	}
+
+	@Override
+	public double repulsionCurveShape() {
+		return 2.0;
 	}
 }

@@ -51,28 +51,32 @@ public abstract class Zone extends Polygon {
 	}
 	
 	public Circle2D getBroadcastArea(Point2D originator) {
-		return new Circle2D(originator, getBroadcastRange(originator));
+		return new Circle2D(originator, getBroadcastRange());
 	}
 	
 	public Circle2D getVisibilityArea(Point2D originator) {
-		return new Circle2D(originator, getVisiblityRange(originator));
+		return new Circle2D(originator, getVisiblityRange());
 	}
 	
 	public Circle2D getAudibleArea(Point2D originator) {
-		return new Circle2D(originator, getAudibleRange(originator));
+		return new Circle2D(originator, getAudibleRange());
 	}
 	
 	public Circle2D getFoundArea(Point2D originator) {
-		return new Circle2D(originator, getFoundRange(originator));
+		return new Circle2D(originator, getFoundRange());
 	}
 
 	
 	public abstract Shout getShout(Survivor shouter);
-	public abstract double getBroadcastRange(Point2D originator);
-	public abstract double getVisiblityRange(Point2D originator);
-	public abstract double getAudibleRange(Point2D originator);
-	public abstract double getFoundRange(Point2D originator);
-	public abstract double getRepulsionForcePerLength();
+	public abstract double getBroadcastRange();
+	public abstract double getVisiblityRange();
+	public abstract double getAudibleRange();
+	public abstract double getFoundRange();
+	
+	public abstract boolean causesRepulsion();
+	public abstract double repulsionMinDist();
+	public abstract double repulsionMaxDist();
+	public abstract double repulsionCurveShape();
 	
 	public abstract boolean isObstacle();
 }

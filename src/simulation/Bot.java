@@ -36,9 +36,9 @@ public class Bot extends Rectangle2D.Double {
 
 	//1 px = 2 m
 	public static final double DEFAULT_BROADCAST_RADIUS = 40; //40 px = 80 m
-	public static final double DEFALUT_VISIBILITY_RADIUS = 12; //12 px = 24 m
+	public static final double DEFAULT_VISIBILITY_RADIUS = 12; //12 px = 24 m
 	public static final double DEFAULT_AUDITORY_RADIUS = 24; //24 px = 48 m
-	public static final double DEFAULT_FOUND_RANGE = DEFALUT_VISIBILITY_RADIUS;
+	public static final double DEFAULT_FOUND_RANGE = DEFAULT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
 
 	private static Random NUM_GEN = new Random();
@@ -48,23 +48,13 @@ public class Bot extends Rectangle2D.Double {
 	private final int ZONE_BASE = 3;
 
 	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
-	private final double SEPERATION_FACTOR = 									Math.pow(DEFAULT_BROADCAST_RADIUS / 2.0, 2.0); //set this to be about the distance you want them to be apart at the maximum squared
-	private final double COHESION_FACTOR = 										1.0; //cohesion factor should never me more than 1
-	private final double DANGER_ZONE_REPULSION_FACTOR = 						Math.pow(DEFALUT_VISIBILITY_RADIUS, 2.0); //set this to the distance at which you want the repulsion force to be just the magnitude of the force exerted by 1 px.
+	private final double SEPERATION_FACTOR = 									;
+	private final double COHESION_FACTOR = 										.5; //cohesion factor should never me more than 1
+	private final double DANGER_ZONE_REPULSION_FACTOR = 						;
 
 	private final double SEPERATION_MIN_DIST = 0.1;
 	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS;
-	private final int SEPERATION_CURVE_SHAPE = 1;
-
-	private final double DANGER_ZONE_MIN_DIST = 1.0;
-	private final double DANGER_ZONE_MAX_DIST = DEFALUT_VISIBILITY_RADIUS;
-	private final int DANGER_ZONE_CURVE_SHAPE = 2;
-
-	private final double OBSTACLE_MIN_DIST = 1.0;
-	private final double OBSTACLE_MAX_DIST = DEFALUT_VISIBILITY_RADIUS;
-	private final int OBSTACLE_CURVE_SHAPE = 3;
-
-
+	private final double SEPERATION_CURVE_SHAPE = 1.0;
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
@@ -228,7 +218,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public double getVisibityRange() {
-		return currentZone.getVisiblityRange(getCenterLocation());
+		return currentZone.getVisiblityRange();
 	}
 
 	public Circle2D getAuditbleArea() {
@@ -245,7 +235,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public double getObstacleBufferRange() {
-		return DEFALUT_VISIBILITY_RADIUS / 4.0;
+		return DEFAULT_VISIBILITY_RADIUS / 4.0;
 	}
 
 	public int getID() {
@@ -800,7 +790,7 @@ public class Bot extends Rectangle2D.Double {
 
 		if ((!haveMoved) && (otherBotInfo.size() > 0)) {
 
-			Vector seperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
+			Vector botSeperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 
 			for (int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
@@ -834,19 +824,16 @@ public class Bot extends Rectangle2D.Double {
 				}
 
 				// now add it to the seperation vector
-				seperationVector = seperationVector.add(curBotVect);
-
+				botSeperationVector = botSeperationVector.add(curBotVect);
 			}
 
-//			print("Final sep vect mag = " + seperationVector.getMagnitude());
+			//			print("Final sep vect mag = " + seperationVector.getMagnitude());
 
-			if(Utilities.shouldEqualsZero(seperationVector.getMagnitude())) {
-				seperationVector = seperationVector.rescale(0.0);
+			if(Utilities.shouldEqualsZero(botSeperationVector.getMagnitude())) {
+				botSeperationVector = botSeperationVector.rescale(0.0);
 			} else {
-				seperationVector = seperationVector.rescale(SEPERATION_FACTOR);
-				World.debugSeperationVectors.add(seperationVector.rescale(10.0));
+				World.debugSeperationVectors.add(botSeperationVector.rescale(10.0));
 			}
-
 
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
 			//start by calculating the average location of all the bots
@@ -865,26 +852,28 @@ public class Bot extends Rectangle2D.Double {
 			//scale the cohesion vector based on it's scaling factor
 			cohesionVector = cohesionVector.rescaleRatio(COHESION_FACTOR);
 
-			//			//also, get a vector pushing us away from bad places
-			//			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
-			//
-			//			if(zoneRepulsionVector.getMagnitude() > seperationVector.getMagnitude()) {
-			//				zoneRepulsionVector = zoneRepulsionVector.rescale(seperationVector.getMagnitude() * 1.1);
-			//			}
+			//also, get a vector pushing us away from bad places
+			Vector zoneRepulsionVector = getAllZonesRepulsionVector();
 
-			//			World.debugRepulsionVectors.add(zoneRepulsionVector);
+			if(Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
+				zoneRepulsionVector = zoneRepulsionVector.rescale(0.0);
+			} else {
+				World.debugRepulsionVectors.add(zoneRepulsionVector.rescale(10.0));
+			}
+
+			//add up the separation vectors
+			Vector seperationVector = botSeperationVector.add(zoneRepulsionVector);
+
+			//make it bigger
+			if(! Utilities.shouldEqualsZero(seperationVector.getMagnitude())) {
+				seperationVector = seperationVector.rescale(SEPERATION_FACTOR);
+			}
 
 			//we want to move along the sum of these vectors
 			Vector movementVector = seperationVector.add(cohesionVector);
-			//			movementVector = movementVector.add(zoneRepulsionVector);
 
 			timestepSeperationMagnitudeTotal += seperationVector.getMagnitude();
 			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
-
-			//			if(! Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
-			//				timestepZoneRepulsionMagnitudeTotal += zoneRepulsionVector.getMagnitude();
-			//				timestepBotsRepelledByZones++;
-			//			}
 
 			// move along the vector we made
 			actuallyMoveAlong(movementVector);
@@ -922,17 +911,22 @@ public class Bot extends Rectangle2D.Double {
 		actuallyMoveAlong(randomMove);
 	}
 
-	private Vector calculateFractionalPotentialVector(Point2D awayFrom, double minDist, double maxDist, int curveShape) {
+	private Vector calculateFractionalPotentialVector(Point2D awayFrom, double minDist, double maxDist, double curveShape) {
 		//check distances are OK
 		if(minDist <= 0.0 || maxDist <= 0.0 || maxDist < minDist) {
 			throw new IllegalArgumentException("Distances impossible");
+		}
+
+		//check that curve shape is OK
+		if(curveShape < 0.0) {
+			throw new IllegalArgumentException("Illegal Curve Shape");
 		}
 
 		double distaceAway = this.getCenterLocation().distance(awayFrom);
 
 		//if our current distance is outside the possible range, throw an error	
 		if(distaceAway > maxDist) {
-			throw new IllegalArgumentException("Current distance is too big");
+			throw new IllegalArgumentException("Current distance is too big - max = " + maxDist + "\t cur = " + distaceAway);
 		}
 
 		if(distaceAway < minDist) {
@@ -949,7 +943,7 @@ public class Bot extends Rectangle2D.Double {
 		//make sure the magnitude is positive, so we don't flip the vector's direction
 		vectMag = Math.copySign(vectMag, 1.0);
 
-//		print("Partial vect mag = " + vectMag);
+		//		print("Partial vect mag = " + vectMag);
 
 		return awayVect.rescale(vectMag);
 	}
@@ -972,7 +966,7 @@ public class Bot extends Rectangle2D.Double {
 
 	private Vector getRepulsionContributionFromOneZone(Zone z) {
 		//make sure it is a zone that creates a repulsion
-		if(Utilities.shouldEqualsZero(z.getRepulsionForcePerLength()) ) {
+		if(! z.causesRepulsion()) {
 			return new Vector(this.getCenterLocation(), this.getCenterLocation());
 		}
 
@@ -982,9 +976,10 @@ public class Bot extends Rectangle2D.Double {
 		List<LineSegment> dzSides = Utilities.getSides(z);
 
 		LineSegment visibleSegment;
-		double seperation, endpointDistFromMe1, endpointDistFromMe2, endpointDistFromClosestLinePt1, endpointDistFromClosestLinePt2, partialMagAway, partialMagAlong;
-		Vector visibleVector, partialVectAway, partialVectAlong;
+		Point2D visSegMidpoint;
+		Vector thisSideContribution;
 
+		//TODO I think this isn't normalized if we consider more than one side - do we maybe just want to consider the closest side or the closest midpoint?
 		for(LineSegment s : dzSides) {
 			//get the part of the segment that we can see, since that is the only part that should be exerting a force
 			visibleSegment = this.getVisibleArea().getLineIntersectionSegment(s);
@@ -999,52 +994,18 @@ public class Bot extends Rectangle2D.Double {
 			timestepVisibleZoneSideTotal += visibleSegment.getLength();
 			timestepNumVisibleZoneSides++;
 
-			//get the values we need about the segment
-			seperation = visibleSegment.ptLineDist(this.getCenterLocation());
-			endpointDistFromMe1 = this.getCenterLocation().distance(visibleSegment.getP1());
-			endpointDistFromMe2 = this.getCenterLocation().distance(visibleSegment.getP2());
-			endpointDistFromClosestLinePt1 = Math.sqrt(endpointDistFromMe1 * endpointDistFromMe1 - seperation * seperation);
-			endpointDistFromClosestLinePt2 = Math.sqrt(endpointDistFromMe2 * endpointDistFromMe2 - seperation * seperation);
+			visSegMidpoint = visibleSegment.getMidpoint();
 
-			//calculate the partial forces along the direction of the segment and away from the segment
-
-			partialMagAway = (DANGER_ZONE_REPULSION_FACTOR * z.getRepulsionForcePerLength() / seperation)
-			* ( endpointDistFromClosestLinePt1 / endpointDistFromMe1 + endpointDistFromClosestLinePt2 / endpointDistFromMe2);
-			partialMagAlong = (DANGER_ZONE_REPULSION_FACTOR * z.getRepulsionForcePerLength() )
-			* (1 / endpointDistFromMe1 + 1 / endpointDistFromMe2);
-
-			//get a vector out of the segment
-			visibleVector = new Vector(visibleSegment);
-			//get vectors perp and parallel to it
-			partialVectAway = visibleVector.getPerpendicularVector(this.getCenterLocation(), partialMagAway);
-			partialVectAlong = visibleVector.getParallelVector(this.getCenterLocation(), partialMagAlong);
-			//make sure they are both pointing in the correct direction
-			//in the case of the vector that is away, make sure it is pointing away from the side
-			if(partialVectAway.intersectsLine(visibleSegment) 
-					|| (visibleSegment.ptLineDist(partialVectAway.getP1()) > (visibleSegment.ptLineDist(partialVectAway.getP2())))) {
-				//we need to reverse it
-				partialVectAway = partialVectAway.rescaleRatio(-1.0);
-			}
-
-			//in the case of the vector that is along, make sure it is pointing towards the closer endpoint of the visible segment
-			Point2D closerVisibleEndpoint = (this.getCenterLocation().distance(visibleSegment.getP1()) < this.getCenterLocation().distance(visibleSegment.getP2())) ? visibleSegment.getP1() : visibleSegment.getP2();
-			Point2D fartherVisibleEndpoint = (closerVisibleEndpoint.equals(visibleSegment.getP1())) ? visibleSegment.getP2() : visibleSegment.getP2();
-
-			if(partialVectAlong.getP2().distance(closerVisibleEndpoint) > partialVectAlong.getP2().distance(fartherVisibleEndpoint)) {
-				//need to reverse it
-				partialVectAlong = partialVectAlong.rescale(-1.0);
-			}
-
-			//now that both of them are pointing in the correct direction, need to combine into one vector
-			Vector resultantRepulsionFromSide = partialVectAlong.add(partialVectAway);
-
-			//see if we are inside the zone
-			//in that case, we want to go towards all the visible sides
-			if(z.contains(this.getCenterLocation())) {
-				netRepulsionFromZone = netRepulsionFromZone.add(resultantRepulsionFromSide.rescaleRatio(-1.0));
+			//calculate the force from this side and add it to the net repulsion from the zone
+			if(this.getCenterLocation().distance(visSegMidpoint) < z.repulsionMinDist()) {
+				//distance too small
+				//just have a vector of size 1 pointing away from the midpoint
+				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0);
 			} else {
-				netRepulsionFromZone = netRepulsionFromZone.add(resultantRepulsionFromSide);
+				 thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape());
 			}
+
+			netRepulsionFromZone.add(thisSideContribution);
 		}
 
 		return netRepulsionFromZone;
