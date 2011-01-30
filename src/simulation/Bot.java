@@ -48,16 +48,20 @@ public class Bot extends Rectangle2D.Double {
 	private final int ZONE_BASE = 3;
 
 	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
-	private final double SEPERATION_FACTOR = 									;
+	private final double SEPERATION_FACTOR = 									50;
 	private final double COHESION_FACTOR = 										.5; //cohesion factor should never me more than 1
-	private final double DANGER_ZONE_REPULSION_FACTOR = 						;
 
 	private final double SEPERATION_MIN_DIST = 0.1;
-	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS;
-	private final double SEPERATION_CURVE_SHAPE = 1.0;
+	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS*2;
+	private final double SEPERATION_CURVE_SHAPE = 2.5;
+
+	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 5;
+	private final double FACTOR_ADJUSTMENT_SEPERATION_VALUE = SEPERATION_FACTOR * 2;
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
+	public static int timestepCountOfBotsAffectedBySepOrCohesion;
+
 	public static double timestepZoneRepulsionMagnitudeTotal;
 	public static double timestepBotsRepelledByZones;
 	public static double timestepVisibleZoneSideTotal;
@@ -795,10 +799,6 @@ public class Bot extends Rectangle2D.Double {
 			for (int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
 
-				// don't consider ourselves
-				if (bi.getBotID() == botID)
-					continue;
-
 				//get the location of the other bot
 				Point2D curBotLoc = bi.getCenterLocation();
 				double distToCurBot = this.getCenterLocation().distance(curBotLoc);
@@ -820,19 +820,30 @@ public class Bot extends Rectangle2D.Double {
 					//don't consider this bot
 					continue;
 				} else {
-					curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE);
+					curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
 				}
 
 				// now add it to the seperation vector
 				botSeperationVector = botSeperationVector.add(curBotVect);
 			}
 
+			//since there are several other bots, need to divide by the number of bots to end up with an average location
+			botSeperationVector = botSeperationVector.rescaleRatio(1.0/(otherBotInfo.size()));
+
 			//			print("Final sep vect mag = " + seperationVector.getMagnitude());
 
 			if(Utilities.shouldEqualsZero(botSeperationVector.getMagnitude())) {
 				botSeperationVector = botSeperationVector.rescale(0.0);
 			} else {
-				World.debugSeperationVectors.add(botSeperationVector.rescale(10.0));
+				World.debugSeperationVectors.add(botSeperationVector.rescaleRatio(10.0));
+			}
+
+			//now, scale it up
+			//if there are too many nearby bots, make sure it scales up more than the danger zone repulsion
+			if(otherBotInfo.size() > FACTOR_ADJUSTMENT_BOT_NUMBER) {
+				botSeperationVector = botSeperationVector.rescaleRatio(FACTOR_ADJUSTMENT_SEPERATION_VALUE);
+			} else {
+				botSeperationVector = botSeperationVector.rescaleRatio(SEPERATION_FACTOR);
 			}
 
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
@@ -858,22 +869,26 @@ public class Bot extends Rectangle2D.Double {
 			if(Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
 				zoneRepulsionVector = zoneRepulsionVector.rescale(0.0);
 			} else {
-				World.debugRepulsionVectors.add(zoneRepulsionVector.rescale(10.0));
-			}
+				World.debugRepulsionVectors.add(zoneRepulsionVector.rescaleRatio(10.0));
+			}			
+						
+//			print("Num neighbors = " + otherBotInfo.size() + "\tsep = " + botSeperationVector.getMagnitude() + "\tzone = " + zoneRepulsionVector.getMagnitude());
 
 			//add up the separation vectors
-			Vector seperationVector = botSeperationVector.add(zoneRepulsionVector);
+			//			Vector seperationVector = botSeperationVector.add(zoneRepulsionVector);
 
-			//make it bigger
-			if(! Utilities.shouldEqualsZero(seperationVector.getMagnitude())) {
-				seperationVector = seperationVector.rescale(SEPERATION_FACTOR);
-			}
 
 			//we want to move along the sum of these vectors
-			Vector movementVector = seperationVector.add(cohesionVector);
+			Vector movementVector = botSeperationVector.add(cohesionVector).add(zoneRepulsionVector);
 
-			timestepSeperationMagnitudeTotal += seperationVector.getMagnitude();
+			timestepSeperationMagnitudeTotal += botSeperationVector.getMagnitude();
 			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
+			timestepCountOfBotsAffectedBySepOrCohesion++;
+
+			if(! Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
+				timestepZoneRepulsionMagnitudeTotal += zoneRepulsionVector.getMagnitude();
+				timestepBotsRepelledByZones++;
+			}
 
 			// move along the vector we made
 			actuallyMoveAlong(movementVector);
@@ -911,14 +926,14 @@ public class Bot extends Rectangle2D.Double {
 		actuallyMoveAlong(randomMove);
 	}
 
-	private Vector calculateFractionalPotentialVector(Point2D awayFrom, double minDist, double maxDist, double curveShape) {
+	private Vector calculateFractionalPotentialVector(Point2D awayFrom, double minDist, double maxDist, double curveShape, double scalingFactor) {
 		//check distances are OK
 		if(minDist <= 0.0 || maxDist <= 0.0 || maxDist < minDist) {
 			throw new IllegalArgumentException("Distances impossible");
 		}
 
 		//check that curve shape is OK
-		if(curveShape < 0.0) {
+		if(curveShape < 0.0 || curveShape == 2.0) {
 			throw new IllegalArgumentException("Illegal Curve Shape");
 		}
 
@@ -945,7 +960,7 @@ public class Bot extends Rectangle2D.Double {
 
 		//		print("Partial vect mag = " + vectMag);
 
-		return awayVect.rescale(vectMag);
+		return awayVect.rescale(vectMag * scalingFactor);
 	}
 
 
@@ -955,10 +970,21 @@ public class Bot extends Rectangle2D.Double {
 
 		//go through each of them and get the repulsion from each one
 		Vector netRepulsionFromAllZones = new Vector(this.getCenterLocation(), this.getCenterLocation());
+		int numContributingShapes = 0;
 
 		for(Shape s : visibleShapes) {
 			//should all be zones
-			netRepulsionFromAllZones = netRepulsionFromAllZones.add(getRepulsionContributionFromOneZone((Zone) s));
+			Vector curShapeContribution = getRepulsionContributionFromOneZone((Zone) s);
+
+			if(! Utilities.shouldEqualsZero(curShapeContribution.getMagnitude())) {
+				netRepulsionFromAllZones = netRepulsionFromAllZones.add(curShapeContribution);
+				numContributingShapes++;
+			}
+		}
+
+		if(numContributingShapes > 0) {
+			//now, need to normalize it
+			netRepulsionFromAllZones = netRepulsionFromAllZones.rescaleRatio(1.0/numContributingShapes);
 		}
 
 		return netRepulsionFromAllZones;
@@ -978,6 +1004,7 @@ public class Bot extends Rectangle2D.Double {
 		LineSegment visibleSegment;
 		Point2D visSegMidpoint;
 		Vector thisSideContribution;
+		int numContributingSides = 0;
 
 		//TODO I think this isn't normalized if we consider more than one side - do we maybe just want to consider the closest side or the closest midpoint?
 		for(LineSegment s : dzSides) {
@@ -1002,11 +1029,24 @@ public class Bot extends Rectangle2D.Double {
 				//just have a vector of size 1 pointing away from the midpoint
 				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0);
 			} else {
-				 thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape());
+				thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape(), z.repulsionScalingFactor());
+			}
+			
+			//reverse the vector if we are inside the zone
+			if(z.contains(this.getCenterLocation())) {
+				thisSideContribution = thisSideContribution.rescaleRatio(-1.0);
 			}
 
-			netRepulsionFromZone.add(thisSideContribution);
+			netRepulsionFromZone = netRepulsionFromZone.add(thisSideContribution);
+			numContributingSides++;
 		}
+
+		if(numContributingSides > 0) {
+			//need to divide by the number of sides to average it out
+			netRepulsionFromZone = netRepulsionFromZone.rescaleRatio(1.0/numContributingSides);
+		}
+
+		//		print("Net repulsion vector = " + netRepulsionFromZone.getMagnitude());
 
 		return netRepulsionFromZone;
 	}

@@ -75,4 +75,10 @@ public class SafeZone extends Zone {
 		return 0;
 	}
 
+	@Override
+	public double repulsionScalingFactor() {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
 }

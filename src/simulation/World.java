@@ -344,6 +344,7 @@ public class World extends JFrame implements WindowListener {
 			
 			Bot.timestepCohesionMagnitudeTotal = 0.0;
 			Bot.timestepSeperationMagnitudeTotal = 0.0;
+			Bot.timestepCountOfBotsAffectedBySepOrCohesion = 0;
 			Bot.timestepBotsRepelledByZones = 0.0;
 			Bot.timestepZoneRepulsionMagnitudeTotal = 0.0;
 			Bot.timestepVisibleZoneSideTotal = 0.0;
@@ -360,8 +361,8 @@ public class World extends JFrame implements WindowListener {
 			System.out.println("");
 			System.out.println("Done with bots");
 			
-			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / allBots.size()));
-			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / allBots.size()));
+			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
+			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
 			System.out.println("Average zone repulsion vector mag (for bots near zones) = " + (Bot.timestepZoneRepulsionMagnitudeTotal / Bot.timestepBotsRepelledByZones));
 			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
 

@@ -71,6 +71,15 @@ public class DangerZone extends Zone {
 
 	@Override
 	public double repulsionCurveShape() {
-		return 2.0;
+		return 4.5;
 	}
+
+	@Override
+	public double repulsionScalingFactor() {
+		return 55;
+	}
+	
+	
+	
+	
 }

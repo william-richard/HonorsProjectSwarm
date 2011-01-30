@@ -77,6 +77,7 @@ public abstract class Zone extends Polygon {
 	public abstract double repulsionMinDist();
 	public abstract double repulsionMaxDist();
 	public abstract double repulsionCurveShape();
+	public abstract double repulsionScalingFactor();
 	
 	public abstract boolean isObstacle();
 }
