@@ -4,7 +4,6 @@ import java.awt.Color;
 
 import simulation.Bot;
 
-
 public class Fire extends DangerZone {
 
 	private static final long serialVersionUID = 1L;

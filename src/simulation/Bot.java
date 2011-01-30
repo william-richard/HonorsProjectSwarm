@@ -60,6 +60,7 @@ public class Bot extends Rectangle2D.Double {
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
+	public static double timestepAverageDistanceApartTotal;
 	public static int timestepCountOfBotsAffectedBySepOrCohesion;
 
 	public static double timestepZoneRepulsionMagnitudeTotal;
@@ -795,7 +796,8 @@ public class Bot extends Rectangle2D.Double {
 		if ((!haveMoved) && (otherBotInfo.size() > 0)) {
 
 			Vector botSeperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
-
+			double averageDistanceToNeighbors = 0.0;
+			
 			for (int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
 
@@ -803,6 +805,8 @@ public class Bot extends Rectangle2D.Double {
 				Point2D curBotLoc = bi.getCenterLocation();
 				double distToCurBot = this.getCenterLocation().distance(curBotLoc);
 
+				averageDistanceToNeighbors += distToCurBot;
+				
 				//make a random vector if the other bot is right on top of us
 				if(Utilities.shouldEqualsZero(distToCurBot)) {
 					Vector randomDirVect = Vector.getHorizontalUnitVector(this.getCenterLocation());
@@ -820,7 +824,11 @@ public class Bot extends Rectangle2D.Double {
 					//don't consider this bot
 					continue;
 				} else {
-					curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
+					if(otherBotInfo.size() > FACTOR_ADJUSTMENT_BOT_NUMBER) {
+						curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, FACTOR_ADJUSTMENT_SEPERATION_VALUE);
+					} else {
+						curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
+					}
 				}
 
 				// now add it to the seperation vector
@@ -829,6 +837,8 @@ public class Bot extends Rectangle2D.Double {
 
 			//since there are several other bots, need to divide by the number of bots to end up with an average location
 			botSeperationVector = botSeperationVector.rescaleRatio(1.0/(otherBotInfo.size()));
+			averageDistanceToNeighbors = averageDistanceToNeighbors / otherBotInfo.size();
+			timestepAverageDistanceApartTotal+= averageDistanceToNeighbors;
 
 			//			print("Final sep vect mag = " + seperationVector.getMagnitude());
 
@@ -836,14 +846,6 @@ public class Bot extends Rectangle2D.Double {
 				botSeperationVector = botSeperationVector.rescale(0.0);
 			} else {
 				World.debugSeperationVectors.add(botSeperationVector.rescaleRatio(10.0));
-			}
-
-			//now, scale it up
-			//if there are too many nearby bots, make sure it scales up more than the danger zone repulsion
-			if(otherBotInfo.size() > FACTOR_ADJUSTMENT_BOT_NUMBER) {
-				botSeperationVector = botSeperationVector.rescaleRatio(FACTOR_ADJUSTMENT_SEPERATION_VALUE);
-			} else {
-				botSeperationVector = botSeperationVector.rescaleRatio(SEPERATION_FACTOR);
 			}
 
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
@@ -871,12 +873,8 @@ public class Bot extends Rectangle2D.Double {
 			} else {
 				World.debugRepulsionVectors.add(zoneRepulsionVector.rescaleRatio(10.0));
 			}			
-						
-//			print("Num neighbors = " + otherBotInfo.size() + "\tsep = " + botSeperationVector.getMagnitude() + "\tzone = " + zoneRepulsionVector.getMagnitude());
 
-			//add up the separation vectors
-			//			Vector seperationVector = botSeperationVector.add(zoneRepulsionVector);
-
+			//			print("Num neighbors = " + otherBotInfo.size() + "\tsep = " + botSeperationVector.getMagnitude() + "\tzone = " + zoneRepulsionVector.getMagnitude());
 
 			//we want to move along the sum of these vectors
 			Vector movementVector = botSeperationVector.add(cohesionVector).add(zoneRepulsionVector);
@@ -1031,7 +1029,7 @@ public class Bot extends Rectangle2D.Double {
 			} else {
 				thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape(), z.repulsionScalingFactor());
 			}
-			
+
 			//reverse the vector if we are inside the zone
 			if(z.contains(this.getCenterLocation())) {
 				thisSideContribution = thisSideContribution.rescaleRatio(-1.0);

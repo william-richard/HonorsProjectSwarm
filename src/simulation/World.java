@@ -24,6 +24,7 @@ import util.shapes.LineSegment;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerZone;
+import zones.Fire;
 import zones.SafeZone;
 import zones.Zone;
 
@@ -250,11 +251,10 @@ public class World extends JFrame implements WindowListener {
 			Zone newZone;
 
 			
-			switch(RANDOM_GENERATOR.nextInt(2)) {
+			switch(RANDOM_GENERATOR.nextInt(3)) {
 				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-//				case 2: newZone = new SafeDebris(xPoints, yPoints, 3, allZones.size()); break;
-//				case 3: newZone = new DangerDebris(xPoints, yPoints, 3, allZones.size()); break;
+				case 2: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
 				default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
 			}
 
@@ -349,6 +349,7 @@ public class World extends JFrame implements WindowListener {
 			Bot.timestepZoneRepulsionMagnitudeTotal = 0.0;
 			Bot.timestepVisibleZoneSideTotal = 0.0;
 			Bot.timestepNumVisibleZoneSides = 0;
+			Bot.timestepAverageDistanceApartTotal = 0.0;
 
 			for(Bot b : allBots) {
 				b.doOneTimestep();
@@ -363,6 +364,7 @@ public class World extends JFrame implements WindowListener {
 			
 			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
 			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
+			System.out.println("Average distance between bots = " + (Bot.timestepAverageDistanceApartTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
 			System.out.println("Average zone repulsion vector mag (for bots near zones) = " + (Bot.timestepZoneRepulsionMagnitudeTotal / Bot.timestepBotsRepelledByZones));
 			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
 
