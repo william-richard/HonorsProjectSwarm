@@ -55,7 +55,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS*2;
 	private final double SEPERATION_CURVE_SHAPE = 2.5;
 
-	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 5;
+	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 4;
 	private final double FACTOR_ADJUSTMENT_SEPERATION_VALUE = SEPERATION_FACTOR * 2;
 
 	public static double timestepSeperationMagnitudeTotal;
