@@ -72,12 +72,6 @@ public class Bot extends Rectangle2D.Double {
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
-
-	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
-	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
-	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
-	public final static String CREATE_PATH_MESSAGE = 						"cp";
-
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
 	private boolean LOOK_BOT_DEBUG = false;
@@ -224,6 +218,20 @@ public class Bot extends Rectangle2D.Double {
 		return movementVector;
 	}
 
+	/**
+	 * @return the mySurvivor
+	 */
+	public Survivor getMySurvivor() {
+		return mySurvivor;
+	}
+
+	/**
+	 * @return the mySurvivorClaimTime
+	 */
+	public int getMySurvivorClaimTime() {
+		return mySurvivorClaimTime;
+	}
+
 	public void setCenterLocation(Point2D newCenterLoc) {
 		// need find the new upper-left corner location
 		double cornerX = newCenterLoc.getX() - (DIMENSION / 2.0);
@@ -255,54 +263,6 @@ public class Bot extends Rectangle2D.Double {
 		//		}
 
 		messageBuffer.add(message);
-	}
-
-	private Message constructLocationMessage() {
-		return new Message(this.getThisBotInfo(), 
-				BOT_LOCATION_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + this.getCenterX() + " " + this.getCenterY() + "\n");
-	}
-
-	private Message constructFoundMessage(Survivor foundSurvivor,
-			double surDamageAssessment) {
-		return new Message(this.getThisBotInfo(), 
-				FOUND_SURVIVOR_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
-	}
-
-	private Message constructClaimMessage() {
-		if (mySurvivor == null) {
-			// can't do it - no survivor to claim
-			return null;
-		}
-		return new Message(this.getThisBotInfo(), 
-				CLAIM_SURVIVOR_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
-	}
-
-	private Message constructCreatePathsMessage(SurvivorPath pathToUse) {
-		//make a string representing the path
-		//include the damage of the survivor, and the points in the path
-		//start with the survivor
-		String messageBody = "";
-
-		Survivor pathSurvivor = pathToUse.getSur();
-
-		messageBody += pathSurvivor.getCenterX() + " " + pathSurvivor.getCenterY() + " " + pathSurvivor.getDamage() + "\t";
-
-		//now add the points in the path
-		PathIterator pathit = pathToUse.getPathIterator(null);
-
-		double[] curCoord = new double[6];
-		while(! pathit.isDone()){
-			//get the coordinates of the current point
-			int segType = pathit.currentSegment(curCoord);
-			if(segType == PathIterator.SEG_CLOSE || segType == PathIterator.SEG_CUBICTO || segType == PathIterator.SEG_QUADTO) {
-				throw new IllegalArgumentException("Got a path that has incorrect form");
-			}
-			//add the current point to the string
-			messageBody += " " + curCoord[0] + " " + curCoord[1] + " ";
-			pathit.next();
-		}
-
-		return new Message(this.getThisBotInfo(), CREATE_PATH_MESSAGE, messageBody);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -370,7 +330,7 @@ public class Bot extends Rectangle2D.Double {
 			String messageType = mes.getType();
 
 			//TODO change this to a switch statement
-			if (messageType.equals(BOT_LOCATION_MESSAGE)) {
+			if (messageType.equals(Message.BOT_LOCATION_MESSAGE)) {
 				int botNum = s.nextInt();
 
 				if (botNum == botID) {
@@ -385,7 +345,7 @@ public class Bot extends Rectangle2D.Double {
 				BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
 
 				otherBotInfo.add(newBotInfo);
-			} else if (messageType.equals(FOUND_SURVIVOR_MESSAGE)) {
+			} else if (messageType.equals(Message.FOUND_SURVIVOR_MESSAGE)) {
 				// get all the information off the message
 				int finderID = s.nextInt();
 
@@ -420,7 +380,7 @@ public class Bot extends Rectangle2D.Double {
 
 				// rebroadcast the message if we haven't already
 				broadcastMessage(mes);
-			} else if (messageType.equals(CLAIM_SURVIVOR_MESSAGE)) {
+			} else if (messageType.equals(Message.CLAIM_SURVIVOR_MESSAGE)) {
 				// remember to give up and reset mySurvivor if someone else
 				// finds them first
 				// and maybe rebroadcast our claim message so that they get the
@@ -460,7 +420,7 @@ public class Bot extends Rectangle2D.Double {
 						if (getID() < claimerID) {
 							// I get it
 							// rebroadcast my claim message
-							Message myClaimMessage = constructClaimMessage();
+							Message myClaimMessage = Message.constructClaimMessage(this);
 							if(myClaimMessage != null) {
 								broadcastMessage(myClaimMessage);
 							}
@@ -482,7 +442,7 @@ public class Bot extends Rectangle2D.Double {
 					// rebroadcast their message
 					broadcastMessage(mes);
 				}
-			} else if(messageType.equals(CREATE_PATH_MESSAGE)) {
+			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
 				//read out the survivor
 				Survivor pathSur = new Survivor(s.nextDouble(), s.nextDouble(), s.nextDouble());
 				//read out each of the points
@@ -509,19 +469,19 @@ public class Bot extends Rectangle2D.Double {
 					//compare lengths
 					if(pathWeKnow.getPathLength() < sp.getPathLength()) {
 						//pass on the path we know
-						passOnMessage = constructCreatePathsMessage(pathWeKnow);
+						passOnMessage = Message.constructCreatePathsMessage(this, pathWeKnow);
 					} else {
 						//we want to pass on the new path
 						//it is better
 						knownPaths.remove(pathWeKnow);
 						knownPaths.add(sp);
-						passOnMessage = constructCreatePathsMessage(sp);
+						passOnMessage = Message.constructCreatePathsMessage(this, sp);
 					}
 				} else {
 					//we haven't seen a path to this survivor before
 					//store that we have seen it, and pass it on
 					knownPaths.add(sp);
-					passOnMessage = constructCreatePathsMessage(sp);
+					passOnMessage = Message.constructCreatePathsMessage(this, sp);
 				}
 				if(MESSAGE_BOT_DEBUG) {
 					print("Passing on a path : " + passOnMessage);
@@ -939,7 +899,7 @@ public class Bot extends Rectangle2D.Double {
 		movementVector = v;
 
 		//tell everyone where we are
-		Message locationMessage = constructLocationMessage();
+		Message locationMessage = Message.constructLocationMessage(this);
 		broadcastMessage(locationMessage);
 	}
 
@@ -1116,7 +1076,7 @@ public class Bot extends Rectangle2D.Double {
 
 			// send out a message letting everyone know where the survivor is,
 			// what condition they are in, and how safe the zones is
-			Message message = constructFoundMessage(s, surDamage);
+			Message message = Message.constructFoundMessage(this, s, surDamage);
 
 			broadcastMessage(message);
 
@@ -1144,7 +1104,7 @@ public class Bot extends Rectangle2D.Double {
 
 			// claim the closest one
 			mySurvivor = closestSurvivor;
-			Message message = constructClaimMessage();
+			Message message = Message.constructClaimMessage(this);
 			mySurvivorClaimTime = World.getCurrentTimestep();
 			if(message != null) {
 				broadcastMessage(message);

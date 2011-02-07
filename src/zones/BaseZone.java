@@ -64,7 +64,7 @@ public class BaseZone extends Zone {
 
 			s = new Scanner(mes.getText());
 
-			if(mes.getType().equals(Bot.CREATE_PATH_MESSAGE)) {
+			if(mes.getType().equals(Message.CREATE_PATH_MESSAGE)) {
 				//read the message and add the path it has to our list of paths
 				//TODO really should have a static method (in the Message class?) that does this
 				//TODO message types should be in the Message class along with the construct methods

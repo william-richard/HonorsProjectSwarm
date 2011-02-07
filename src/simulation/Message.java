@@ -1,10 +1,17 @@
 package simulation;
 
+import java.awt.geom.PathIterator;
+
 public class Message {
 	
 	BotInfo sender;
 	String type;
 	String message;
+	
+	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
+	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
+	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
+	public final static String CREATE_PATH_MESSAGE = 						"cp";
 	
 	public Message(BotInfo _sender, String _type, String _message) {
 		sender = _sender;;
@@ -73,5 +80,53 @@ public class Message {
 		} else if (!sender.equals(other.sender))
 			return false;
 		return true;
+	}
+	
+	public static Message constructLocationMessage(Bot sender) {
+		return new Message(sender.getThisBotInfo(), 
+				BOT_LOCATION_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + sender.getCenterX() + " " + sender.getCenterY() + "\n");
+	}
+
+	public static Message constructFoundMessage(Bot sender, Survivor foundSurvivor, double surDamageAssessment) {
+		return new Message(sender.getThisBotInfo(), 
+				FOUND_SURVIVOR_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
+	}
+
+	public static Message constructClaimMessage(Bot sender) {
+		Survivor senderSurvivior = sender.getMySurvivor();
+		if (senderSurvivior == null) {
+			// can't do it - no survivor to claim
+			return null;
+		}
+		return new Message(sender.getThisBotInfo(), 
+				CLAIM_SURVIVOR_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + senderSurvivior.getCenterX() + " " + senderSurvivior.getCenterY() + " " + sender.getMySurvivorClaimTime() + "\n");
+	}
+
+	public static Message constructCreatePathsMessage(Bot sender, SurvivorPath pathToUse) {
+		//make a string representing the path
+		//include the damage of the survivor, and the points in the path
+		//start with the survivor
+		String messageBody = "";
+
+		Survivor pathSurvivor = pathToUse.getSur();
+
+		messageBody += pathSurvivor.getCenterX() + " " + pathSurvivor.getCenterY() + " " + pathSurvivor.getDamage() + "\t";
+
+		//now add the points in the path
+		PathIterator pathit = pathToUse.getPathIterator(null);
+
+		double[] curCoord = new double[6];
+		while(! pathit.isDone()){
+			//get the coordinates of the current point
+			int segType = pathit.currentSegment(curCoord);
+			if(segType == PathIterator.SEG_CLOSE || segType == PathIterator.SEG_CUBICTO || segType == PathIterator.SEG_QUADTO) {
+				throw new IllegalArgumentException("Got a path that has incorrect form");
+			}
+			//add the current point to the string
+			messageBody += " " + curCoord[0] + " " + curCoord[1] + " ";
+			pathit.next();
+		}
+
+		return new Message(sender.getThisBotInfo(), CREATE_PATH_MESSAGE, messageBody);
 	}
 }
