@@ -5,7 +5,6 @@ import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -68,10 +67,8 @@ public class Bot extends Rectangle2D.Double {
 	public static double timestepVisibleZoneSideTotal;
 	public static int timestepNumVisibleZoneSides;
 
-	private final static int SPREAD_OUT_PHASE = 				0;
-	private final static int CREATE_PATHS_PHASE = 				1;
-	private final static int AGGRIGATE_PHASE =					2;
-	private final static int WAITING_TO_BE_TURNED_ON_PHASE = 	3;
+	private final static int WAITING_FOR_ACTIVATION = 			0;
+	private final static int ACTIVATED = 						1;
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
@@ -79,23 +76,13 @@ public class Bot extends Rectangle2D.Double {
 	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
 	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
 	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
-	public final static String ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE = 	"atnpe";
-	public final static String NOT_READY_TO_ADVANCE_MESSAGE = 				"nrta";
-	public final static String ADVANCE_TO_NEXT_PHASE_MESSAGE =				"atnp";
 	public final static String CREATE_PATH_MESSAGE = 						"cp";
-
-	private final int NUM_PREV_LOCATIONS_TO_CONSIDER;
-	private final static double STOP_SPREADING_THRESHOLD = DEFAULT_MAX_VELOCITY / 2.0;
-	private final static double DEFAULT_AVERAGE_LOCATION_VALUE = -1 * java.lang.Double.MAX_VALUE;
-
-	private final int MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
 	private boolean LOOK_BOT_DEBUG = false;
 	private boolean MESSAGE_BOT_DEBUG = false;
 	private boolean MOVE_BOT_DEBUG = false;
-	private boolean SETTLE_DEBUG = false;
 
 	/***************************************************************************
 	 * VARIABLES
@@ -130,17 +117,7 @@ public class Bot extends Rectangle2D.Double {
 	// this is useful, but it might be
 	private int mySurvivorClaimTime;
 	private World world;
-	private int algorithmPhase;
-
-	private int lastMoveToNextPhaseMessageRecievedTime = -1;
-	private int numberOfElectionsStarted = 0;
-	private boolean electionLooksSuccessful = true;
-	private int myElectionStartTime = -1;
-	private HashMap<Integer, Integer> electionLeaderRecord;
-
-	private List<Point2D> previousLocations;
-	private Point2D averagePreviousLocation;
-	private boolean settledOnLocation;
+	private int botMode;
 
 	private boolean startedCreatingMyPath = false;
 	private List<SurvivorPath> knownPaths;
@@ -177,24 +154,15 @@ public class Bot extends Rectangle2D.Double {
 		knownSurvivors = new ArrayList<Survivor>();
 		claimedSurvivors = new ArrayList<Survivor>();
 
-		previousLocations = new ArrayList<Point2D>();
-		NUM_PREV_LOCATIONS_TO_CONSIDER = 100;
-
 		boundingBox = _bounds;
 
 		movementVector = new Vector(this.getCenterLocation(), this
 				.getCenterLocation());
 
-		// start in the spread out phase
-		algorithmPhase = WAITING_TO_BE_TURNED_ON_PHASE;
-
-		settledOnLocation = false;
+		// start deactivaed
+		botMode = WAITING_FOR_ACTIVATION;
 
 		mySurvivor = null;
-
-		MOVE_TO_NEXT_PHASE_TIME_THRESHOLD = _numBots * 2;
-
-		electionLeaderRecord = new HashMap<Integer, Integer>();
 
 		knownPaths = new ArrayList<SurvivorPath>();
 
@@ -282,7 +250,7 @@ public class Bot extends Rectangle2D.Double {
 	 **************************************************************************/
 	public void recieveMessage(Message message) {
 		//if we aren't on, we can't recieve
-		//		if(algorithmPhase == WAITING_TO_BE_TURNED_ON_PHASE) {
+		//		if(botMode == WAITING_TO_BE_TURNED_ON_PHASE) {
 		//			return;
 		//		}
 
@@ -307,32 +275,6 @@ public class Bot extends Rectangle2D.Double {
 		}
 		return new Message(this.getThisBotInfo(), 
 				CLAIM_SURVIVOR_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + mySurvivor.getCenterX() + " " + mySurvivor.getCenterY() + " " + mySurvivorClaimTime + "\n");
-	}
-
-	private Message constructPhaseAdvancementElectionMessage() {
-		numberOfElectionsStarted++;
-		return new Message(this.getThisBotInfo(),
-				ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + " " + numberOfElectionsStarted + "\n");
-	}
-
-	private Message constructNotReadyForPhaseAdvancementMessage(Message electionMessage) {
-		Scanner messageScanner = new Scanner(electionMessage.getText());
-
-		String messageType = electionMessage.getType();
-		if(! messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE)) {
-			throw new IllegalArgumentException("Did not pass an election message to counter");
-		}
-		int starterID = messageScanner.nextInt();
-		int electionNum = messageScanner.nextInt();
-
-		return new Message(this.getThisBotInfo(),
-				NOT_READY_TO_ADVANCE_MESSAGE, starterID + " " + World.getCurrentTimestep() + " " + electionNum + "\n");		
-
-	}
-
-	private Message constructPhaseAdvancementMessage() {
-		return new Message(this.getThisBotInfo(),
-				ADVANCE_TO_NEXT_PHASE_MESSAGE, this.getID() + " " + World.getCurrentTimestep() + "\n");
 	}
 
 	private Message constructCreatePathsMessage(SurvivorPath pathToUse) {
@@ -540,88 +482,6 @@ public class Bot extends Rectangle2D.Double {
 					// rebroadcast their message
 					broadcastMessage(mes);
 				}
-			} else if(messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE) 
-					|| messageType.equals(NOT_READY_TO_ADVANCE_MESSAGE)) {
-
-				//first, update or ignore messages based on our records of who has started what election
-				Integer starterID = new Integer(s.nextInt());
-
-				int sentTime = s.nextInt();
-
-				Integer electionNumber = new Integer(s.nextInt());
-				if(electionLeaderRecord.containsKey(starterID)) {
-					//this sender has started an election before
-					//see what election we last saw them start
-					Integer lastKnownElectionStartedByThisSender = electionLeaderRecord.get(starterID);
-					if(electionNumber < lastKnownElectionStartedByThisSender) {
-						//this message has to do with an election that is already over
-						//ignore it
-						continue;
-					} else if(electionNumber > lastKnownElectionStartedByThisSender){ 
-						//we need to update our records - they have started a new election
-						electionLeaderRecord.put(starterID, electionNumber);
-					}
-				} else {
-					//this is the first election we have seen from this sender
-					//record it and process the message
-					electionLeaderRecord.put(starterID, electionNumber);
-				}
-
-				//now, process the message
-				if (messageType.equals(ADVANCE_TO_NEXT_PHASE_ELECTION_MESSAGE)) { 
-					//first, record that someone is trying to start an election
-					lastMoveToNextPhaseMessageRecievedTime = World.getCurrentTimestep();
-
-					//see if we are ready
-					if(settledOnLocation) {
-						//we're ready
-						//rebroadcast the message
-						broadcastMessage(mes);
-					} else {
-						//we're not ready
-						//respond with a not-ready message
-						Message notReady = constructNotReadyForPhaseAdvancementMessage(mes);
-						broadcastMessage(notReady);
-					}
-				} else if(messageType.equals(NOT_READY_TO_ADVANCE_MESSAGE)) {
-					//see if we started the elecetion
-
-					if(starterID == this.getID()) {
-						//we started the election
-						//see if we are still waiting
-						if(electionNumber == numberOfElectionsStarted) {
-							//we are still waiting for the results
-							//this means the election failed
-							electionLooksSuccessful = false;
-						} else {
-							//we are not still waiting - ignore it
-						}
-					} else {
-						//we did not start this election
-						//pass on the message so the starter eventually gets it
-						broadcastMessage(mes);
-					}
-				}
-
-			} else if(messageType.equals(ADVANCE_TO_NEXT_PHASE_MESSAGE)) {
-				//Someone has decided it is time to move onto the next phase
-				//do so
-				print("Moving onto next phase");
-				algorithmPhase = CREATE_PATHS_PHASE;
-				//tell everyone else to move on too
-				broadcastMessage(mes);
-
-				//also, if we have a claimed survivor, start making a path to them
-				if(mySurvivor != null && !startedCreatingMyPath) {
-					List<Point2D> pointsList = new ArrayList<Point2D>();
-					pointsList.add(this.getCenterLocation());
-					SurvivorPath pathStart = new SurvivorPath(mySurvivor, pointsList, baseZone.getCenterLocation());
-					Message makeAPathMessage = constructCreatePathsMessage(pathStart);
-					broadcastMessage(makeAPathMessage);
-					print("Since we're starting create paths phase, broadcasting create paths message");
-					print("Message reads: " + makeAPathMessage);
-					startedCreatingMyPath = true;
-				}
 			} else if(messageType.equals(CREATE_PATH_MESSAGE)) {
 				//read out the survivor
 				Survivor pathSur = new Survivor(s.nextDouble(), s.nextDouble(), s.nextDouble());
@@ -717,19 +577,6 @@ public class Bot extends Rectangle2D.Double {
 			haveMoved = true;
 		}
 
-		if(settledOnLocation || algorithmPhase == CREATE_PATHS_PHASE) { 
-			//don't move unless we aren't in communication range with anyone else
-			if(otherBotInfo.size() <= 0) {
-				//need to move back towards home base to get into communication range of more other bots
-				Vector baseVect = new Vector(this.getCenterLocation(), baseZone.getCenterLocation());
-				actuallyMoveAlong(baseVect);
-			} else {
-				//don't move
-				actuallyMoveAlong(new Vector(this.getCenterLocation(), this.getCenterLocation()));
-			}
-			haveMoved = true;
-		}
-
 		// 1) See if we can detect a survivor, first by sight and then by sound
 		// head towards them if we can
 		if (!haveMoved) {
@@ -797,7 +644,7 @@ public class Bot extends Rectangle2D.Double {
 
 			Vector botSeperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 			double averageDistanceToNeighbors = 0.0;
-			
+
 			for (int i = 0; i < otherBotInfo.size(); i++) {
 				BotInfo bi = otherBotInfo.get(i);
 
@@ -806,7 +653,7 @@ public class Bot extends Rectangle2D.Double {
 				double distToCurBot = this.getCenterLocation().distance(curBotLoc);
 
 				averageDistanceToNeighbors += distToCurBot;
-				
+
 				//make a random vector if the other bot is right on top of us
 				if(Utilities.shouldEqualsZero(distToCurBot)) {
 					Vector randomDirVect = Vector.getHorizontalUnitVector(this.getCenterLocation());
@@ -1305,134 +1152,6 @@ public class Bot extends Rectangle2D.Double {
 		}
 	}
 
-	private void updateAveragePreviousLocation() {
-		// basically, we're going to take simple moving average of the previous
-		// moves
-		// start by storing the current location
-		double avgX, avgY;
-
-		// if(SETTLE_DEBUG) {
-		// print("Considering " + previousLocations.size() +
-		// " previous locations");
-		// print(previousLocations.toString());
-		// }
-
-		if (previousLocations.size() < NUM_PREV_LOCATIONS_TO_CONSIDER) {
-			previousLocations.add(0, this.getCenterLocation());
-			// since we don't have a full dataset yet, don't take an average
-
-			avgX = DEFAULT_AVERAGE_LOCATION_VALUE;
-			avgY = DEFAULT_AVERAGE_LOCATION_VALUE;
-		} else {
-			// add the new value
-			previousLocations.add(0, this.getCenterLocation());
-
-			// if this is the first time we are calculating the average, need to
-			// calculate it from scratch
-			if (averagePreviousLocation.getX() == DEFAULT_AVERAGE_LOCATION_VALUE
-					&& averagePreviousLocation.getY() == DEFAULT_AVERAGE_LOCATION_VALUE) {
-				// remove the oldest value
-				previousLocations.remove(NUM_PREV_LOCATIONS_TO_CONSIDER);
-
-				// calculate the average value of the values we have
-				double xSum = 0, ySum = 0;
-				for (Point2D curPoint : previousLocations) {
-					xSum += curPoint.getX();
-					ySum += curPoint.getY();
-				}
-
-				avgX = (xSum / NUM_PREV_LOCATIONS_TO_CONSIDER);
-				avgY = (ySum / NUM_PREV_LOCATIONS_TO_CONSIDER);
-			} else {
-				// already have an average value
-				// do the whole moving average thing
-				double oldAvgX = averagePreviousLocation.getX();
-				double oldAvgY = averagePreviousLocation.getY();
-
-				Point2D oldestPoint = previousLocations
-				.remove(NUM_PREV_LOCATIONS_TO_CONSIDER);
-				Point2D newestPoint = previousLocations.get(0);
-				// subtract the oldest point's contribution to the average
-				// and add the newest point's contribution to the average
-				avgX = oldAvgX
-				- (oldestPoint.getX() / NUM_PREV_LOCATIONS_TO_CONSIDER)
-				+ (newestPoint.getX() / NUM_PREV_LOCATIONS_TO_CONSIDER);
-				avgY = oldAvgY
-				- (oldestPoint.getY() / NUM_PREV_LOCATIONS_TO_CONSIDER)
-				+ (newestPoint.getY() / NUM_PREV_LOCATIONS_TO_CONSIDER);
-			}
-		}
-
-		// make the point out of the average values
-		averagePreviousLocation = new Point2D.Double(avgX, avgY);
-	}
-
-	private void determineIfSettledOnLocation() {		
-		// first, update our average location
-		updateAveragePreviousLocation();
-
-		// now, see if the average location is within the threshold of where we
-		// are
-		// that determines if we have settled on a location
-		if (SETTLE_DEBUG) {
-			print("I am at '"
-					+ this.getCenterLocation()
-					+ "' average location is '"
-					+ averagePreviousLocation
-					+ "' distance between them is '"
-					+ averagePreviousLocation
-					.distance(this.getCenterLocation()) + "'");
-		}
-
-		settledOnLocation = averagePreviousLocation.distance(this
-				.getCenterLocation()) < STOP_SPREADING_THRESHOLD;
-	}
-
-	private void handlePhaseElectionIfNeeded() {
-		//see if we are waiting on results
-		if(myElectionStartTime > 0) {
-			//see if the election is over
-			//first, check if we have gotten a no back
-			if(! electionLooksSuccessful) {
-				//the election failed
-				//start another one in a while
-				//basically, to do this, set the lastMoveToNextPhaseMessageRecievedTime such that it will start when we want it to
-				//i.e. set it at MOVE_TO_NEXT_PHASE_TIME_THRESHOLD ago
-				//so that we start before anyone else does (hopefully)
-				lastMoveToNextPhaseMessageRecievedTime = World.getCurrentTimestep() - MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
-				myElectionStartTime = -1;
-			} else {
-				//see if the election is over
-				int timeToEndElection = myElectionStartTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD;
-				if(World.getCurrentTimestep() >= timeToEndElection) {
-					//the election is over, and no one has objected
-					//broadcast that we should move on
-					Message moveOnMessage = constructPhaseAdvancementMessage();
-					broadcastMessage(moveOnMessage);
-				}
-			}
-		}
-		else if(lastMoveToNextPhaseMessageRecievedTime > 0) {
-			//see if we need to start an election
-			int timeToStartElection = lastMoveToNextPhaseMessageRecievedTime + MOVE_TO_NEXT_PHASE_TIME_THRESHOLD*2;
-			if(World.getCurrentTimestep() >= timeToStartElection) {
-				startElection();
-			}
-		} else {
-			//no election has been started
-			//start it myself
-			startElection();
-		}
-	}
-
-	private void startElection() {
-		Message electionStartMesasge = constructPhaseAdvancementElectionMessage();
-		broadcastMessage(electionStartMesasge);
-		myElectionStartTime = World.getCurrentTimestep();
-		electionLooksSuccessful = true;
-		print("Starting move on to next phase election");
-	}
-
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
@@ -1448,16 +1167,16 @@ public class Bot extends Rectangle2D.Double {
 		// first, read any messages that have come in, and take care of them
 		readMessages();
 
-		switch (algorithmPhase) {
-			case (WAITING_TO_BE_TURNED_ON_PHASE):
+		switch (botMode) {
+			case (WAITING_FOR_ACTIVATION):
 				//with some probability, we'll be turned on this timestep
 				//if that probability is right, turn on and move to the next phase
 				if(NUM_GEN.nextDouble() < TURNED_ON_THIS_TIMESTEP_PROB) {
-					algorithmPhase = SPREAD_OUT_PHASE;
+					botMode = ACTIVATED;
 				}
 
 			break;
-			case (SPREAD_OUT_PHASE) :
+			case (ACTIVATED) :
 				// now try to move, based on the move rules.
 				move();
 			// if we have not already claimed a survivor, find out if we can see any survivors
@@ -1466,27 +1185,10 @@ public class Bot extends Rectangle2D.Double {
 				findAndAssesSurvivor();
 			}
 
-			// decide if we should stop moving
-			determineIfSettledOnLocation();
-
-			if(settledOnLocation) {
-				//handle starting an election to move onto the next phase if needbe
-				handlePhaseElectionIfNeeded();
-			}
 
 			break;
-			case (CREATE_PATHS_PHASE) :
-
-				break;
-			case (AGGRIGATE_PHASE) :
-
-				break;
 			default :
-				/*
-				 * TODO fix this so that it asks neighbor what phase it is
-				 * shouldn't happen regardless, so this doesn't really matter
-				 */
-				algorithmPhase = WAITING_TO_BE_TURNED_ON_PHASE;
+				botMode = WAITING_FOR_ACTIVATION;
 				break;
 		}
 

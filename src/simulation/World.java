@@ -20,7 +20,6 @@ import java.util.Random;
 import javax.swing.JFrame;
 
 import util.Utilities;
-import util.shapes.LineSegment;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerZone;
