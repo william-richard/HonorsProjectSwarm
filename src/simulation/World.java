@@ -10,6 +10,7 @@ import java.awt.Stroke;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
 import java.awt.geom.Area;
+import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
@@ -94,7 +95,7 @@ public class World extends JFrame implements WindowListener {
 
 		//add all the default zones
 		addAllSetZones();
-	
+
 		//fill in the rest randomly
 		fillInZones();
 
@@ -167,24 +168,24 @@ public class World extends JFrame implements WindowListener {
 	private void addAllSetZones() {
 		//start with the base zone
 		addBaseZone();
-		
+
 		//the rest are not as necessary
 		//put some triangles of safe zones around the base zone
 		int[] xPointsSafe = {225, 250, 275};
 		int[] yPointsSafe = {225, 200, 225};
 		SafeZone safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
 		allZones.add(safe);
-		
+
 		xPointsSafe = new int[] {275, 300, 275};
 		yPointsSafe = new int[] {225, 250, 275};
 		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
 		allZones.add(safe);
-		
+
 		xPointsSafe = new int[] {275, 250, 225};
 		yPointsSafe = new int[] {275, 300, 275};
 		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
 		allZones.add(safe);
-		
+
 		xPointsSafe = new int[] {225, 200, 225};
 		yPointsSafe = new int[] {225, 250, 275};
 		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
@@ -192,7 +193,7 @@ public class World extends JFrame implements WindowListener {
 
 
 	}
-	
+
 	private void addBaseZone() {
 		int[] xPointsBase = {225, 275, 275, 225};
 		int[] yPointsBase = {225, 225, 275, 275};
@@ -200,8 +201,8 @@ public class World extends JFrame implements WindowListener {
 		allZones.add(homeBase);
 		this.homeBase = homeBase;
 	}
-	
-	
+
+
 	//TODO combine same type zones?
 
 	private void fillInZones() {
@@ -242,15 +243,16 @@ public class World extends JFrame implements WindowListener {
 			Point p1 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
 			Point p2 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
 			Point p3 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
-			
+
 			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
 			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
 
 			//make a zones out of them
 			Zone newZone;
 
-			
+
 			switch(RANDOM_GENERATOR.nextInt(3)) {
+				//TODO Add some logic? Danger around fire?
 				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
 				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
 				case 2: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
@@ -273,12 +275,12 @@ public class World extends JFrame implements WindowListener {
 				zoneVerticies.add(p3);
 				continue;
 			}
-			
+
 			//it checks out - add it
 			allZones.add(newZone);
 			//remove it's area from the unfilled area
 			unfilledArea.subtract(new Area(newZone));
-			
+
 			//TODO find a way to combine same-type zones that share sides
 
 			//only put points back into the array if they are still in the unfilled area
@@ -340,7 +342,7 @@ public class World extends JFrame implements WindowListener {
 			//do all the bots
 			//print out percent checkpoints
 			double lastPercentCheckpoint = 0.0;
-			
+
 			Bot.timestepCohesionMagnitudeTotal = 0.0;
 			Bot.timestepSeperationMagnitudeTotal = 0.0;
 			Bot.timestepCountOfBotsAffectedBySepOrCohesion = 0;
@@ -360,7 +362,7 @@ public class World extends JFrame implements WindowListener {
 			}
 			System.out.println("");
 			System.out.println("Done with bots");
-			
+
 			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
 			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
 			System.out.println("Average distance between bots = " + (Bot.timestepAverageDistanceApartTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
@@ -441,14 +443,14 @@ public class World extends JFrame implements WindowListener {
 
 			g2d.fill(curSur);
 		}
-		
+
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
 			Bot curBot = allBotSnapshot.next();
 
-//			g2d.setColor(BOT_COLOR);
-//			g2d.fill(curBot);
+			//			g2d.setColor(BOT_COLOR);
+			//			g2d.fill(curBot);
 
 			if(DRAW_BOT_RADII) {
 				g2d.setColor(AUDIO_RANGE_COLOR);
@@ -461,8 +463,8 @@ public class World extends JFrame implements WindowListener {
 				g2d.draw(curBot.getBroadcastArea());
 			}
 
-//			g2d.setColor(BOT_LABEL_COLOR);
-//			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
+			//			g2d.setColor(BOT_LABEL_COLOR);
+			//			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 
 			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
 			//only draw it if it has non-zero length
@@ -477,31 +479,35 @@ public class World extends JFrame implements WindowListener {
 
 			g2d.setColor(BOT_COLOR);
 			g2d.fill(curBot);
-			
+
 			g2d.setColor(BOT_LABEL_COLOR);
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 		}
-		
-		
+
+
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
-		//only basezones have survivorPaths
-		for(Zone z : allZones) {
-			//skip everything that isn't a BaseZone
-			if(! (z instanceof BaseZone)) continue;
 
-			System.out.println("Got a base zone - printing out it's paths");
-			
-			BaseZone bz = (BaseZone) z;
-
-			//draw all of is paths
-			List<SurvivorPath> survivorPaths= bz.getBestSurvivorPaths();
+		//go through each of the bots, looking at their known complete paths
+		//keep a list of one's we've drawn, so we don't draw more than once
+		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
+		for(Bot b : allBots) {
+			//draw all of it's paths
+			List<SurvivorPath> survivorPaths = b.getKnownCompletePaths();
 
 			for(SurvivorPath sp : survivorPaths) {
-				g2d.draw(sp);
+				if(! pathsDrawn.contains(sp)) {
+					//draw each segment in the path
+					if(sp.getPoints().size() > 1) {
+						for(int i = 1; i < sp.getPoints().size(); i++) {
+							g2d.draw(new Line2D.Double(sp.getPoints().get(i-1).getCenterLocation(), sp.getPoints().get(i).getCenterLocation()));
+						}
+					}
+					g2d.draw(new Line2D.Double(sp.getPoints().get(sp.getPoints().size() - 1).getCenterLocation(), sp.getEndPoint()));
+					pathsDrawn.add(sp);
+				}
 			}
-
 		}
 
 		if(WORLD_DEBUG) {
@@ -512,18 +518,18 @@ public class World extends JFrame implements WindowListener {
 				g2d.draw(s);
 			}
 			debugShapesToDraw.clear();
-			
-//			g2d.setColor(Color.red);
-//			for(Shape s : debugSeperationVectors) {
-//				g2d.draw(s);
-//			}
-//			debugSeperationVectors.clear();
-//			
-//			g2d.setColor(Color.blue);
-//			for(Shape s : debugRepulsionVectors) {
-//				g2d.draw(s);
-//			}
-//			debugRepulsionVectors.clear();
+
+			//			g2d.setColor(Color.red);
+			//			for(Shape s : debugSeperationVectors) {
+			//				g2d.draw(s);
+			//			}
+			//			debugSeperationVectors.clear();
+			//			
+			//			g2d.setColor(Color.blue);
+			//			for(Shape s : debugRepulsionVectors) {
+			//				g2d.draw(s);
+			//			}
+			//			debugRepulsionVectors.clear();
 		}
 
 

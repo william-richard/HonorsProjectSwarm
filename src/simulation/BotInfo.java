@@ -7,21 +7,19 @@ public class BotInfo {
 
 	private int botNum;
 	private Point2D location;
-	private int zoneAssessment;
-
+	
 	public BotInfo(int _botNum) {
 		botNum = _botNum;
 		location = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
 	}
-
-	public BotInfo(int _botNum, double _x, double _y) {
-		this(_botNum);
-		location = new Point2D.Double(_x, _y);
+	
+	public BotInfo(int _botNum, Point2D _loc) {
+		botNum = _botNum;
+		location = _loc;
 	}
 
-	public BotInfo(int _botNum, double _x, double _y, int _zoneAssessment) {
-		this(_botNum, _x, _y);
-		zoneAssessment = _zoneAssessment;
+	public BotInfo(int _botNum, double _x, double _y) {
+		this(_botNum, new Point2D.Double(_x, _y));
 	}
 
 	public BotInfo(String str) {
@@ -36,17 +34,17 @@ public class BotInfo {
 		//get the x and y
 		double x = strScan.nextDouble();
 		double y = strScan.nextDouble();
-		//skip the :
-		strScan.skip(":");
-		//get the zone assessment
-		int _zoneAssessment = strScan.nextInt();
 		//all done store it 
 		botNum = _botNum;
 		location = new Point2D.Double(x,y);
-		zoneAssessment = _zoneAssessment;
 
 	}
 
+	public BotInfo(BotInfo i) {
+		//just to be 100% sure it copies when using the constructor
+		this(i.getBotID(), i.getCenterX(), i.getCenterY());
+	}
+	
 	/**
 	 * @return the botNum
 	 */
@@ -73,10 +71,6 @@ public class BotInfo {
 	 */
 	public Point2D getCenterLocation() {
 		return location;
-	}
-
-	public int getZoneAssessment() {
-		return zoneAssessment;
 	}
 
 	public void merge(BotInfo newInfo) {
@@ -125,6 +119,6 @@ public class BotInfo {
 
 	@Override
 	public String toString() {
-		return "[ " + botNum + " : " + location.getX() + " " + location.getY() + " : " + zoneAssessment + " ]";
+		return "[ " + botNum + " : " + location.getX() + " " + location.getY() + " ]";
 	}
 }

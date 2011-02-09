@@ -1,47 +1,52 @@
 package simulation;
-import java.awt.geom.Path2D;
 import java.awt.geom.Point2D;
+import java.util.ArrayList;
 import java.util.List;
 
 
-public class SurvivorPath extends Path2D.Double {
+public class SurvivorPath {
 
+	//TODO remove "point" terminology from this class
+	
 	private static final long serialVersionUID = 269945074800423928L;
 
 	private double pathLength;
 	private Survivor sur;
+	private ArrayList<BotInfo> points;
+	private Point2D endPoint;
+	private boolean complete;
 
-	public SurvivorPath(Survivor _sur, List<Point2D> pathPoints, Point2D endPoint) {
+	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, boolean _complete) {
 		super();
-		sur = _sur;
-		//now, construct the path
-		//path will end up looking the same if we start at the end or at the start
-		//for simplicity, start at the end
-		this.moveTo(endPoint.getX(), endPoint.getY());
-		//now, go through the rest of the points in reverse
-		//should always have at least 1 point in the rest of the path
-		//i.e. we should always have at least a start point and an end point
 
-		for(int i = pathPoints.size() - 1; i >= 0; i--) {
-			this.lineTo(pathPoints.get(i).getX(), pathPoints.get(i).getY());
+		sur = _sur;
+		complete = _complete;
+		points = new ArrayList<BotInfo>();
+		endPoint = _endPoint;
+		
+		//want to clone the individual points, to make sure we don't have any wrong pointers - need to do a loop
+		for(BotInfo bot : _pathPoints) {
+			points.add(new BotInfo(bot));
 		}
+
 		//calculate the path length
-		pathLength = 0.0;
-		if(pathPoints.size() == 0) {
-			//SHOULD never happen
-			pathLength = 0;
-		} else if(pathPoints.size() == 1) {
-			pathLength = pathPoints.get(0).distance(endPoint);
-		} else {
-			for(int i = 1 ; i < pathPoints.size(); i++) {
-				pathLength += pathPoints.get(i).distance(pathPoints.get(i-1));
-			}
-			pathLength += pathPoints.get(pathPoints.size()-1).distance(endPoint);
-		}
+		recalculatePathLength();
+	}
+	
+	public SurvivorPath(SurvivorPath _original) {
+		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.isComplete());
 	}
 
-	public SurvivorPath(Survivor _sur, List<Point2D> pathPoints) {
-		this(_sur, pathPoints.subList(0, pathPoints.size() - 1), pathPoints.get(pathPoints.size() - 1));
+	private void recalculatePathLength() {
+		pathLength = 0.0;
+		//start by adding up all the distances between bots
+		if(points.size() > 1) {
+			for(int i = 1; i < points.size(); i++) {
+				pathLength += points.get(i).getCenterLocation().distance(points.get(i-1).getCenterLocation());
+			}
+		}
+		//add the distance from the last point to the end point
+		pathLength += points.get(points.size() - 1).getCenterLocation().distance(endPoint);
 	}
 
 	public double getPathLength() {
@@ -52,8 +57,38 @@ public class SurvivorPath extends Path2D.Double {
 		return sur;
 	}
 
+	/**
+	 * @return the points
+	 */
+	public ArrayList<BotInfo> getPoints() {
+		return points;
+	}
 
+	/**
+	 * @return the endPoint
+	 */
+	public Point2D getEndPoint() {
+		return endPoint;
+	}
 
+	/**
+	 * @return the complete
+	 */
+	public boolean isComplete() {
+		return complete;
+	}
+
+	/**
+	 * @param complete the complete to set
+	 */
+	public void setComplete(boolean complete) {
+		this.complete = complete;
+	}
+	
+	public void addPoint(BotInfo pointToAdd) {
+		points.add(pointToAdd);
+		recalculatePathLength();
+	}
 
 	/* (non-Javadoc)
 	 * @see java.lang.Object#hashCode()
@@ -62,6 +97,13 @@ public class SurvivorPath extends Path2D.Double {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + (complete ? 1231 : 1237);
+		result = prime * result
+				+ ((endPoint == null) ? 0 : endPoint.hashCode());
+		long temp;
+		temp = Double.doubleToLongBits(pathLength);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result + ((points == null) ? 0 : points.hashCode());
 		result = prime * result + ((sur == null) ? 0 : sur.hashCode());
 		return result;
 	}
@@ -78,11 +120,31 @@ public class SurvivorPath extends Path2D.Double {
 		if (!(obj instanceof SurvivorPath))
 			return false;
 		SurvivorPath other = (SurvivorPath) obj;
+		if (complete != other.complete)
+			return false;
+		if (endPoint == null) {
+			if (other.endPoint != null)
+				return false;
+		} else if (!endPoint.equals(other.endPoint))
+			return false;
+		if (Double.doubleToLongBits(pathLength) != Double
+				.doubleToLongBits(other.pathLength))
+			return false;
+		if (points == null) {
+			if (other.points != null)
+				return false;
+		} else if (!points.equals(other.points))
+			return false;
 		if (sur == null) {
 			if (other.sur != null)
 				return false;
 		} else if (!sur.equals(other.sur))
 			return false;
 		return true;
+	}
+	
+	@Override
+	public String toString() {
+		return sur + " : " + points + " : " + endPoint + " : length = " + pathLength + " : " + (complete ? " complete" : "NOT complete");
 	}
 }

@@ -1,7 +1,6 @@
 package simulation;
 
 import java.awt.Shape;
-import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
@@ -54,6 +53,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS*2;
 	private final double SEPERATION_CURVE_SHAPE = 2.5;
 
+	//TODO danger zone factor adjustment threshold to being if the closest neighbor is too close
 	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 4;
 	private final double FACTOR_ADJUSTMENT_SEPERATION_VALUE = SEPERATION_FACTOR * 2;
 
@@ -71,6 +71,10 @@ public class Bot extends Rectangle2D.Double {
 	private final static int ACTIVATED = 						1;
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
+
+	private final static double DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH = 1.0;
+	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
+
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -114,7 +118,9 @@ public class Bot extends Rectangle2D.Double {
 	private int botMode;
 
 	private boolean startedCreatingMyPath = false;
-	private List<SurvivorPath> knownPaths;
+	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
+
+	private List<SurvivorPath> knownCompletePaths;
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -158,7 +164,7 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		knownPaths = new ArrayList<SurvivorPath>();
+		knownCompletePaths = new ArrayList<SurvivorPath>();
 
 		// for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
@@ -209,8 +215,8 @@ public class Bot extends Rectangle2D.Double {
 		return botID;
 	}
 
-	public BotInfo getThisBotInfo() {
-		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), this.zoneAssesment);
+	public BotInfo getBotInfo() {
+		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY());
 	}
 
 
@@ -223,6 +229,13 @@ public class Bot extends Rectangle2D.Double {
 	 */
 	public Survivor getMySurvivor() {
 		return mySurvivor;
+	}
+
+	/**
+	 * @return the knownCompletePaths
+	 */
+	public List<SurvivorPath> getKnownCompletePaths() {
+		return knownCompletePaths;
 	}
 
 	/**
@@ -292,25 +305,6 @@ public class Bot extends Rectangle2D.Double {
 			}
 			b.recieveMessage(mes);
 		}
-
-		// also, send it to any BaseZones
-		List<Zone> nearbyZones = (List<Zone>) Utilities
-		.findAreaIntersectionsInList(broadcastRange, World.allZones);
-
-		for (Zone z : nearbyZones) {
-			// skip non-BaseZones
-			if (!(z instanceof BaseZone))
-				continue;
-
-			// send messages to those basezones
-			BaseZone bz = (BaseZone) z;
-
-			try {
-				bz.recieveMessage(mes);
-			} catch (InterruptedException e) {
-			}
-
-		}
 	}
 
 	private void readMessages() {
@@ -322,6 +316,7 @@ public class Bot extends Rectangle2D.Double {
 		// bots
 
 		for (Message mes : messageBuffer) {
+
 			s = new Scanner(mes.getText());
 
 			if (!s.hasNext())
@@ -329,7 +324,6 @@ public class Bot extends Rectangle2D.Double {
 
 			String messageType = mes.getType();
 
-			//TODO change this to a switch statement
 			if (messageType.equals(Message.BOT_LOCATION_MESSAGE)) {
 				int botNum = s.nextInt();
 
@@ -443,50 +437,78 @@ public class Bot extends Rectangle2D.Double {
 					broadcastMessage(mes);
 				}
 			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
-				//read out the survivor
-				Survivor pathSur = new Survivor(s.nextDouble(), s.nextDouble(), s.nextDouble());
-				//read out each of the points
-				List<Point2D> pathPoints = new ArrayList<Point2D>();
-				while(s.hasNextDouble()) {
-					Point2D nextPathPoint = new Point2D.Double(s.nextDouble(), s.nextDouble());
-					pathPoints.add(nextPathPoint);
+
+				if(MESSAGE_BOT_DEBUG) {
+					print("Got path message " + mes);
 				}
 
-				//add our point to the path if it isn't already there
-				//not at the end, but one before the end
-				if(! pathPoints.contains(this.getCenterLocation())) {
-					pathPoints.add(pathPoints.size() - 2, this.getCenterLocation());
-				}
-
-
-				//make a path out of it
-				SurvivorPath sp = new SurvivorPath(pathSur, pathPoints);
+				//remove the survivor path attachment
+				SurvivorPath sp = new SurvivorPath((SurvivorPath) mes.getAttachment(0));
 
 				//see how it compares to what path we know of that is best for this survivor
-				Message passOnMessage;
-				if(knownPaths.contains(sp)) {
-					SurvivorPath pathWeKnow = knownPaths.get(knownPaths.indexOf(sp));
-					//compare lengths
-					if(pathWeKnow.getPathLength() < sp.getPathLength()) {
-						//pass on the path we know
-						passOnMessage = Message.constructCreatePathsMessage(this, pathWeKnow);
+
+				Message passOnMessage = null;
+				if(sp.isComplete()) {
+					//if it is complete, see if we have a complete path to this survivor already
+					SurvivorPath knownPathToThisSurvivor = null;
+					for(SurvivorPath curKnownPath : knownCompletePaths) {
+						if(curKnownPath.getSur().equals(sp.getSur())) {
+							knownPathToThisSurvivor = curKnownPath;
+							break;
+						}
+					}
+					if(knownPathToThisSurvivor != null) {
+						//see if the path we have is the same that we just got
+						if(knownPathToThisSurvivor.equals(sp)) {
+							//we know about this path already, and it is the best we've heard - don't rebroadcast
+						} else {
+							//the new path may be better or worse than the one we have - see which it is
+							if(knownPathToThisSurvivor.getPathLength() > sp.getPathLength()) {
+								//the new one is better is better
+								passOnMessage = Message.constructCreatePathsMessage(this, sp);
+								knownCompletePaths.remove(knownPathToThisSurvivor);
+								knownCompletePaths.add(new SurvivorPath(sp));
+							} else {
+								//our's is better
+								passOnMessage = Message.constructCreatePathsMessage(this, knownPathToThisSurvivor);
+							}
+						}
 					} else {
-						//we want to pass on the new path
-						//it is better
-						knownPaths.remove(pathWeKnow);
-						knownPaths.add(sp);
+						//we have not heard of this path before
+						//add it to our list, and pass on info about it
+						knownCompletePaths.add(new SurvivorPath(sp));
 						passOnMessage = Message.constructCreatePathsMessage(this, sp);
 					}
 				} else {
-					//we haven't seen a path to this survivor before
-					//store that we have seen it, and pass it on
-					knownPaths.add(sp);
-					passOnMessage = Message.constructCreatePathsMessage(this, sp);
+					//the path we just got is not complete
+
+					//make our changes to it, and pass it on
+
+					//first, make sure we have not already contributed to this path
+					//if we have, we should not do anything more with it
+					if(sp.getPoints().contains(this.getBotInfo())) {
+						continue;
+					}
+					//make a new version
+					SurvivorPath ourVersion = new SurvivorPath(sp);
+
+					//see if we are in the baseZone, i.e. if it should be complete
+					if(baseZone.contains(this.getCenterLocation())) {
+						ourVersion.setComplete(true);
+					}
+					//add our current location to the path
+					ourVersion.addPoint(this.getBotInfo());
+
+					//broadcast our version of the path
+					passOnMessage = Message.constructCreatePathsMessage(this, ourVersion);
 				}
-				if(MESSAGE_BOT_DEBUG) {
-					print("Passing on a path : " + passOnMessage);
+
+				if(passOnMessage != null) {
+					if(MESSAGE_BOT_DEBUG) {
+						print("Passing on a path : " + passOnMessage);
+					}
+					broadcastMessage(passOnMessage);
 				}
-				broadcastMessage(passOnMessage);
 			} else {
 				continue; // this else matches up to figuring out what message type we have
 			}
@@ -811,7 +833,6 @@ public class Bot extends Rectangle2D.Double {
 		Vector thisSideContribution;
 		int numContributingSides = 0;
 
-		//TODO I think this isn't normalized if we consider more than one side - do we maybe just want to consider the closest side or the closest midpoint?
 		for(LineSegment s : dzSides) {
 			//get the part of the segment that we can see, since that is the only part that should be exerting a force
 			visibleSegment = this.getVisibleArea().getLineIntersectionSegment(s);
@@ -831,8 +852,8 @@ public class Bot extends Rectangle2D.Double {
 			//calculate the force from this side and add it to the net repulsion from the zone
 			if(this.getCenterLocation().distance(visSegMidpoint) < z.repulsionMinDist()) {
 				//distance too small
-				//just have a vector of size 1 pointing away from the midpoint
-				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0);
+				//just have a vector of maximum size pointing away from the midpoint
+				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0 * z.repulsionScalingFactor());
 			} else {
 				thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape(), z.repulsionScalingFactor());
 			}
@@ -1112,15 +1133,40 @@ public class Bot extends Rectangle2D.Double {
 		}
 	}
 
+	private void handlePathToMySurvivor() {
+		//double check that we have a survivior
+		if(mySurvivor == null) return;
+
+		//what we do depends on if we've already initiated creating our survivor's path
+		//TODO after some time, we should do this again to see if paths change
+		if(! startedCreatingMyPath || numTimestepsToNextPathCreation == 0) {
+			//see if we are close to them
+			if(this.getCenterLocation().distance(mySurvivor.getCenterLocation()) <= DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH) {
+				print("Starting to make a path to my survivor");
+				//start making the path
+				startedCreatingMyPath = true;
+
+				List<BotInfo> pointList = new ArrayList<BotInfo>();
+				pointList.add(this.getBotInfo());
+
+				SurvivorPath initialPath = new SurvivorPath(mySurvivor, pointList, baseZone.getCenterLocation(), baseZone.contains(this.getCenterLocation()));
+				broadcastMessage(Message.constructCreatePathsMessage(this, initialPath));
+
+				numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
+			}
+
+		} else { //we have already started creating the path to our survivor
+			numTimestepsToNextPathCreation--;
+		}
+
+	}
+
+
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
 			System.out.flush();
 		}
-	}
-
-	private void print(int message) {
-		this.print("" + message);
 	}
 
 	public void doOneTimestep() {
@@ -1143,6 +1189,9 @@ public class Bot extends Rectangle2D.Double {
 			// TODO if they have heard a survivor, check it out for a few steps
 			if (mySurvivor == null) {
 				findAndAssesSurvivor();
+			} else {
+				//if we are close enough to them, we should start creating a path to the survivor
+				handlePathToMySurvivor();
 			}
 
 

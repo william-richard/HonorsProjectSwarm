@@ -1,24 +1,31 @@
 package simulation;
 
-import java.awt.geom.PathIterator;
+import java.util.ArrayList;
 
 public class Message {
 	
-	BotInfo sender;
-	String type;
-	String message;
+	private BotInfo sender;
+	private String type;
+	private String message;
+	private ArrayList<Object> attachments;
 	
 	public final static String BOT_LOCATION_MESSAGE = 						"bloc";
 	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
 	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
 	public final static String CREATE_PATH_MESSAGE = 						"cp";
 	
-	public Message(BotInfo _sender, String _type, String _message) {
+	public Message(BotInfo _sender, String _type, String _message, ArrayList<Object> _attachments) {
 		sender = _sender;;
 		type = _type;
 		message = _message;
+		attachments = _attachments;
 	}
-
+	
+	
+	public Message(BotInfo _sender, String _type, String _message) {
+		this(_sender, _type, _message, null);
+	}
+	
 	/**
 	 * @return the type
 	 */
@@ -40,9 +47,16 @@ public class Message {
 		return message;
 	}
 	
+	public Object getAttachment(int index) {
+		if(index < 0 || index >= attachments.size()) {
+			throw new IndexOutOfBoundsException("Trying to get attachment with invalid index");
+		}
+		return attachments.get(index);
+	}
+	
 	@Override
 	public String toString() {
-		return sender + "\t" + type + "\t'" + message + "'";
+		return sender + "\t" + type + "\t'" + message + "' " + attachments;
 	}
 
 	/* (non-Javadoc)
@@ -83,12 +97,12 @@ public class Message {
 	}
 	
 	public static Message constructLocationMessage(Bot sender) {
-		return new Message(sender.getThisBotInfo(), 
+		return new Message(sender.getBotInfo(), 
 				BOT_LOCATION_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + sender.getCenterX() + " " + sender.getCenterY() + "\n");
 	}
 
 	public static Message constructFoundMessage(Bot sender, Survivor foundSurvivor, double surDamageAssessment) {
-		return new Message(sender.getThisBotInfo(), 
+		return new Message(sender.getBotInfo(), 
 				FOUND_SURVIVOR_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
 	}
 
@@ -98,35 +112,17 @@ public class Message {
 			// can't do it - no survivor to claim
 			return null;
 		}
-		return new Message(sender.getThisBotInfo(), 
+		return new Message(sender.getBotInfo(), 
 				CLAIM_SURVIVOR_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + senderSurvivior.getCenterX() + " " + senderSurvivior.getCenterY() + " " + sender.getMySurvivorClaimTime() + "\n");
 	}
 
+	//TODO handle incomplete vs complete paths
 	public static Message constructCreatePathsMessage(Bot sender, SurvivorPath pathToUse) {
-		//make a string representing the path
-		//include the damage of the survivor, and the points in the path
-		//start with the survivor
-		String messageBody = "";
+		
+		ArrayList<Object> attachement = new ArrayList<Object>();
+		//copy it with the constructor to make sure there aren't any pointer issues
+		attachement.add(new SurvivorPath(pathToUse));
 
-		Survivor pathSurvivor = pathToUse.getSur();
-
-		messageBody += pathSurvivor.getCenterX() + " " + pathSurvivor.getCenterY() + " " + pathSurvivor.getDamage() + "\t";
-
-		//now add the points in the path
-		PathIterator pathit = pathToUse.getPathIterator(null);
-
-		double[] curCoord = new double[6];
-		while(! pathit.isDone()){
-			//get the coordinates of the current point
-			int segType = pathit.currentSegment(curCoord);
-			if(segType == PathIterator.SEG_CLOSE || segType == PathIterator.SEG_CUBICTO || segType == PathIterator.SEG_QUADTO) {
-				throw new IllegalArgumentException("Got a path that has incorrect form");
-			}
-			//add the current point to the string
-			messageBody += " " + curCoord[0] + " " + curCoord[1] + " ";
-			pathit.next();
-		}
-
-		return new Message(sender.getThisBotInfo(), CREATE_PATH_MESSAGE, messageBody);
+		return new Message(sender.getBotInfo(), CREATE_PATH_MESSAGE, sender.getID() + " " + World.getCurrentTimestep(), attachement);
 	}
 }
