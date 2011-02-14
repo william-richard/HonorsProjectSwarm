@@ -3,16 +3,18 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import util.shapes.LineSegment;
+
 
 public class SurvivorPath {
 
 	//TODO remove "point" terminology from this class
-	
+
 	private static final long serialVersionUID = 269945074800423928L;
 
 	private double pathLength;
 	private Survivor sur;
-	private ArrayList<BotInfo> points;
+	private ArrayList<BotInfo> pathWaypoints;
 	private Point2D endPoint;
 	private boolean complete;
 
@@ -21,18 +23,18 @@ public class SurvivorPath {
 
 		sur = _sur;
 		complete = _complete;
-		points = new ArrayList<BotInfo>();
+		pathWaypoints = new ArrayList<BotInfo>();
 		endPoint = _endPoint;
-		
+
 		//want to clone the individual points, to make sure we don't have any wrong pointers - need to do a loop
 		for(BotInfo bot : _pathPoints) {
-			points.add(new BotInfo(bot));
+			pathWaypoints.add(new BotInfo(bot));
 		}
 
 		//calculate the path length
 		recalculatePathLength();
 	}
-	
+
 	public SurvivorPath(SurvivorPath _original) {
 		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.isComplete());
 	}
@@ -40,13 +42,13 @@ public class SurvivorPath {
 	private void recalculatePathLength() {
 		pathLength = 0.0;
 		//start by adding up all the distances between bots
-		if(points.size() > 1) {
-			for(int i = 1; i < points.size(); i++) {
-				pathLength += points.get(i).getCenterLocation().distance(points.get(i-1).getCenterLocation());
+		if(pathWaypoints.size() > 1) {
+			for(int i = 1; i < pathWaypoints.size(); i++) {
+				pathLength += pathWaypoints.get(i).getCenterLocation().distance(pathWaypoints.get(i-1).getCenterLocation());
 			}
 		}
 		//add the distance from the last point to the end point
-		pathLength += points.get(points.size() - 1).getCenterLocation().distance(endPoint);
+		pathLength += pathWaypoints.get(pathWaypoints.size() - 1).getCenterLocation().distance(endPoint);
 	}
 
 	public double getPathLength() {
@@ -61,7 +63,7 @@ public class SurvivorPath {
 	 * @return the points
 	 */
 	public ArrayList<BotInfo> getPoints() {
-		return points;
+		return pathWaypoints;
 	}
 
 	/**
@@ -84,10 +86,43 @@ public class SurvivorPath {
 	public void setComplete(boolean complete) {
 		this.complete = complete;
 	}
-	
+
 	public void addPoint(BotInfo pointToAdd) {
-		points.add(pointToAdd);
+		pathWaypoints.add(pointToAdd);
 		recalculatePathLength();
+	}
+
+	public double ptPathDist(Point2D pt) {
+		return getNearestSegment(pt).ptSegDist(pt);
+	}
+
+	public LineSegment getNearestSegment(Point2D pt) {
+		double minDist = Double.MAX_VALUE;
+		LineSegment closestSeg = new LineSegment(pt, pt);
+
+		LineSegment curSeg;
+		double curSegDist;
+
+		ArrayList<Point2D> allPoints = new ArrayList<Point2D>();
+
+		for(BotInfo bi : pathWaypoints) {
+			allPoints.add(bi.getCenterLocation());
+		}
+
+		allPoints.add(endPoint);
+
+		for(int i = 0; i < allPoints.size()-1; i++) {
+			curSeg = new LineSegment(allPoints.get(i), allPoints.get(i+1));
+
+			curSegDist = curSeg.ptSegDist(pt);
+
+			if(curSegDist < minDist) {
+				minDist = curSegDist;
+				closestSeg = curSeg;
+			}
+		}
+
+		return closestSeg;	
 	}
 
 	/* (non-Javadoc)
@@ -99,11 +134,11 @@ public class SurvivorPath {
 		int result = 1;
 		result = prime * result + (complete ? 1231 : 1237);
 		result = prime * result
-				+ ((endPoint == null) ? 0 : endPoint.hashCode());
+		+ ((endPoint == null) ? 0 : endPoint.hashCode());
 		long temp;
 		temp = Double.doubleToLongBits(pathLength);
 		result = prime * result + (int) (temp ^ (temp >>> 32));
-		result = prime * result + ((points == null) ? 0 : points.hashCode());
+		result = prime * result + ((pathWaypoints == null) ? 0 : pathWaypoints.hashCode());
 		result = prime * result + ((sur == null) ? 0 : sur.hashCode());
 		return result;
 	}
@@ -130,10 +165,10 @@ public class SurvivorPath {
 		if (Double.doubleToLongBits(pathLength) != Double
 				.doubleToLongBits(other.pathLength))
 			return false;
-		if (points == null) {
-			if (other.points != null)
+		if (pathWaypoints == null) {
+			if (other.pathWaypoints != null)
 				return false;
-		} else if (!points.equals(other.points))
+		} else if (!pathWaypoints.equals(other.pathWaypoints))
 			return false;
 		if (sur == null) {
 			if (other.sur != null)
@@ -142,9 +177,9 @@ public class SurvivorPath {
 			return false;
 		return true;
 	}
-	
+
 	@Override
 	public String toString() {
-		return sur + " : " + points + " : " + endPoint + " : length = " + pathLength + " : " + (complete ? " complete" : "NOT complete");
+		return sur + " : " + pathWaypoints + " : " + endPoint + " : length = " + pathLength + " : " + (complete ? " complete" : "NOT complete");
 	}
 }

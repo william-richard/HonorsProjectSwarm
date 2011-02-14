@@ -184,7 +184,7 @@ public class Vector extends Line2D{
 		return this.rotate(degrees * Math.PI / 180.0);
 	}
 
-	/*get the scalar projection of this on other
+	/* get the scalar projection of this on other
 	 * i.e. get the magnitude of the component of the this vector in the direction of the other vector
 	 */
 	public double scalerProjectionOnto(Vector other) {

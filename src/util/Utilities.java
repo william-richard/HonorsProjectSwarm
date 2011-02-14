@@ -202,11 +202,6 @@ public class Utilities {
 	}
 
 	public static Point2D getNearestPoint(Shape onThisShape, Point2D toThisPoint) {
-		//		if(onThisShape.contains(toThisPoint)) {
-		//			return toThisPoint;
-		//		}
-
-
 		//get the closest side
 		Line2D closestSide = getNearestSide(onThisShape, toThisPoint);
 

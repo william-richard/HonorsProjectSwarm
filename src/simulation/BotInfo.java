@@ -7,19 +7,22 @@ public class BotInfo {
 
 	private int botNum;
 	private Point2D location;
+	private boolean pathMarker;
 	
 	public BotInfo(int _botNum) {
 		botNum = _botNum;
 		location = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
+		pathMarker = false;
 	}
 	
-	public BotInfo(int _botNum, Point2D _loc) {
+	public BotInfo(int _botNum, Point2D _loc, boolean _pathMarker) {
 		botNum = _botNum;
 		location = _loc;
+		pathMarker = _pathMarker;
 	}
 
-	public BotInfo(int _botNum, double _x, double _y) {
-		this(_botNum, new Point2D.Double(_x, _y));
+	public BotInfo(int _botNum, double _x, double _y, boolean _pathMarker) {
+		this(_botNum, new Point2D.Double(_x, _y), _pathMarker);
 	}
 
 	public BotInfo(String str) {
@@ -42,7 +45,7 @@ public class BotInfo {
 
 	public BotInfo(BotInfo i) {
 		//just to be 100% sure it copies when using the constructor
-		this(i.getBotID(), i.getCenterX(), i.getCenterY());
+		this(i.getBotID(), i.getCenterX(), i.getCenterY(), i.isPathMarker());
 	}
 	
 	/**
@@ -71,6 +74,13 @@ public class BotInfo {
 	 */
 	public Point2D getCenterLocation() {
 		return location;
+	}
+
+	/**
+	 * @return the pathMarker
+	 */
+	public boolean isPathMarker() {
+		return pathMarker;
 	}
 
 	public void merge(BotInfo newInfo) {

@@ -46,10 +46,12 @@ public class World extends JFrame implements WindowListener {
 
 	private static final boolean WORLD_DEBUG = false;
 
-	private static final int ZONE_COMPLEXITY = 10;
+	private static final int ZONE_COMPLEXITY = 5;
 
 	private static final Color BACKGROUND_COLOR = Color.white;
-	private static final Color BOT_COLOR = Color.green;
+	private static final Color EXPLORER_BOT_COLOR = Color.green;
+	private static final Color PATH_MARKER_BOT_COLOR = new Color(152,245,255);
+	private static final Color DEACTIVATED_BOT_COLOR = new Color(97,97,97);
 	private static final Color SURVIVOR_COLOR = Color.red;
 	private static final Color SHOUT_COLOR = new Color(30, 144, 255);
 	private static final Color VISIBLE_RANGE_COLOR = new Color(255,106,106);
@@ -57,7 +59,7 @@ public class World extends JFrame implements WindowListener {
 	private static final Color BROADCAST_RANGE_COLOR = Color.yellow;
 	private static final Color BOT_LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
-	private static final Color SURVIVOR_PATH_COLOR = new Color(0,191,255);
+	private static final Color SURVIVOR_PATH_COLOR = new Color(0,154,205);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 
 	private static final Stroke SURVIVOR_PATH_STROKE = new BasicStroke((float) 2.0);
@@ -351,6 +353,9 @@ public class World extends JFrame implements WindowListener {
 			Bot.timestepVisibleZoneSideTotal = 0.0;
 			Bot.timestepNumVisibleZoneSides = 0;
 			Bot.timestepAverageDistanceApartTotal = 0.0;
+			Bot.timestepAvgDistBtwnPathNeighbors = 0.0;
+			Bot.timestepNumBotOnPaths = 0;
+			
 
 			for(Bot b : allBots) {
 				b.doOneTimestep();
@@ -368,6 +373,8 @@ public class World extends JFrame implements WindowListener {
 			System.out.println("Average distance between bots = " + (Bot.timestepAverageDistanceApartTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
 			System.out.println("Average zone repulsion vector mag (for bots near zones) = " + (Bot.timestepZoneRepulsionMagnitudeTotal / Bot.timestepBotsRepelledByZones));
 			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
+			System.out.println("");
+			System.out.println("Avg dist btwn bots on paths = " + (Bot.timestepAvgDistBtwnPathNeighbors / Bot.timestepNumBotOnPaths));
 
 			//repaint the scenario
 			repaint();
@@ -444,6 +451,34 @@ public class World extends JFrame implements WindowListener {
 			g2d.fill(curSur);
 		}
 
+		//paint all the survivor paths
+		g2d.setColor(SURVIVOR_PATH_COLOR);
+		g2d.setStroke(SURVIVOR_PATH_STROKE);
+
+		//go through each of the bots, looking at their known complete paths
+		//keep a list of one's we've drawn, so we don't draw more than once
+		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
+		for(Bot b : allBots) {
+			//draw all of it's paths
+			List<SurvivorPath> survivorPaths = b.getKnownCompletePaths();
+
+			for(SurvivorPath sp : survivorPaths) {
+				if(! pathsDrawn.contains(sp)) {
+					//draw each segment in the path
+					if(sp.getPoints().size() > 1) {
+						for(int i = 1; i < sp.getPoints().size(); i++) {
+							g2d.draw(new Line2D.Double(sp.getPoints().get(i-1).getCenterLocation(), sp.getPoints().get(i).getCenterLocation()));
+						}
+					}
+					g2d.draw(new Line2D.Double(sp.getPoints().get(sp.getPoints().size() - 1).getCenterLocation(), sp.getEndPoint()));
+					pathsDrawn.add(sp);
+				}
+			}
+		}
+
+		
+		g2d.setStroke(new BasicStroke());
+		
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
@@ -477,38 +512,23 @@ public class World extends JFrame implements WindowListener {
 		while(allBotSnapshot.hasNext()) {
 			Bot curBot = allBotSnapshot.next();
 
-			g2d.setColor(BOT_COLOR);
+			switch(curBot.getBotMode()) {
+				case(Bot.WAITING_FOR_ACTIVATION):
+					g2d.setColor(DEACTIVATED_BOT_COLOR);
+				break;
+				case(Bot.EXPLORER):
+					g2d.setColor(EXPLORER_BOT_COLOR);
+				break;
+				case(Bot.PATH_MARKER):
+					g2d.setColor(PATH_MARKER_BOT_COLOR);
+				break;
+			}
 			g2d.fill(curBot);
 
 			g2d.setColor(BOT_LABEL_COLOR);
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 		}
 
-
-		//paint all the survivor paths
-		g2d.setColor(SURVIVOR_PATH_COLOR);
-		g2d.setStroke(SURVIVOR_PATH_STROKE);
-
-		//go through each of the bots, looking at their known complete paths
-		//keep a list of one's we've drawn, so we don't draw more than once
-		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
-		for(Bot b : allBots) {
-			//draw all of it's paths
-			List<SurvivorPath> survivorPaths = b.getKnownCompletePaths();
-
-			for(SurvivorPath sp : survivorPaths) {
-				if(! pathsDrawn.contains(sp)) {
-					//draw each segment in the path
-					if(sp.getPoints().size() > 1) {
-						for(int i = 1; i < sp.getPoints().size(); i++) {
-							g2d.draw(new Line2D.Double(sp.getPoints().get(i-1).getCenterLocation(), sp.getPoints().get(i).getCenterLocation()));
-						}
-					}
-					g2d.draw(new Line2D.Double(sp.getPoints().get(sp.getPoints().size() - 1).getCenterLocation(), sp.getEndPoint()));
-					pathsDrawn.add(sp);
-				}
-			}
-		}
 
 		if(WORLD_DEBUG) {
 			//draw the shapes in the debug arraylist

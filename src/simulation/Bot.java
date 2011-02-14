@@ -26,11 +26,11 @@ public class Bot extends Rectangle2D.Double {
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
-	private final int DIMENSION = 2;
-	private final double VISUAL_ID_SURVIVOR_PROB = .70;
-	private final double HEAR_SURVIVOR_PROB = .75;
-	private final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
-	private final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
+	private static final int DIMENSION = 2;
+	private static final double VISUAL_ID_SURVIVOR_PROB = .70;
+	private static final double HEAR_SURVIVOR_PROB = .75;
+	private static final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
+	private static final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
 
 	//1 px = 2 m
 	public static final double DEFAULT_BROADCAST_RADIUS = 40; //40 px = 80 m
@@ -38,6 +38,8 @@ public class Bot extends Rectangle2D.Double {
 	public static final double DEFAULT_AUDITORY_RADIUS = 24; //24 px = 48 m
 	public static final double DEFAULT_FOUND_RANGE = DEFAULT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
+	private final static double IDEAL_DIST_BTWN_BOTS_ON_PATH = 10; //5 px = 10 m
+	private final static double MIN_DIST_BTWN_BOTS_ON_PATH = 5; // 2 px = 4 m
 
 	private static Random NUM_GEN = new Random();
 
@@ -66,15 +68,22 @@ public class Bot extends Rectangle2D.Double {
 	public static double timestepBotsRepelledByZones;
 	public static double timestepVisibleZoneSideTotal;
 	public static int timestepNumVisibleZoneSides;
+	
+	public static double timestepAvgDistBtwnPathNeighbors;
+	public static int timestepNumBotOnPaths;
 
-	private final static int WAITING_FOR_ACTIVATION = 			0;
-	private final static int ACTIVATED = 						1;
+	public final static int WAITING_FOR_ACTIVATION = 			0;
+	public final static int EXPLORER = 							1;
+	public final static int PATH_MARKER = 						2;
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
 	private final static double DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH = 1.0;
 	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
 
+	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 2.0;
+	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
+	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .5;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -120,7 +129,10 @@ public class Bot extends Rectangle2D.Double {
 	private boolean startedCreatingMyPath = false;
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
 
-	private List<SurvivorPath> knownCompletePaths;
+	private List<SurvivorPath> bestKnownCompletePaths;
+
+	private List<SurvivorPath> markablePaths;
+	private SurvivorPath myPathToMark;
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -164,7 +176,8 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		knownCompletePaths = new ArrayList<SurvivorPath>();
+		bestKnownCompletePaths = new ArrayList<SurvivorPath>();
+		markablePaths = new ArrayList<SurvivorPath>();
 
 		// for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
@@ -215,8 +228,15 @@ public class Bot extends Rectangle2D.Double {
 		return botID;
 	}
 
+	/**
+	 * @return the botMode
+	 */
+	public int getBotMode() {
+		return botMode;
+	}
+
 	public BotInfo getBotInfo() {
-		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY());
+		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode == PATH_MARKER);
 	}
 
 
@@ -232,10 +252,10 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	/**
-	 * @return the knownCompletePaths
+	 * @return the bestKnownCompletePaths
 	 */
 	public List<SurvivorPath> getKnownCompletePaths() {
-		return knownCompletePaths;
+		return bestKnownCompletePaths;
 	}
 
 	/**
@@ -324,19 +344,14 @@ public class Bot extends Rectangle2D.Double {
 
 			String messageType = mes.getType();
 
+			BotInfo newBotInfo;
 			if (messageType.equals(Message.BOT_LOCATION_MESSAGE)) {
-				int botNum = s.nextInt();
 
-				if (botNum == botID) {
+				newBotInfo = mes.getSender();
+
+				if(newBotInfo.getBotID() == this.botID) {
 					continue;
 				}
-
-				int sentTime = s.nextInt();
-
-				double newX = s.nextDouble();
-				double newY = s.nextDouble();
-
-				BotInfo newBotInfo = new BotInfo(botNum, newX, newY);
 
 				otherBotInfo.add(newBotInfo);
 			} else if (messageType.equals(Message.FOUND_SURVIVOR_MESSAGE)) {
@@ -344,8 +359,6 @@ public class Bot extends Rectangle2D.Double {
 				int finderID = s.nextInt();
 
 				if (finderID == this.getID()) {
-					// message from ourselves, we can safely ignore
-					// TODO is this really safe to ignore?
 					continue;
 				}
 
@@ -451,7 +464,7 @@ public class Bot extends Rectangle2D.Double {
 				if(sp.isComplete()) {
 					//if it is complete, see if we have a complete path to this survivor already
 					SurvivorPath knownPathToThisSurvivor = null;
-					for(SurvivorPath curKnownPath : knownCompletePaths) {
+					for(SurvivorPath curKnownPath : bestKnownCompletePaths) {
 						if(curKnownPath.getSur().equals(sp.getSur())) {
 							knownPathToThisSurvivor = curKnownPath;
 							break;
@@ -466,8 +479,8 @@ public class Bot extends Rectangle2D.Double {
 							if(knownPathToThisSurvivor.getPathLength() > sp.getPathLength()) {
 								//the new one is better is better
 								passOnMessage = Message.constructCreatePathsMessage(this, sp);
-								knownCompletePaths.remove(knownPathToThisSurvivor);
-								knownCompletePaths.add(new SurvivorPath(sp));
+								bestKnownCompletePaths.remove(knownPathToThisSurvivor);
+								bestKnownCompletePaths.add(new SurvivorPath(sp));
 							} else {
 								//our's is better
 								passOnMessage = Message.constructCreatePathsMessage(this, knownPathToThisSurvivor);
@@ -476,7 +489,7 @@ public class Bot extends Rectangle2D.Double {
 					} else {
 						//we have not heard of this path before
 						//add it to our list, and pass on info about it
-						knownCompletePaths.add(new SurvivorPath(sp));
+						bestKnownCompletePaths.add(new SurvivorPath(sp));
 						passOnMessage = Message.constructCreatePathsMessage(this, sp);
 					}
 				} else {
@@ -509,7 +522,20 @@ public class Bot extends Rectangle2D.Double {
 					}
 					broadcastMessage(passOnMessage);
 				}
-			} else {
+			} else if(messageType.equals(Message.STOP_ADDING_NEW_PATH_MARKERS)) {
+				//figure out which path we should stop marking
+				SurvivorPath dontMark = (SurvivorPath) mes.getAttachment(0);
+
+				if(myPathToMark != null && myPathToMark.equals(dontMark)) {
+					continue;
+				}
+
+				markablePaths.remove(dontMark);
+
+				//don't pass on this message - only bots near a path need to know not to mark it this timestep
+				//this also lets local need for bots be met without having to get the whole path to work together
+
+			}else {
 				continue; // this else matches up to figuring out what message type we have
 			}
 
@@ -531,7 +557,7 @@ public class Bot extends Rectangle2D.Double {
 		return results;
 	}
 
-	private void move() {
+	private void exploreMove() {
 		// //store our current state, so we can undo it if necessary.
 		// this.previousBot = (Bot) this.clone();
 
@@ -636,7 +662,7 @@ public class Bot extends Rectangle2D.Double {
 
 				averageDistanceToNeighbors += distToCurBot;
 
-				//make a random vector if the other bot is right on top of us
+				//put the other bot at a random nearby location if the other bot is right on top of us
 				if(Utilities.shouldEqualsZero(distToCurBot)) {
 					Vector randomDirVect = Vector.getHorizontalUnitVector(this.getCenterLocation());
 					randomDirVect = randomDirVect.rotate(NUM_GEN.nextDouble() * 2.0 * Math.PI);
@@ -741,6 +767,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 	}
 
+	@Deprecated
 	protected void moveRandomly() {
 		//calculate a random vector
 		//start with a vector to the right
@@ -1161,6 +1188,205 @@ public class Bot extends Rectangle2D.Double {
 
 	}
 
+	private ArrayList<BotInfo> getPathNeighbors() {
+
+		LineSegment closestSegmentOfPath = myPathToMark.getNearestSegment(this.getCenterLocation());
+
+
+		Point2D zeroRadPoint = new Point2D.Double(this.getCenterX() + 1, this.getCenterY());
+		double angleToEndpoint1 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP1(), this.getCenterLocation());
+		double angleToEndpoint2 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP2(), this.getCenterLocation());
+
+		double neighborDist1 = java.lang.Double.MAX_VALUE, neighborDist2 = java.lang.Double.MAX_VALUE;
+		BotInfo neighbor1 = null, neighbor2 = null;
+
+		double curAngle;
+		double curDist;
+
+		for(BotInfo potentialNeighbor : otherBotInfo) {
+			if(! potentialNeighbor.isPathMarker()) {
+				//only want neighbors that are path markers
+				continue;
+			}
+
+			curAngle = Utilities.getAngleBetween(zeroRadPoint, potentialNeighbor.getCenterLocation(), this.getCenterLocation());
+			curDist = potentialNeighbor.getCenterLocation().distance(this.getCenterLocation());
+
+			if(Math.abs(curAngle - angleToEndpoint1) < Math.abs(curAngle - angleToEndpoint2)) {
+				//it is closer to endpoint 1
+				//is it the closest we've seen so far?
+				if(curDist < neighborDist1) {
+					neighborDist1 = curDist;
+					neighbor1 = potentialNeighbor;
+				}
+			} else {
+				//it is closer to endpoint 2
+				//is it the closest we've seen so far?
+				if(curDist < neighborDist2) {
+					neighborDist2 = curDist;
+					neighbor2 = potentialNeighbor;
+				}
+			}
+		}
+
+		ArrayList<BotInfo> pathNeighbors = new ArrayList<BotInfo>();
+		if(neighbor1 != null) {
+			pathNeighbors.add(neighbor1);
+		}
+		if(neighbor2 != null) {
+			pathNeighbors.add(neighbor2);
+		}
+
+		return pathNeighbors;
+	}
+
+	private void pathMarkMove() {
+		//want to move toward our path, or distribute ourselves on the path
+		//first, try to move toward our path
+		//if we can't move any closer, start to move away from neighbors on path
+
+		LineSegment closestSegmentOfPath = myPathToMark.getNearestSegment(this.getCenterLocation());
+
+		Point2D closestPointOnPath = Utilities.getNearestPoint(closestSegmentOfPath, this.getCenterLocation());
+
+		Vector towardsPathVector = new Vector(this.getCenterLocation(), closestPointOnPath);
+
+		if(towardsPathVector.getMagnitude() > ON_PATH_THRESHOLD_DISTANCE) {
+			actuallyMoveAlong(towardsPathVector);
+			return;
+		}
+
+		//if we got here, we are "on" the path
+		//we should try to distribute ourselves from our neighbors
+
+
+		//try to distribute ourself equally between these two neighbors
+		//along the path
+		ArrayList<BotInfo> pathNeighbors = getPathNeighbors();
+
+		Vector pathSegVector = new Vector(closestSegmentOfPath);
+		Vector movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
+
+		for(BotInfo curNeighbor : pathNeighbors) {
+			//TODO DUPLICATE CODE! We should just have a method that gives us a vector away from a neighbor for both move methods
+			Point2D curBotLoc = curNeighbor.getCenterLocation();
+			double distToCurNeighbor = curNeighbor.getCenterLocation().distance(this.getCenterLocation());
+
+			if(Utilities.shouldEqualsZero(distToCurNeighbor)) {
+				//put them in a random location
+				Vector randomDir = Vector.getHorizontalUnitVector(this.getCenterLocation());
+				randomDir = randomDir.rotate(NUM_GEN.nextDouble() * 2.0 * Math.PI);
+				curBotLoc = randomDir.getP2();
+			}
+
+			Vector curBotVect;
+			if(distToCurNeighbor < SEPERATION_MIN_DIST) {
+				//make a vector of length 1 away from them
+				curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1.0);
+			} else {
+				curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
+			}
+
+			//we only want the part along the path
+			curBotVect  = pathSegVector.rescale(curBotVect.scalerProjectionOnto(pathSegVector));
+
+			movementVector = movementVector.add(curBotVect);
+		}
+
+		if(pathNeighbors.size() != 0) {
+			movementVector = movementVector.rescaleRatio(1.0 / pathNeighbors.size());
+		}
+		
+		if(Utilities.shouldEqualsZero(movementVector.getMagnitude())) {
+			movementVector = movementVector.rescale(0.0);
+		}
+
+		actuallyMoveAlong(movementVector);
+	}
+
+	private double getAvgDistFromPathNeighbors() {
+		ArrayList<BotInfo> pathNeighbors = getPathNeighbors();
+
+		double distSum = 0.0;
+		for(BotInfo curNeighbor : pathNeighbors) {
+			distSum += curNeighbor.getCenterLocation().distance(this.getCenterLocation());
+		}
+
+		return distSum / (double)pathNeighbors.size();
+	}
+
+
+	private void handlePathDensity() {
+		//see what the average distance to neighboring bots on path is
+		double avgDist = getAvgDistFromPathNeighbors();
+
+		if(avgDist <= IDEAL_DIST_BTWN_BOTS_ON_PATH) {
+			//no need for more bots on this path
+			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
+		}
+
+		timestepAvgDistBtwnPathNeighbors += avgDist;
+		timestepNumBotOnPaths++;
+	}
+
+	private void reevaluateBotMode() {
+
+		//depending on which mode we're in, we're going to reevaluate differently
+		//if we end up with more than the modes we have now (2/13/11) we're going to have problems with this method
+		//cross that bridge when you come to it
+
+		if(botMode == WAITING_FOR_ACTIVATION) {
+			//with some probability, we'll be turned on this timestep
+			//if that probability is right, turn on and move to the next phase
+			if(NUM_GEN.nextDouble() <= TURNED_ON_THIS_TIMESTEP_PROB) {
+				botMode = EXPLORER;
+			}
+		} else {
+
+			//if we have a path, add it to a "markable" path
+			if(myPathToMark != null) {
+				markablePaths.add(myPathToMark);
+			}
+
+			//want to see if there is a markable path nearby that we should move towards
+			if(markablePaths.size() == 0) {
+				//no paths to mark - we are an explorer
+				botMode = EXPLORER;
+				return;
+			}
+
+			double minPathDistance = java.lang.Double.MAX_VALUE;
+			SurvivorPath nearestPath = null;
+
+			for(SurvivorPath potentialPathToMark : markablePaths) {
+				double distToCurPath = potentialPathToMark.ptPathDist(this.getCenterLocation());
+				if(distToCurPath < minPathDistance) {
+					minPathDistance = distToCurPath;
+					nearestPath = potentialPathToMark;
+				}
+			}
+
+			if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST) {
+				botMode = PATH_MARKER;
+				myPathToMark = new SurvivorPath(nearestPath);
+			} else {
+				botMode = EXPLORER;
+			}
+
+			//with some probability, if the density is too high, stop being a marker
+			if(botMode == PATH_MARKER && getAvgDistFromPathNeighbors() < MIN_DIST_BTWN_BOTS_ON_PATH) {
+				if(NUM_GEN.nextDouble() <= HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
+					botMode = EXPLORER;
+				}
+			}
+			
+			//also, if our path is no longer a best known path, switch away from being a path marker
+			if(botMode == PATH_MARKER && ! bestKnownCompletePaths.contains(myPathToMark)) {
+				botMode = EXPLORER;
+			}
+		}
+	}
+
 
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
@@ -1170,21 +1396,27 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public void doOneTimestep() {
+		//before anything else, populate the possible markable paths list
+		markablePaths = new ArrayList<SurvivorPath>(bestKnownCompletePaths);
+
+		//make sure we aren't trying to mark a path if we shouldn't be
+		if(botMode != PATH_MARKER) {
+			myPathToMark = null;
+		}
+
 		// first, read any messages that have come in, and take care of them
 		readMessages();
 
 		switch (botMode) {
 			case (WAITING_FOR_ACTIVATION):
-				//with some probability, we'll be turned on this timestep
-				//if that probability is right, turn on and move to the next phase
-				if(NUM_GEN.nextDouble() < TURNED_ON_THIS_TIMESTEP_PROB) {
-					botMode = ACTIVATED;
-				}
 
-			break;
-			case (ACTIVATED) :
+				//don't do anything in this loop - the transition a different mode
+				//will take place in the "reevaluateBotMode()" method
+
+				break;
+			case (EXPLORER) :
 				// now try to move, based on the move rules.
-				move();
+				exploreMove();
 			// if we have not already claimed a survivor, find out if we can see any survivors
 			// TODO if they have heard a survivor, check it out for a few steps
 			if (mySurvivor == null) {
@@ -1193,7 +1425,13 @@ public class Bot extends Rectangle2D.Double {
 				//if we are close enough to them, we should start creating a path to the survivor
 				handlePathToMySurvivor();
 			}
+			break;
+			case(PATH_MARKER) :
+				//move toward/on the path
+				pathMarkMove();
 
+			//check path density, and stop more bots from approaching if need be
+			handlePathDensity();
 
 			break;
 			default :
@@ -1201,11 +1439,14 @@ public class Bot extends Rectangle2D.Double {
 				break;
 		}
 
+		reevaluateBotMode();
+
 		// now, just some housekeeping
 		// we shouldn't hang onto shouts for too long
 		heardShouts.clear();
 		// also don't want to hang on to bot info for too long
 		otherBotInfo.clear();
+		//TODO set up arraylist of complete paths that we know about that we could mark this timestep
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
