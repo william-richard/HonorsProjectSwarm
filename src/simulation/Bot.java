@@ -51,7 +51,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double SEPERATION_FACTOR = 									50;
 	private final double COHESION_FACTOR = 										.5; //cohesion factor should never me more than 1
 
-	private final double SEPERATION_MIN_DIST = 0.1;
+	private final double SEPERATION_MIN_DIST = 5;
 	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS*2;
 	private final double SEPERATION_CURVE_SHAPE = 2.5;
 
@@ -68,7 +68,7 @@ public class Bot extends Rectangle2D.Double {
 	public static double timestepBotsRepelledByZones;
 	public static double timestepVisibleZoneSideTotal;
 	public static int timestepNumVisibleZoneSides;
-	
+
 	public static double timestepAvgDistBtwnPathNeighbors;
 	public static int timestepNumBotOnPaths;
 
@@ -673,7 +673,7 @@ public class Bot extends Rectangle2D.Double {
 				if(distToCurBot < SEPERATION_MIN_DIST) {
 					//too close
 					//just make a vector pointing away of length 1, since the other vector calculation will be normalized to be between 0 and 1
-					curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1.0);
+					curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1 * SEPERATION_FACTOR);
 				} else if (distToCurBot > SEPERATION_MAX_DIST) { 
 					//too far
 					//don't consider this bot
@@ -1212,7 +1212,7 @@ public class Bot extends Rectangle2D.Double {
 			curAngle = Utilities.getAngleBetween(zeroRadPoint, potentialNeighbor.getCenterLocation(), this.getCenterLocation());
 			curDist = potentialNeighbor.getCenterLocation().distance(this.getCenterLocation());
 
-			if(Math.abs(curAngle - angleToEndpoint1) < Math.abs(curAngle - angleToEndpoint2)) {
+			if(Math.abs((curAngle - angleToEndpoint1) % (2*Math.PI)) < Math.abs((curAngle - angleToEndpoint2) % (2*Math.PI))) {
 				//it is closer to endpoint 1
 				//is it the closest we've seen so far?
 				if(curDist < neighborDist1) {
@@ -1282,13 +1282,13 @@ public class Bot extends Rectangle2D.Double {
 			Vector curBotVect;
 			if(distToCurNeighbor < SEPERATION_MIN_DIST) {
 				//make a vector of length 1 away from them
-				curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1.0);
+				curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1.0 * SEPERATION_FACTOR);
 			} else {
 				curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
 			}
 
 			//we only want the part along the path
-			curBotVect  = pathSegVector.rescale(curBotVect.scalerProjectionOnto(pathSegVector));
+			//			curBotVect  = pathSegVector.rescale(curBotVect.scalerProjectionOnto(pathSegVector));
 
 			movementVector = movementVector.add(curBotVect);
 		}
@@ -1296,7 +1296,7 @@ public class Bot extends Rectangle2D.Double {
 		if(pathNeighbors.size() != 0) {
 			movementVector = movementVector.rescaleRatio(1.0 / pathNeighbors.size());
 		}
-		
+
 		if(Utilities.shouldEqualsZero(movementVector.getMagnitude())) {
 			movementVector = movementVector.rescale(0.0);
 		}
@@ -1379,7 +1379,7 @@ public class Bot extends Rectangle2D.Double {
 					botMode = EXPLORER;
 				}
 			}
-			
+
 			//also, if our path is no longer a best known path, switch away from being a path marker
 			if(botMode == PATH_MARKER && ! bestKnownCompletePaths.contains(myPathToMark)) {
 				botMode = EXPLORER;

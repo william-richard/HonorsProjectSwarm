@@ -24,9 +24,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private World world;
 
 	// initial values for fields
-	private int numBots = 100;
+	private int numBots = 200;
 	private int numSurvivors = 5;
-	private double timeBetweenTimestepsInSeconds = 1;
+	private double timeBetweenTimestepsInSeconds = 0;
 
 	// buttons to control the simulation
 	private JButton runSimulationButton;;
