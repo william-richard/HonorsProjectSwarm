@@ -204,6 +204,9 @@ public class World extends JFrame implements WindowListener {
 		this.homeBase = homeBase;
 	}
 
+	
+	
+	
 
 	//TODO combine same type zones?
 
