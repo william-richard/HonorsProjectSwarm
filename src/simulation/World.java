@@ -5,6 +5,7 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Polygon;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.WindowEvent;
@@ -14,16 +15,22 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
 import javax.swing.JFrame;
 
+import main.java.be.humphreys.voronoi.GraphEdge;
+import main.java.be.humphreys.voronoi.Site;
+import main.java.be.humphreys.voronoi.Voronoi;
+
 import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerZone;
+import zones.DummyZone;
 import zones.Fire;
 import zones.SafeZone;
 import zones.Zone;
@@ -61,14 +68,16 @@ public class World extends JFrame implements WindowListener {
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color SURVIVOR_PATH_COLOR = new Color(0,154,205);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
-
+	
+	private static final Point BASE_ZONE_LOC = new Point(FRAME_WIDTH / 2, FRAME_HEIGHT / 2);
+	
 	private static final Stroke SURVIVOR_PATH_STROKE = new BasicStroke((float) 2.0);
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
 
 	/** VARIABLES */
-	public static List<Zone> allZones; //The zones in the world - should be non-overlapping
+	public static java.util.Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static List<Survivor> allSurvivors; //The survivors
 	public ListIterator<Bot> allBotSnapshot;
@@ -93,7 +102,7 @@ public class World extends JFrame implements WindowListener {
 		setupFrame();
 
 		//initialize the zones
-		allZones = new ArrayList<Zone>();
+		allZones = new Hashtable<Integer, Zone>();
 
 		//add all the default zones
 		addAllSetZones();
@@ -110,11 +119,6 @@ public class World extends JFrame implements WindowListener {
 
 		for(int i = 0; i < numBots; i++) {
 			allBots.add(new Bot(this, startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
-		}
-
-		//need to randomly distribute the bots a bit
-		for(Bot b : allBots) {
-			b.moveRandomly();
 		}
 
 		//initialize the survivors
@@ -145,7 +149,7 @@ public class World extends JFrame implements WindowListener {
 		//check each zones's area with all the rest to make sure they don't overlap
 		for(int i = 0; i < allZones.size(); i++) {
 			//calculate if there are any intersections
-			List<? extends Shape> intersections = Utilities.findAreaIntersectionsInList(allZones.get(i), allZones.subList(i+1, allZones.size()));
+			List<? extends Shape> intersections = Utilities.findAreaIntersectionsInList(allZones.get(i), allZones.values());
 			//if there are, freak out
 			if(intersections.size() > 0) {
 				System.out.println("ZONES ARE NOT SANE!!!!");
@@ -155,7 +159,7 @@ public class World extends JFrame implements WindowListener {
 
 		//make sure the whole area is covered
 		Area zoneArea = new Area();
-		for(Zone z : allZones) {
+		for(Zone z : allZones.values()) {
 			zoneArea.add(new Area(z));
 		}
 
@@ -168,52 +172,107 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private void addAllSetZones() {
-		//start with the base zone
-		addBaseZone();
-
-		//the rest are not as necessary
-		//put some triangles of safe zones around the base zone
-		int[] xPointsSafe = {225, 250, 275};
-		int[] yPointsSafe = {225, 200, 225};
-		SafeZone safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-		allZones.add(safe);
-
-		xPointsSafe = new int[] {275, 300, 275};
-		yPointsSafe = new int[] {225, 250, 275};
-		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-		allZones.add(safe);
-
-		xPointsSafe = new int[] {275, 250, 225};
-		yPointsSafe = new int[] {275, 300, 275};
-		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-		allZones.add(safe);
-
-		xPointsSafe = new int[] {225, 200, 225};
-		yPointsSafe = new int[] {225, 250, 275};
-		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-		allZones.add(safe);
-
-
+//		//start with the base zone
+//		addBaseZone();
+//
+//		//the rest are not as necessary
+//		//put some triangles of safe zones around the base zone
+//		int[] xPointsSafe = {225, 250, 275};
+//		int[] yPointsSafe = {225, 200, 225};
+//		SafeZone safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+//		allZones.add(safe);
+//
+//		xPointsSafe = new int[] {275, 300, 275};
+//		yPointsSafe = new int[] {225, 250, 275};
+//		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+//		allZones.add(safe);
+//
+//		xPointsSafe = new int[] {275, 250, 225};
+//		yPointsSafe = new int[] {275, 300, 275};
+//		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+//		allZones.add(safe);
+//
+//		xPointsSafe = new int[] {225, 200, 225};
+//		yPointsSafe = new int[] {225, 250, 275};
+//		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
+//		allZones.add(safe);
 	}
 
 	private void addBaseZone() {
-		int[] xPointsBase = {225, 275, 275, 225};
-		int[] yPointsBase = {225, 225, 275, 275};
-		BaseZone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
-		allZones.add(homeBase);
-		this.homeBase = homeBase;
+//		int[] xPointsBase = {225, 275, 275, 225};
+//		int[] yPointsBase = {225, 225, 275, 275};
+//		BaseZone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
+//		allZones.add(homeBase);
+//		this.homeBase = homeBase;
 	}
 
+	private void voronoiZones() {
+		//create our points
+		double[] xValues = new double[ZONE_COMPLEXITY];
+		double[] yValues = new double[ZONE_COMPLEXITY];
+		
+		//start with the basezone center location
+		xValues[0] = (double) BASE_ZONE_LOC.getX();
+		yValues[0] = (double) BASE_ZONE_LOC.getY();
+				
+		//add random points
+		//make sure they are not inside the basezone
+		Point curPoint;
+		for(int i = 1; i < ZONE_COMPLEXITY; i++) {
+			//make a random point
+			curPoint = new Point(RANDOM_GENERATOR.nextInt(), RANDOM_GENERATOR.nextInt());
+			
+			//add it to the list
+			xValues[i] = curPoint.getX();
+			yValues[i] = curPoint.getY();
+		}
+		
+		//now, get the edges from the Voronoi algorithm
+		List<GraphEdge> voronoiEdges = (new Voronoi(1)).generateVoronoi(xValues, yValues, 0, FRAME_WIDTH, 0, FRAME_HEIGHT - MENUBAR_HEIGHT);
+		
+		//we should have <ZONE_COMPLEXITY> shapes
+		@SuppressWarnings("unchecked")
+		List<GraphEdge>[] voronoiEdgesOrganizedByShape = (ArrayList<GraphEdge>[]) new ArrayList[ZONE_COMPLEXITY];
+		
+		//organize the edges into the various shapes
+		for(GraphEdge curEdge : voronoiEdges) {
+			voronoiEdgesOrganizedByShape[curEdge.site1].add(curEdge);
+			voronoiEdgesOrganizedByShape[curEdge.site2].add(curEdge);
+		}
+		
+		//make them into Zones
+		//start with DummyZones
+		for(int zoneId = 0; zoneId < voronoiEdgesOrganizedByShape.length; zoneId++) {
+			allZones.put(new Integer(zoneId), new DummyZone(voronoiEdgesOrganizedByShape[zoneId], zoneId));
+		}
 	
-	
-	
+		//now, we need to reassign them to non-dummy zones
+		for(int zoneId = 0; zoneId < allZones.size(); zoneId++) {
+			//get the zone
+			Integer zoneIdInteger = new Integer(zoneId);
+			Zone curZone = allZones.get(zoneIdInteger);
+			//see if it should be the BaseZone
+			if(curZone.contains(BASE_ZONE_LOC)) {
+				allZones.put(zoneIdInteger, new BaseZone(curZone));
+			}
+			
+		}
+		
+		
+	}
+
+
+
+
+
+
 
 	//TODO combine same type zones?
 
 	private void fillInZones() {
 		//first, get all unfilled zones
 		Area filledAreas = new Area();
-		for(Zone z : allZones) {
+		for(Zone z : allZones.values()) {
 			filledAreas.add(new Area(z));
 		}
 
@@ -258,15 +317,15 @@ public class World extends JFrame implements WindowListener {
 
 			switch(RANDOM_GENERATOR.nextInt(3)) {
 				//TODO Add some logic? Danger around fire?
-				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
-				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-				case 2: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
-				default: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break;  
+//				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
+//				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
+//				case 2: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
+				default: newZone = new SafeZone(null, 0); break;  
 			}
 
 			//make sure it doesn't intersect any existing zones
 			try {
-				if(Utilities.findAreaIntersectionsInList(newZone, allZones).size() > 0) {
+				if(Utilities.findAreaIntersectionsInList(newZone, allZones.values()).size() > 0) {
 					zoneVerticies.add(p1);
 					zoneVerticies.add(p2);
 					zoneVerticies.add(p3);
@@ -282,7 +341,7 @@ public class World extends JFrame implements WindowListener {
 			}
 
 			//it checks out - add it
-			allZones.add(newZone);
+			allZones.put(new Integer(newZone.getID()), newZone);
 			//remove it's area from the unfilled area
 			unfilledArea.subtract(new Area(newZone));
 
@@ -358,7 +417,7 @@ public class World extends JFrame implements WindowListener {
 			Bot.timestepAverageDistanceApartTotal = 0.0;
 			Bot.timestepAvgDistBtwnPathNeighbors = 0.0;
 			Bot.timestepNumBotOnPaths = 0;
-			
+
 
 			for(Bot b : allBots) {
 				b.doOneTimestep();
@@ -427,7 +486,7 @@ public class World extends JFrame implements WindowListener {
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
-		for(Zone z : allZones) {
+		for(Zone z : allZones.values()) {
 			g2d.setColor(z.getColor());
 			g2d.fill(z);
 			g2d.setColor(ZONE_OUTLINE_COLOR);
@@ -479,9 +538,9 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 
-		
+
 		g2d.setStroke(new BasicStroke());
-		
+
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
@@ -562,7 +621,7 @@ public class World extends JFrame implements WindowListener {
 	//zones should not overlap, so there should only be one solution
 	public static Zone findZone(Point2D point) {
 
-		for(Zone z : allZones) {
+		for(Zone z : allZones.values()) {
 			if(z.contains(point)) {
 				return z;
 			}

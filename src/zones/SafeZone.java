@@ -1,6 +1,9 @@
 package zones;
 
 import java.awt.Color;
+import java.util.List;
+
+import main.java.be.humphreys.voronoi.GraphEdge;
 
 import simulation.Bot;
 import simulation.Shout;
@@ -13,12 +16,12 @@ public class SafeZone extends Zone {
 	private static final long serialVersionUID = 1L;
 	private static final Color SafeZoneColor = new Color(34, 139, 34);
 
-	public SafeZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		this(xPoints, yPoints, numPoints, _zoneID, SafeZoneColor);
-	}
-
-	protected SafeZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
-		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
+	public SafeZone(List<GraphEdge> _sides, int _zoneID) {
+		super(_sides, _zoneID);
+	}	
+	
+	public SafeZone(Zone other) {
+		super(other);
 	}
 	
 	
@@ -79,6 +82,11 @@ public class SafeZone extends Zone {
 	public double repulsionScalingFactor() {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public Color getColor() {
+		return SafeZoneColor;
 	}
 
 }

@@ -820,7 +820,7 @@ public class Bot extends Rectangle2D.Double {
 
 	private Vector getAllZonesRepulsionVector() {
 		//see which zone-shapes we can see
-		List<? extends Shape> visibleShapes = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones);
+		List<? extends Shape> visibleShapes = Utilities.findAreaIntersectionsInList(this.getVisibleArea(), World.allZones.values());
 
 		//go through each of them and get the repulsion from each one
 		Vector netRepulsionFromAllZones = new Vector(this.getCenterLocation(), this.getCenterLocation());

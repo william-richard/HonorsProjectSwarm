@@ -1,5 +1,8 @@
 package zones;
 import java.awt.Color;
+import java.util.List;
+
+import main.java.be.humphreys.voronoi.GraphEdge;
 
 import simulation.Bot;
 import simulation.Shout;
@@ -12,14 +15,15 @@ public class BaseZone extends Zone {
 	private static final long serialVersionUID = 1L;
 	private final static Color BaseZoneColor = new Color(0, 100, 0);
 
-	public BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID) {
-		this(xPoints, yPoints, numPoints, _zoneID, BaseZoneColor);
+	public BaseZone(List<GraphEdge> _sides, int _zoneID) {
+		super(_sides, _zoneID);
 	}
-
-	protected BaseZone(int[] xPoints, int[] yPoints, int numPoints, int _zoneID, Color _zoneColor) {
-		super(xPoints, yPoints, numPoints, _zoneID, _zoneColor);
+	
+	public BaseZone(Zone other) {
+		super(other);
 	}
-
+	
+	
 
 	@Override
 	public boolean isObstacle() {
@@ -75,6 +79,11 @@ public class BaseZone extends Zone {
 	public double repulsionScalingFactor() {
 		// TODO Auto-generated method stub
 		return 0;
+	}
+
+	@Override
+	public Color getColor() {
+		return BaseZoneColor;
 	}
 	
 }

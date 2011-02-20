@@ -8,6 +8,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import util.shapes.Circle2D;
@@ -19,7 +20,7 @@ public class Utilities {
 	
 	
 	//finds all shapes in the shapeList that intersect the base shape
-	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, List<? extends Shape> shapeList) {		
+	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, Collection<? extends Shape> shapeList) {		
 		//we're going to take advantage of Area's intersect method
 		// so we need to turn base into an area		
 		Area baseArea = new Area(base);
