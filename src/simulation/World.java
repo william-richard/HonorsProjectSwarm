@@ -228,7 +228,7 @@ public class World extends JFrame implements WindowListener {
 		}
 		
 		//now, get the edges from the Voronoi algorithm
-		List<GraphEdge> voronoiEdges = (new Voronoi(1)).generateVoronoi(xValues, yValues, 0, FRAME_WIDTH, 0, FRAME_HEIGHT - MENUBAR_HEIGHT);
+		List<GraphEdge> voronoiEdges = (new Voronoi(1)).generateVoronoi(xValues, yValues, BOUNDING_BOX.getMinX(), BOUNDING_BOX.getMaxX(), BOUNDING_BOX.getMinY(), BOUNDING_BOX.getMaxY());
 		
 		//we should have <ZONE_COMPLEXITY> shapes
 		@SuppressWarnings("unchecked")
@@ -254,11 +254,60 @@ public class World extends JFrame implements WindowListener {
 			//see if it should be the BaseZone
 			if(curZone.contains(BASE_ZONE_LOC)) {
 				allZones.put(zoneIdInteger, new BaseZone(curZone));
+				homeBase = (BaseZone) allZones.get(zoneIdInteger);
+				continue;
+			}
+			//otherwise, take a look at it's neighbors
+			List<Zone> neighobrs = curZone.getNeighbors();
+			//count up how many of each type
+			/* Index 	Type
+			 * 0		Safe or Bounding Box
+			 * 1		Danger
+			 * 2		Fire
+			 */
+			int[] neighborCounts = new int[3];
+			for(Zone curNeighbor : neighobrs) {
+				if(curNeighbor instanceof SafeZone || curNeighbor instanceof BaseZone) {
+					neighborCounts[0]++;
+				} else if(curNeighbor instanceof DangerZone) {
+					neighborCounts[1]++;
+				} else if(curNeighbor instanceof Fire) {
+					neighborCounts[2]++;
+				} else {
+					//choose randomly
+					neighborCounts[RANDOM_GENERATOR.nextInt(neighborCounts.length)]++;
+				}
 			}
 			
+			//determine the probability cutoffs
+			for(int i = 1; i < neighborCounts.length; i++) {
+				neighborCounts[i] += neighborCounts[i-1];
+			}
+			
+			//produce our random number
+			//want it to be, at most, the number of neighbors we have
+			int randomValue = RANDOM_GENERATOR.nextInt(neighobrs.size());
+			for(int i = 0; i < neighborCounts.length - 1; i++) {
+				if(randomValue < neighborCounts[i]) {
+					switch(i) {
+						case(0):
+							//SafeZone
+							allZones.put(zoneIdInteger, new SafeZone(curZone));
+						break;
+						case(1):
+							//DangerZone
+							allZones.put(zoneIdInteger, new DangerZone(curZone));
+						break;
+						case(2):
+							//Fire
+							allZones.put(zoneIdInteger, new Fire(curZone));
+						break;
+					}
+					//break out of the for loop
+					break;
+				}
+			}
 		}
-		
-		
 	}
 
 

@@ -13,6 +13,7 @@ import main.java.be.humphreys.voronoi.GraphEdge;
 
 import simulation.Shout;
 import simulation.Survivor;
+import simulation.World;
 import util.shapes.Circle2D;
 
 public abstract class Zone extends Polygon {
@@ -67,6 +68,14 @@ public abstract class Zone extends Polygon {
 		
 	public int getID() {
 		return zoneID;
+	}
+	
+	public List<Zone> getNeighbors() {
+		ArrayList<Zone> neighborZones = new ArrayList<Zone>();
+		for(int neighborID : neighbors) {
+			neighborZones.add(World.allZones.get(new Integer(neighborID)));
+		}
+		return neighborZones;
 	}
 	
 	public double getCenterX() {
