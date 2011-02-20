@@ -15,6 +15,7 @@ import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
@@ -104,13 +105,10 @@ public class World extends JFrame implements WindowListener {
 		//initialize the zones
 		allZones = new Hashtable<Integer, Zone>();
 
-		//add all the default zones
-		addAllSetZones();
-
-		//fill in the rest randomly
-		fillInZones();
-
-		checkZoneSanity();
+		//set them up using the Voronoi Algorithm
+		voronoiZones();
+		
+//		checkZoneSanity();
 
 		//initialize the bots
 		allBots = new ArrayList<Bot>();
@@ -171,40 +169,6 @@ public class World extends JFrame implements WindowListener {
 
 	}
 
-	private void addAllSetZones() {
-//		//start with the base zone
-//		addBaseZone();
-//
-//		//the rest are not as necessary
-//		//put some triangles of safe zones around the base zone
-//		int[] xPointsSafe = {225, 250, 275};
-//		int[] yPointsSafe = {225, 200, 225};
-//		SafeZone safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-//		allZones.add(safe);
-//
-//		xPointsSafe = new int[] {275, 300, 275};
-//		yPointsSafe = new int[] {225, 250, 275};
-//		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-//		allZones.add(safe);
-//
-//		xPointsSafe = new int[] {275, 250, 225};
-//		yPointsSafe = new int[] {275, 300, 275};
-//		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-//		allZones.add(safe);
-//
-//		xPointsSafe = new int[] {225, 200, 225};
-//		yPointsSafe = new int[] {225, 250, 275};
-//		safe = new SafeZone(xPointsSafe, yPointsSafe, 3, allZones.size());
-//		allZones.add(safe);
-	}
-
-	private void addBaseZone() {
-//		int[] xPointsBase = {225, 275, 275, 225};
-//		int[] yPointsBase = {225, 225, 275, 275};
-//		BaseZone homeBase = new BaseZone(xPointsBase, yPointsBase, 4, 0);
-//		allZones.add(homeBase);
-//		this.homeBase = homeBase;
-	}
 
 	private void voronoiZones() {
 		//create our points
@@ -220,25 +184,37 @@ public class World extends JFrame implements WindowListener {
 		Point curPoint;
 		for(int i = 1; i < ZONE_COMPLEXITY; i++) {
 			//make a random point
-			curPoint = new Point(RANDOM_GENERATOR.nextInt(), RANDOM_GENERATOR.nextInt());
+			curPoint = new Point((int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxX()-BOUNDING_BOX.getMinX())) + BOUNDING_BOX.getMinX()),
+								 (int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxY()-BOUNDING_BOX.getMinY())) + BOUNDING_BOX.getMinY()));
 			
 			//add it to the list
-			xValues[i] = curPoint.getX();
-			yValues[i] = curPoint.getY();
+			xValues[i] = curPoint.x;
+			yValues[i] = curPoint.y;
 		}
-		
+				
 		//now, get the edges from the Voronoi algorithm
-		List<GraphEdge> voronoiEdges = (new Voronoi(1)).generateVoronoi(xValues, yValues, BOUNDING_BOX.getMinX(), BOUNDING_BOX.getMaxX(), BOUNDING_BOX.getMinY(), BOUNDING_BOX.getMaxY());
-		
+		Voronoi vor = new Voronoi(.5);
+		List<GraphEdge> voronoiEdges = vor.generateVoronoi(xValues, yValues, BOUNDING_BOX.getMinX(), BOUNDING_BOX.getMaxX(), BOUNDING_BOX.getMinY(), BOUNDING_BOX.getMaxY());
+				
 		//we should have <ZONE_COMPLEXITY> shapes
 		@SuppressWarnings("unchecked")
 		List<GraphEdge>[] voronoiEdgesOrganizedByShape = (ArrayList<GraphEdge>[]) new ArrayList[ZONE_COMPLEXITY];
+		//intitialize them
+		for(int i = 0; i < voronoiEdgesOrganizedByShape.length; i++) {
+			voronoiEdgesOrganizedByShape[i] = new ArrayList<GraphEdge>();
+		}
+		
+		System.out.println("num x values for Voronoi = " + xValues.length);
 		
 		//organize the edges into the various shapes
 		for(GraphEdge curEdge : voronoiEdges) {
+			System.out.println(curEdge.site1 + "\t" + curEdge.site2);
+			//TODO check that site values are unique
+			System.out.flush();
 			voronoiEdgesOrganizedByShape[curEdge.site1].add(curEdge);
 			voronoiEdgesOrganizedByShape[curEdge.site2].add(curEdge);
 		}
+		System.out.flush();
 		
 		//make them into Zones
 		//start with DummyZones
@@ -251,6 +227,7 @@ public class World extends JFrame implements WindowListener {
 			//get the zone
 			Integer zoneIdInteger = new Integer(zoneId);
 			Zone curZone = allZones.get(zoneIdInteger);
+			
 			//see if it should be the BaseZone
 			if(curZone.contains(BASE_ZONE_LOC)) {
 				allZones.put(zoneIdInteger, new BaseZone(curZone));
@@ -307,101 +284,6 @@ public class World extends JFrame implements WindowListener {
 					break;
 				}
 			}
-		}
-	}
-
-
-
-
-
-
-
-	//TODO combine same type zones?
-
-	private void fillInZones() {
-		//first, get all unfilled zones
-		Area filledAreas = new Area();
-		for(Zone z : allZones.values()) {
-			filledAreas.add(new Area(z));
-		}
-
-		Area unfilledArea = new Area(BOUNDING_BOX);
-		unfilledArea.subtract(filledAreas);
-
-		List<Point> zoneVerticies = Utilities.getVerticies(unfilledArea);
-
-		//the ZONE_COMPLEXITY constant basically defines how many extra verticies in Zones we should add
-		//so add them
-		int numLeftToAdd = ZONE_COMPLEXITY;
-		while(numLeftToAdd > 0) {
-			//make a random point
-			Point newPoint = new Point(RANDOM_GENERATOR.nextInt(FRAME_WIDTH), RANDOM_GENERATOR.nextInt(FRAME_HEIGHT));
-			//make sure the point is in the area
-			if(! unfilledArea.contains(newPoint)) {
-				continue;
-			}
-			//make sure it isn't already added
-			if(zoneVerticies.contains(newPoint)) {
-				continue;
-			}
-			//if we've gotten here, the point is safe to add
-			zoneVerticies.add(newPoint);
-			numLeftToAdd--;
-		}
-
-		//now, start making arbitrary triangles and see if they overlap with any existing zones
-		//if they don't, add them to the zones list
-		while(! unfilledArea.isEmpty()) {
-			//choose 3 points randomly
-			Point p1 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
-			Point p2 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
-			Point p3 = zoneVerticies.remove(RANDOM_GENERATOR.nextInt(zoneVerticies.size()));
-
-			int[] xPoints = {(int) p1.getX(), (int) p2.getX(), (int) p3.getX()};
-			int[] yPoints = {(int) p1.getY(), (int) p2.getY(), (int) p3.getY()};
-
-			//make a zones out of them
-			Zone newZone;
-
-
-			switch(RANDOM_GENERATOR.nextInt(3)) {
-				//TODO Add some logic? Danger around fire?
-//				case 0: newZone = new SafeZone(xPoints, yPoints, 3, allZones.size()); break; 
-//				case 1: newZone = new DangerZone(xPoints, yPoints, 3, allZones.size()); break;
-//				case 2: newZone = new Fire(xPoints, yPoints, 3, allZones.size()); break;
-				default: newZone = new SafeZone(null, 0); break;  
-			}
-
-			//make sure it doesn't intersect any existing zones
-			try {
-				if(Utilities.findAreaIntersectionsInList(newZone, allZones.values()).size() > 0) {
-					zoneVerticies.add(p1);
-					zoneVerticies.add(p2);
-					zoneVerticies.add(p3);
-					continue;
-				}
-			} catch(IllegalArgumentException e) {
-				//if we got an IllegalArgument exception, it means we tried to pass an arealess shape
-				//try again
-				zoneVerticies.add(p1);
-				zoneVerticies.add(p2);
-				zoneVerticies.add(p3);
-				continue;
-			}
-
-			//it checks out - add it
-			allZones.put(new Integer(newZone.getID()), newZone);
-			//remove it's area from the unfilled area
-			unfilledArea.subtract(new Area(newZone));
-
-			//TODO find a way to combine same-type zones that share sides
-
-			//only put points back into the array if they are still in the unfilled area
-			zoneVerticies.add(p1);
-
-			zoneVerticies.add(p2);
-
-			zoneVerticies.add(p3);
 		}
 	}
 

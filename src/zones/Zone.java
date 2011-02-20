@@ -25,9 +25,15 @@ public abstract class Zone extends Polygon {
 	
 	public Zone(List<GraphEdge> _sides, int _zoneID) {
 		super();
-		//add the points of this shape
+		
+		for(GraphEdge e : _sides) {
+			System.out.println(e);
+		}
+		
+		
 		ArrayList<Point> verticies = new ArrayList<Point>();
 		for(GraphEdge curSide : _sides) {
+			
 			Point p1 = new Point((int)curSide.x1, (int)curSide.y1);
 			Point p2 = new Point((int)curSide.x2, (int)curSide.y2);
 			if(! verticies.contains(p1)) {

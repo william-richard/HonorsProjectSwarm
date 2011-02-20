@@ -8,4 +8,8 @@ public class GraphEdge
 
     public int site1;
     public int site2;
+    
+    public String toString() {
+    	return "(" + x1 + ", " + y1 + ") (" + x2 + ", " + y2 + ")\t" + site1 + " " + site2;
+    }
 }
