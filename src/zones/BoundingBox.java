@@ -88,5 +88,9 @@ public class BoundingBox extends Rectangle2D.Double {
 		return oneCorner.distance(otherCorner);
 	}
 	
+	public boolean isPointOnBorder(Point2D p) {
+		return p.getX() == getMinX() || p.getX() == getMaxX() || p.getY() == getMinY() || p.getY() == getMaxY();
+	}
+	
 	
 }

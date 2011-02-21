@@ -1,6 +1,7 @@
 package zones;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.util.List;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
@@ -17,8 +18,8 @@ public class DangerZone extends Zone {
 
 	private static final Color DangerZoneColor = new Color(139,37,0);
 		
-	public DangerZone(List<GraphEdge> _sides, int _zoneID) {
-		super(_sides, _zoneID);
+	public DangerZone(List<GraphEdge> _sides, int _zoneID, Point2D center, BoundingBox bbox) {
+		super(_sides, _zoneID, center, bbox);
 	}
 	
 	public DangerZone(Zone other) {

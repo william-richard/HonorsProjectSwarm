@@ -260,6 +260,11 @@ public class Utilities {
 		Vector v2 = new Vector(fromThisPoint, andThisOtherPoint);
 		return v1.getAngleBetween(v2);
 	}
+	
+	public static double getAngleFromZero(Point2D pivot, Point2D anglePoint) {
+		Vector v1 = Vector.getHorizontalUnitVector(pivot);
+		return getAngleBetween(v1.getP2(), anglePoint, pivot);
+	}
 
 	public static List<LineSegment> getDiscontinuitySegments(Circle2D base, Shape outsider) {
 		//first, get the sides of the outsider

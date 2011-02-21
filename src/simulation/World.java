@@ -14,6 +14,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
@@ -54,7 +55,7 @@ public class World extends JFrame implements WindowListener {
 
 	private static final boolean WORLD_DEBUG = false;
 
-	private static final int ZONE_COMPLEXITY = 5;
+	private static final int ZONE_COMPLEXITY = 500; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color EXPLORER_BOT_COLOR = Color.green;
@@ -65,13 +66,13 @@ public class World extends JFrame implements WindowListener {
 	private static final Color VISIBLE_RANGE_COLOR = new Color(255,106,106);
 	private static final Color AUDIO_RANGE_COLOR = new Color(205,102,0);
 	private static final Color BROADCAST_RANGE_COLOR = Color.yellow;
-	private static final Color BOT_LABEL_COLOR = Color.black;
+	private static final Color LABEL_COLOR = Color.black;
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color SURVIVOR_PATH_COLOR = new Color(0,154,205);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
-	
-	private static final Point BASE_ZONE_LOC = new Point(FRAME_WIDTH / 2, FRAME_HEIGHT / 2);
-	
+
+	private static final Point BASE_ZONE_LOC = new Point((int)BOUNDING_BOX.getCenterX(), (int)BOUNDING_BOX.getCenterY());
+
 	private static final Stroke SURVIVOR_PATH_STROKE = new BasicStroke((float) 2.0);
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
@@ -107,8 +108,8 @@ public class World extends JFrame implements WindowListener {
 
 		//set them up using the Voronoi Algorithm
 		voronoiZones();
-		
-//		checkZoneSanity();
+
+		//		checkZoneSanity();
 
 		//initialize the bots
 		allBots = new ArrayList<Bot>();
@@ -174,28 +175,31 @@ public class World extends JFrame implements WindowListener {
 		//create our points
 		double[] xValues = new double[ZONE_COMPLEXITY];
 		double[] yValues = new double[ZONE_COMPLEXITY];
-		
+
 		//start with the basezone center location
 		xValues[0] = (double) BASE_ZONE_LOC.getX();
 		yValues[0] = (double) BASE_ZONE_LOC.getY();
-				
+
 		//add random points
 		//make sure they are not inside the basezone
 		Point curPoint;
+		ArrayList<Point> allPointsToAdd = new ArrayList<Point>();
+		allPointsToAdd.add(BASE_ZONE_LOC);
 		for(int i = 1; i < ZONE_COMPLEXITY; i++) {
-			//make a random point
-			curPoint = new Point((int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxX()-BOUNDING_BOX.getMinX())) + BOUNDING_BOX.getMinX()),
-								 (int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxY()-BOUNDING_BOX.getMinY())) + BOUNDING_BOX.getMinY()));
-			
+			do {
+				//make a random point
+				curPoint = new Point((int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxX()-BOUNDING_BOX.getMinX())) + BOUNDING_BOX.getMinX()),
+						(int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxY()-BOUNDING_BOX.getMinY())) + BOUNDING_BOX.getMinY()));
+			} while(allPointsToAdd.contains(curPoint));
 			//add it to the list
 			xValues[i] = curPoint.x;
 			yValues[i] = curPoint.y;
 		}
-				
+
 		//now, get the edges from the Voronoi algorithm
 		Voronoi vor = new Voronoi(.5);
 		List<GraphEdge> voronoiEdges = vor.generateVoronoi(xValues, yValues, BOUNDING_BOX.getMinX(), BOUNDING_BOX.getMaxX(), BOUNDING_BOX.getMinY(), BOUNDING_BOX.getMaxY());
-				
+
 		//we should have <ZONE_COMPLEXITY> shapes
 		@SuppressWarnings("unchecked")
 		List<GraphEdge>[] voronoiEdgesOrganizedByShape = (ArrayList<GraphEdge>[]) new ArrayList[ZONE_COMPLEXITY];
@@ -203,31 +207,26 @@ public class World extends JFrame implements WindowListener {
 		for(int i = 0; i < voronoiEdgesOrganizedByShape.length; i++) {
 			voronoiEdgesOrganizedByShape[i] = new ArrayList<GraphEdge>();
 		}
-		
-		System.out.println("num x values for Voronoi = " + xValues.length);
-		
+
 		//organize the edges into the various shapes
 		for(GraphEdge curEdge : voronoiEdges) {
-			System.out.println(curEdge.site1 + "\t" + curEdge.site2);
-			//TODO check that site values are unique
-			System.out.flush();
 			voronoiEdgesOrganizedByShape[curEdge.site1].add(curEdge);
 			voronoiEdgesOrganizedByShape[curEdge.site2].add(curEdge);
 		}
 		System.out.flush();
-		
+
 		//make them into Zones
 		//start with DummyZones
 		for(int zoneId = 0; zoneId < voronoiEdgesOrganizedByShape.length; zoneId++) {
-			allZones.put(new Integer(zoneId), new DummyZone(voronoiEdgesOrganizedByShape[zoneId], zoneId));
+			allZones.put(new Integer(zoneId), new DummyZone(voronoiEdgesOrganizedByShape[zoneId], zoneId, new Point2D.Double(xValues[zoneId], yValues[zoneId]), World.BOUNDING_BOX));
 		}
-	
+
 		//now, we need to reassign them to non-dummy zones
-		for(int zoneId = 0; zoneId < allZones.size(); zoneId++) {
+		for(int zoneId = 0; zoneId < allZones.values().size(); zoneId++) {
 			//get the zone
 			Integer zoneIdInteger = new Integer(zoneId);
 			Zone curZone = allZones.get(zoneIdInteger);
-			
+
 			//see if it should be the BaseZone
 			if(curZone.contains(BASE_ZONE_LOC)) {
 				allZones.put(zoneIdInteger, new BaseZone(curZone));
@@ -255,16 +254,16 @@ public class World extends JFrame implements WindowListener {
 					neighborCounts[RANDOM_GENERATOR.nextInt(neighborCounts.length)]++;
 				}
 			}
-			
+
 			//determine the probability cutoffs
 			for(int i = 1; i < neighborCounts.length; i++) {
 				neighborCounts[i] += neighborCounts[i-1];
 			}
-			
+
 			//produce our random number
 			//want it to be, at most, the number of neighbors we have
 			int randomValue = RANDOM_GENERATOR.nextInt(neighobrs.size());
-			for(int i = 0; i < neighborCounts.length - 1; i++) {
+			for(int i = 0; i < neighborCounts.length; i++) {
 				if(randomValue < neighborCounts[i]) {
 					switch(i) {
 						case(0):
@@ -423,6 +422,12 @@ public class World extends JFrame implements WindowListener {
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 		}
+		//		for(Zone z : allZones.values()) {
+		//			g2d.setColor(ZONE_OUTLINE_COLOR);
+		//			g2d.draw(z);
+		//			g2d.setColor(LABEL_COLOR);
+		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+		//		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
 		Bot firstBot = (Bot) allBotSnapshot.next().clone();
@@ -491,7 +496,7 @@ public class World extends JFrame implements WindowListener {
 				g2d.draw(curBot.getBroadcastArea());
 			}
 
-			//			g2d.setColor(BOT_LABEL_COLOR);
+			//			g2d.setColor(LABEL_COLOR);
 			//			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 
 			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
@@ -518,7 +523,7 @@ public class World extends JFrame implements WindowListener {
 			}
 			g2d.fill(curBot);
 
-			g2d.setColor(BOT_LABEL_COLOR);
+			g2d.setColor(LABEL_COLOR);
 			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 		}
 
@@ -544,8 +549,6 @@ public class World extends JFrame implements WindowListener {
 			//			}
 			//			debugRepulsionVectors.clear();
 		}
-
-
 	}
 
 	//figures out which zones the passed point is in, and returns it.

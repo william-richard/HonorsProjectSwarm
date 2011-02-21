@@ -1,6 +1,7 @@
 package zones;
 
 import java.awt.Color;
+import java.awt.geom.Point2D;
 import java.util.List;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
@@ -10,8 +11,8 @@ import simulation.Survivor;
 
 public class DummyZone extends Zone {
 
-	public DummyZone(List<GraphEdge> _sides, int _zoneID) {
-		super(_sides, _zoneID);
+	public DummyZone(List<GraphEdge> _sides, int _zoneID, Point2D center, BoundingBox bbox) {
+		super(_sides, _zoneID, center, bbox);
 	}
 	
 	public DummyZone(Zone other) {
