@@ -4,10 +4,12 @@ import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import util.Utilities;
@@ -56,7 +58,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double SEPERATION_CURVE_SHAPE = 2.5;
 
 	//TODO danger zone factor adjustment threshold to being if the closest neighbor is too close
-	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 4;
+	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 6;
 	private final double FACTOR_ADJUSTMENT_SEPERATION_VALUE = SEPERATION_FACTOR * 2;
 
 	public static double timestepSeperationMagnitudeTotal;
@@ -81,9 +83,9 @@ public class Bot extends Rectangle2D.Double {
 	private final static double DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH = 1.0;
 	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
 
-	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 2.0;
+	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
-	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .5;
+	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .25;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -105,10 +107,10 @@ public class Bot extends Rectangle2D.Double {
 	private BoundingBox boundingBox;
 
 	// private Bot previousBot;
-	private List<BotInfo> otherBotInfo; // storage of what information we know
+	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
-	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	private List<Message> alreadyBroadcastedMessages;
+	private Set<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
+	private Set<Message> alreadyBroadcastedMessages;
 	private int botID;
 	private int zoneAssesment; // stores the bot's assessment of what sort of
 	// zones it is in
@@ -129,9 +131,9 @@ public class Bot extends Rectangle2D.Double {
 	private boolean startedCreatingMyPath = false;
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
 
-	private List<SurvivorPath> bestKnownCompletePaths;
+	private Set<SurvivorPath> bestKnownCompletePaths;
 
-	private List<SurvivorPath> markablePaths;
+	private Set<SurvivorPath> markablePaths;
 	private SurvivorPath myPathToMark;
 
 	/***************************************************************************
@@ -151,11 +153,11 @@ public class Bot extends Rectangle2D.Double {
 		setFrame(cornerX, cornerY, DIMENSION, DIMENSION);
 
 		// now, set up the list of other bot information
-		otherBotInfo = new ArrayList<BotInfo>();
+		otherBotInfo = new HashSet<BotInfo>();
 
 		// set up other variables with default values
-		messageBuffer = new ArrayList<Message>();
-		alreadyBroadcastedMessages = new ArrayList<Message>();
+		messageBuffer = new HashSet<Message>();
+		alreadyBroadcastedMessages = new HashSet<Message>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -176,8 +178,8 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		bestKnownCompletePaths = new ArrayList<SurvivorPath>();
-		markablePaths = new ArrayList<SurvivorPath>();
+		bestKnownCompletePaths = new HashSet<SurvivorPath>();
+		markablePaths = new HashSet<SurvivorPath>();
 
 		// for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
@@ -254,7 +256,7 @@ public class Bot extends Rectangle2D.Double {
 	/**
 	 * @return the bestKnownCompletePaths
 	 */
-	public List<SurvivorPath> getKnownCompletePaths() {
+	public Set<SurvivorPath> getKnownCompletePaths() {
 		return bestKnownCompletePaths;
 	}
 
@@ -653,9 +655,7 @@ public class Bot extends Rectangle2D.Double {
 			Vector botSeperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 			double averageDistanceToNeighbors = 0.0;
 
-			for (int i = 0; i < otherBotInfo.size(); i++) {
-				BotInfo bi = otherBotInfo.get(i);
-
+			for (BotInfo bi : otherBotInfo) {
 				//get the location of the other bot
 				Point2D curBotLoc = bi.getCenterLocation();
 				double distToCurBot = this.getCenterLocation().distance(curBotLoc);
@@ -1344,9 +1344,13 @@ public class Bot extends Rectangle2D.Double {
 		} else {
 
 			//if we have a path, add it to a "markable" path
-			if(myPathToMark != null) {
-				markablePaths.add(myPathToMark);
-			}
+//			if(myPathToMark != null) {
+//				markablePaths.add(myPathToMark);
+//			}
+
+//			if(markablePaths.size() > 0) {
+//				print(markablePaths.toString());
+//			}
 
 			//want to see if there is a markable path nearby that we should move towards
 			if(markablePaths.size() == 0) {
@@ -1375,7 +1379,7 @@ public class Bot extends Rectangle2D.Double {
 
 			//with some probability, if the density is too high, stop being a marker
 			if(botMode == PATH_MARKER && getAvgDistFromPathNeighbors() < MIN_DIST_BTWN_BOTS_ON_PATH) {
-				if(NUM_GEN.nextDouble() <= HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
+				if(NUM_GEN.nextDouble() < HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
 					botMode = EXPLORER;
 				}
 			}
@@ -1397,7 +1401,7 @@ public class Bot extends Rectangle2D.Double {
 
 	public void doOneTimestep() {
 		//before anything else, populate the possible markable paths list
-		markablePaths = new ArrayList<SurvivorPath>(bestKnownCompletePaths);
+		markablePaths = new HashSet<SurvivorPath>(bestKnownCompletePaths);
 
 		//make sure we aren't trying to mark a path if we shouldn't be
 		if(botMode != PATH_MARKER) {

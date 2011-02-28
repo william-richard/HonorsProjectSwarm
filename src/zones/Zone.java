@@ -32,6 +32,8 @@ public abstract class Zone extends Polygon {
 	private final int BOTTOM_EDGE = 1;
 	private final int LEFT_EDGE = 2;
 	private final int RIGHT_EDGE = 3;
+	
+	public final static double CHANGE_PROBABILITY = .001;
 
 	public Zone(List<GraphEdge> _sides, int _zoneID, final Point2D center, BoundingBox bbox) {
 		super();
@@ -279,6 +281,58 @@ public abstract class Zone extends Polygon {
 		return new Circle2D(originator, getFoundRange());
 	}
 
+	public static Zone changeZoneBasedOnNeighbors(Zone z) {
+		List<Zone> neighobrs = z.getNeighbors();
+		//count up how many of each type
+		/* Index 	Type
+		 * 0		Safe or Bounding Box
+		 * 1		Danger
+		 * 2		Fire
+		 */
+		int[] neighborCounts = new int[3];
+		for(Zone curNeighbor : neighobrs) {
+			if(curNeighbor instanceof SafeZone || curNeighbor instanceof BaseZone) {
+				neighborCounts[0]++;
+			} else if(curNeighbor instanceof DangerZone) {
+				neighborCounts[1]++;
+			} else if(curNeighbor instanceof Fire) {
+				neighborCounts[2]++;
+			} else {
+				//choose randomly
+				neighborCounts[World.RANDOM_GENERATOR.nextInt(neighborCounts.length)]++;
+			}
+		}
+
+		//determine the probability cutoffs
+		for(int i = 1; i < neighborCounts.length; i++) {
+			neighborCounts[i] += neighborCounts[i-1];
+		}
+
+		//produce our random number
+		//want it to be, at most, the number of neighbors we have
+		int randomValue = World.RANDOM_GENERATOR.nextInt(neighobrs.size());
+		for(int i = 0; i < neighborCounts.length; i++) {
+			if(randomValue < neighborCounts[i]) {
+				switch(i) {
+					case(0):
+						//SafeZone
+						return new SafeZone(z);
+					case(1):
+						//DangerZone
+						return new DangerZone(z);
+					case(2):
+						//Fire
+						return new Fire(z);
+				}
+				//break out of the for loop
+				break;
+			}
+		}
+		
+		//shouldn't get here, but just in case
+		return z;
+
+	}	
 
 	public abstract Shout getShout(Survivor shouter);
 	public abstract double getBroadcastRange();

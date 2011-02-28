@@ -52,7 +52,7 @@ public class Fire extends DangerZone {
 	
 	@Override
 	public double repulsionScalingFactor() {
-		return 115;
+		return 130;
 	}
 	
 }

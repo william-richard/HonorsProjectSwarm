@@ -1,5 +1,6 @@
 package simulation;
 import java.awt.geom.Point2D;
+import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,6 +50,10 @@ public class SurvivorPath {
 		}
 		//add the distance from the last point to the end point
 		pathLength += pathWaypoints.get(pathWaypoints.size() - 1).getCenterLocation().distance(endPoint);
+		
+		//round to 5 decimal places
+		DecimalFormat df = new DecimalFormat("#.#####");
+		pathLength = Double.parseDouble(df.format(pathLength));
 	}
 
 	public double getPathLength() {

@@ -21,6 +21,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
+import java.util.Set;
 
 import javax.swing.JFrame;
 
@@ -233,56 +234,8 @@ public class World extends JFrame implements WindowListener {
 				homeBase = (BaseZone) allZones.get(zoneIdInteger);
 				continue;
 			}
-			//otherwise, take a look at it's neighbors
-			List<Zone> neighobrs = curZone.getNeighbors();
-			//count up how many of each type
-			/* Index 	Type
-			 * 0		Safe or Bounding Box
-			 * 1		Danger
-			 * 2		Fire
-			 */
-			int[] neighborCounts = new int[3];
-			for(Zone curNeighbor : neighobrs) {
-				if(curNeighbor instanceof SafeZone || curNeighbor instanceof BaseZone) {
-					neighborCounts[0]++;
-				} else if(curNeighbor instanceof DangerZone) {
-					neighborCounts[1]++;
-				} else if(curNeighbor instanceof Fire) {
-					neighborCounts[2]++;
-				} else {
-					//choose randomly
-					neighborCounts[RANDOM_GENERATOR.nextInt(neighborCounts.length)]++;
-				}
-			}
-
-			//determine the probability cutoffs
-			for(int i = 1; i < neighborCounts.length; i++) {
-				neighborCounts[i] += neighborCounts[i-1];
-			}
-
-			//produce our random number
-			//want it to be, at most, the number of neighbors we have
-			int randomValue = RANDOM_GENERATOR.nextInt(neighobrs.size());
-			for(int i = 0; i < neighborCounts.length; i++) {
-				if(randomValue < neighborCounts[i]) {
-					switch(i) {
-						case(0):
-							//SafeZone
-							allZones.put(zoneIdInteger, new SafeZone(curZone));
-						break;
-						case(1):
-							//DangerZone
-							allZones.put(zoneIdInteger, new DangerZone(curZone));
-						break;
-						case(2):
-							//Fire
-							allZones.put(zoneIdInteger, new Fire(curZone));
-						break;
-					}
-					//break out of the for loop
-					break;
-				}
-			}
+			//otherwise, take a look at it's neighbors and change accordingly
+			allZones.put(zoneIdInteger, Zone.changeZoneBasedOnNeighbors(curZone));
 		}
 	}
 
@@ -327,6 +280,22 @@ public class World extends JFrame implements WindowListener {
 
 			timestepStartTime = System.currentTimeMillis();
 
+			//do the zones
+			for(Zone z : allZones.values()) {
+				//needs to be implimented here rather than in a "doOneTimestep" method because we need to store the results
+				//with some probability, each zone is going to change
+				//except for the base Zone
+				if(z instanceof BaseZone) {
+					continue;
+				}
+				
+				if(World.RANDOM_GENERATOR.nextDouble() < Zone.CHANGE_PROBABILITY) {
+					allZones.put(new Integer(z.getID()), Zone.changeZoneBasedOnNeighbors(z));
+				}
+			}
+			
+			
+			
 			//do all the survivors
 			for(Survivor s : allSurvivors) {
 				s.doOneTimestep();
@@ -458,7 +427,7 @@ public class World extends JFrame implements WindowListener {
 		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
 		for(Bot b : allBots) {
 			//draw all of it's paths
-			List<SurvivorPath> survivorPaths = b.getKnownCompletePaths();
+			Set<SurvivorPath> survivorPaths = b.getKnownCompletePaths();
 
 			for(SurvivorPath sp : survivorPaths) {
 				if(! pathsDrawn.contains(sp)) {
