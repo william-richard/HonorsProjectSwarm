@@ -13,7 +13,7 @@ public class Message {
 	public final static String CLAIM_SURVIVOR_MESSAGE = 					"cs";
 	public final static String FOUND_SURVIVOR_MESSAGE = 					"fs";
 	public final static String CREATE_PATH_MESSAGE = 						"cp";
-	public final static String STOP_ADDING_NEW_PATH_MARKERS = 				"sanpm";
+	public final static String STOP_ADDING_NEW_PATH_MARKERS = 				"sanpm"; //TODO on receipt, don't mark ANY paths
 
 	public Message(BotInfo _sender, String _type, String _message, ArrayList<Object> _attachments) {
 		sender = _sender;;

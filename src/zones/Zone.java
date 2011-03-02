@@ -283,6 +283,9 @@ public abstract class Zone extends Polygon {
 
 	public static Zone changeZoneBasedOnNeighbors(Zone z) {
 		List<Zone> neighobrs = z.getNeighbors();
+		
+		//TODO just choose a neighbor randomly rather than doing these counts
+		
 		//count up how many of each type
 		/* Index 	Type
 		 * 0		Safe or Bounding Box

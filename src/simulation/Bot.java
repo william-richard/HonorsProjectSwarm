@@ -126,7 +126,7 @@ public class Bot extends Rectangle2D.Double {
 	// this is useful, but it might be
 	private int mySurvivorClaimTime;
 	private World world;
-	private int botMode;
+	private int botMode; //TODO have explorers ignore path markers, and only let explorers create new paths
 
 	private boolean startedCreatingMyPath = false;
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
