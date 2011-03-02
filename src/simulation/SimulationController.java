@@ -133,7 +133,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		stopSimulationButton = new JButton(stopSimulationString);
 		stopSimulationButton.addActionListener(this);
 
-		//TODO try to make reset button really kill everything - maybe save the thread running and interrupt it?
 		resetSimulationButton = new JButton(resetSimulationString);
 		resetSimulationButton.addActionListener(this);
 	}

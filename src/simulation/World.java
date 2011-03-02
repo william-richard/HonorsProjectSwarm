@@ -56,7 +56,7 @@ public class World extends JFrame implements WindowListener {
 
 	private static final boolean WORLD_DEBUG = false;
 
-	private static final int ZONE_COMPLEXITY = 500; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
+	private static final int ZONE_COMPLEXITY = 100; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color EXPLORER_BOT_COLOR = Color.green;
@@ -236,6 +236,11 @@ public class World extends JFrame implements WindowListener {
 			}
 			//otherwise, take a look at it's neighbors and change accordingly
 			allZones.put(zoneIdInteger, Zone.changeZoneBasedOnNeighbors(curZone));
+
+		}
+		
+		for(Zone z : allZones.values()) {
+			System.out.println(z);
 		}
 	}
 
@@ -288,14 +293,13 @@ public class World extends JFrame implements WindowListener {
 				if(z instanceof BaseZone) {
 					continue;
 				}
-				
+
 				if(World.RANDOM_GENERATOR.nextDouble() < Zone.CHANGE_PROBABILITY) {
 					allZones.put(new Integer(z.getID()), Zone.changeZoneBasedOnNeighbors(z));
-				}
+				}				
 			}
-			
-			
-			
+
+
 			//do all the survivors
 			for(Survivor s : allSurvivors) {
 				s.doOneTimestep();
@@ -391,12 +395,12 @@ public class World extends JFrame implements WindowListener {
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 		}
-		//		for(Zone z : allZones.values()) {
-		//			g2d.setColor(ZONE_OUTLINE_COLOR);
-		//			g2d.draw(z);
-		//			g2d.setColor(LABEL_COLOR);
-		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
-		//		}
+		for(Zone z : allZones.values()) {
+			g2d.setColor(ZONE_OUTLINE_COLOR);
+			g2d.draw(z);
+			g2d.setColor(LABEL_COLOR);
+			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
 		Bot firstBot = (Bot) allBotSnapshot.next().clone();

@@ -81,7 +81,6 @@ public class SafeZone extends Zone {
 
 	@Override
 	public double repulsionScalingFactor() {
-		// TODO Auto-generated method stub
 		return 0;
 	}
 

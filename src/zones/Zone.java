@@ -7,11 +7,14 @@ import java.awt.Shape;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Point2D.Double;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import com.sun.swing.internal.plaf.basic.resources.basic;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
 
@@ -52,7 +55,6 @@ public abstract class Zone extends Polygon {
 				continue;
 			}
 			
-			
 			if(!verticies.contains(p1)) {
 				verticies.add(p1);
 			}
@@ -65,7 +67,7 @@ public abstract class Zone extends Polygon {
 		boolean[] requiredEdges = new boolean[4];
 		Arrays.fill(requiredEdges, false);
 		for(Point p : verticies) {
-			if(World.BOUNDING_BOX.isPointOnBorder(p)) {
+			if(bbox.isPointOnBorder(p)) {
 				if(p.getX() == bbox.getMinX()) {
 					requiredEdges[LEFT_EDGE] = true;
 				}
@@ -282,61 +284,74 @@ public abstract class Zone extends Polygon {
 	}
 
 	public static Zone changeZoneBasedOnNeighbors(Zone z) {
+		
+		//don't change it if it's a base zone
+		if(z instanceof BaseZone) {
+			return z;
+		}
+		
 		List<Zone> neighobrs = z.getNeighbors();
 		
-		//TODO just choose a neighbor randomly rather than doing these counts
+		//choose a neighbor randomly
+		int neighborChoice = World.RANDOM_GENERATOR.nextInt(neighobrs.size());
 		
-		//count up how many of each type
-		/* Index 	Type
-		 * 0		Safe or Bounding Box
-		 * 1		Danger
-		 * 2		Fire
-		 */
-		int[] neighborCounts = new int[3];
-		for(Zone curNeighbor : neighobrs) {
-			if(curNeighbor instanceof SafeZone || curNeighbor instanceof BaseZone) {
-				neighborCounts[0]++;
-			} else if(curNeighbor instanceof DangerZone) {
-				neighborCounts[1]++;
-			} else if(curNeighbor instanceof Fire) {
-				neighborCounts[2]++;
+		Zone decidingNeighbor = neighobrs.get(neighborChoice);
+		
+		//change to that neighbor's type
+		if(decidingNeighbor instanceof DummyZone) {
+			//choose one randomly
+			int randomChoice = World.RANDOM_GENERATOR.nextInt(3);
+			
+			final int SAFE = 0;
+			final int DANGER = 1;
+			final int FIRE = 2;
+			if(randomChoice == SAFE) {
+				return new SafeZone(z);
+			} else if(randomChoice == DANGER) {
+				return new DangerZone(z);
+			} else if(randomChoice == FIRE) {
+				return new Fire(z);
 			} else {
-				//choose randomly
-				neighborCounts[World.RANDOM_GENERATOR.nextInt(neighborCounts.length)]++;
+				//just catch uncaught cases
+				return new SafeZone(z);
 			}
+		} 
+		
+		if(decidingNeighbor instanceof BaseZone) {
+			return new SafeZone(z);
 		}
-
-		//determine the probability cutoffs
-		for(int i = 1; i < neighborCounts.length; i++) {
-			neighborCounts[i] += neighborCounts[i-1];
-		}
-
-		//produce our random number
-		//want it to be, at most, the number of neighbors we have
-		int randomValue = World.RANDOM_GENERATOR.nextInt(neighobrs.size());
-		for(int i = 0; i < neighborCounts.length; i++) {
-			if(randomValue < neighborCounts[i]) {
-				switch(i) {
-					case(0):
-						//SafeZone
-						return new SafeZone(z);
-					case(1):
-						//DangerZone
-						return new DangerZone(z);
-					case(2):
-						//Fire
-						return new Fire(z);
-				}
-				//break out of the for loop
-				break;
-			}
+		
+		try {
+			return decidingNeighbor.getClass().getConstructor(Zone.class).newInstance(z);
+		} catch (IllegalArgumentException e) {
+			e.printStackTrace();
+		} catch (SecurityException e) {
+			e.printStackTrace();
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
 		}
 		
 		//shouldn't get here, but just in case
 		return z;
-
 	}	
 
+	@Override
+	public String toString() {
+		String result = zoneID + "\t";
+		for(int i = 0; i < npoints; i++) {
+			result += "(" + xpoints[i] + ", "+ ypoints[i] + ") ";
+		}
+		return result;
+	}
+	
+	
+	
 	public abstract Shout getShout(Survivor shouter);
 	public abstract double getBroadcastRange();
 	public abstract double getVisiblityRange();
