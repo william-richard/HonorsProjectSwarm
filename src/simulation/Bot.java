@@ -40,8 +40,6 @@ public class Bot extends Rectangle2D.Double {
 	public static final double DEFAULT_AUDITORY_RADIUS = 24; //24 px = 48 m
 	public static final double DEFAULT_FOUND_RANGE = DEFAULT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
-	private final static double IDEAL_DIST_BTWN_BOTS_ON_PATH = 10; //5 px = 10 m
-	private final static double MIN_DIST_BTWN_BOTS_ON_PATH = 5; // 2 px = 4 m
 
 	private final static Random NUM_GEN = new Random();
 
@@ -85,7 +83,14 @@ public class Bot extends Rectangle2D.Double {
 
 	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
-	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .1;
+	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .25;
+	
+	private final double PATH_MARK_IDEAL_DIST = 10;
+	
+	private final double PATH_MARK_MIN_DIST = PATH_MARK_IDEAL_DIST * 0.5;
+	private final double PATH_MARK_MAX_DIST = PATH_MARK_IDEAL_DIST * 1.5;
+	private final double PATH_MARK_CURVE_SHAPE = 2.5;
+	private final double PATH_MARK_FACTOR = 50;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -313,8 +318,6 @@ public class Bot extends Rectangle2D.Double {
 		// find any nearby bots
 		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 
-		//		// if I am the sender, send it out in all directions
-		//		if (mes.getSender() == this) {
 		// send out the message to all the nearby bots
 		for (Bot b : nearbyBots) {
 			if (b.getID() == this.getID()) {
@@ -336,8 +339,8 @@ public class Bot extends Rectangle2D.Double {
 
 			s = new Scanner(mes.getText());
 
-			if (!s.hasNext())
-				continue;
+			//			if (!s.hasNext())
+			//				continue;
 
 			String messageType = mes.getType();
 
@@ -523,12 +526,12 @@ public class Bot extends Rectangle2D.Double {
 				//don't mark any paths this timestep
 				possiblySwitchToMarkingPathsThisStep = false;
 
-				//figure out which path we should stop marking
-				SurvivorPath dontMark = (SurvivorPath) mes.getAttachment(0);
-
-				if(myPathToMark != null && myPathToMark.equals(dontMark)) {
-					continue;
-				}
+				//				//figure out which path we should stop marking
+				//				SurvivorPath dontMark = (SurvivorPath) mes.getAttachment(0);
+				//
+				//				if(myPathToMark != null && myPathToMark.equals(dontMark)) {
+				//					continue;
+				//				}
 
 				//don't pass on this message - only bots near a path need to know not to mark it this timestep
 				//this also lets local need for bots be met without having to get the whole path to work together
@@ -1224,15 +1227,18 @@ public class Bot extends Rectangle2D.Double {
 			}
 
 			Vector curBotVect;
-			if(distToCurNeighbor < SEPERATION_MIN_DIST) {
+			if(distToCurNeighbor < PATH_MARK_MIN_DIST) {
 				//make a vector of length 1 away from them
-				curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1.0 * SEPERATION_FACTOR);
+				curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1.0 * PATH_MARK_FACTOR);
+			} else if(distToCurNeighbor > PATH_MARK_MAX_DIST) {
+				//just have 0 force
+				curBotVect = new Vector(this.getCenterLocation(), this.getCenterLocation());
 			} else {
-				curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
+				curBotVect = calculateFractionalPotentialVector(curBotLoc, PATH_MARK_MIN_DIST, PATH_MARK_MAX_DIST, PATH_MARK_CURVE_SHAPE, PATH_MARK_FACTOR);
 			}
 
 			//we only want the part along the path
-			//			curBotVect  = pathSegVector.rescale(curBotVect.scalerProjectionOnto(pathSegVector));
+			curBotVect  = pathSegVector.rescale(curBotVect.scalerProjectionOnto(pathSegVector));
 
 			movementVector = movementVector.add(curBotVect);
 		}
@@ -1315,7 +1321,7 @@ public class Bot extends Rectangle2D.Double {
 		//see what the average distance to neighboring bots on path is
 		double avgDist = getAvgDistFromPathNeighbors();
 
-		if(avgDist <= IDEAL_DIST_BTWN_BOTS_ON_PATH) {
+		if(avgDist <= PATH_MARK_IDEAL_DIST) {
 			//no need for more bots on this path
 			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
 		}
@@ -1359,8 +1365,13 @@ public class Bot extends Rectangle2D.Double {
 				//if we are already a path marker, make sure we are making the path we are closest to
 				myPathToMark = new SurvivorPath(nearestPath);
 
+				//TODO need to find a way to force it to stay a path marker for a few steps
+				//right now, when someone leaves, most of the time that will force the space between their previous neighbors
+				//to skyrocket, seemingly requiring a need for them to come back
+				
+				
 				//with some probability, if the density is too high, stop being a marker
-				if(getAvgDistFromPathNeighbors() < MIN_DIST_BTWN_BOTS_ON_PATH) {
+				if(! possiblySwitchToMarkingPathsThisStep) {
 					if(Bot.NUM_GEN.nextDouble() < HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
 						botMode = EXPLORER;
 					}
