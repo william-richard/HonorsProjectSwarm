@@ -340,6 +340,7 @@ public class World extends JFrame implements WindowListener {
 			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
 			System.out.println("");
 			System.out.println("Avg dist btwn bots on paths = " + (Bot.timestepAvgDistBtwnPathNeighbors / Bot.timestepNumBotOnPaths));
+			System.out.println(Bot.timestepNumBotOnPaths + " bots marking paths");
 
 			//repaint the scenario
 			repaint();
@@ -395,12 +396,12 @@ public class World extends JFrame implements WindowListener {
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 		}
-		for(Zone z : allZones.values()) {
-			g2d.setColor(ZONE_OUTLINE_COLOR);
-			g2d.draw(z);
-			g2d.setColor(LABEL_COLOR);
-			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
-		}
+//		for(Zone z : allZones.values()) {
+//			g2d.setColor(ZONE_OUTLINE_COLOR);
+//			g2d.draw(z);
+//			g2d.setColor(LABEL_COLOR);
+//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+//		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
 		Bot firstBot = (Bot) allBotSnapshot.next().clone();
