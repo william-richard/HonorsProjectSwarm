@@ -83,10 +83,10 @@ public class Bot extends Rectangle2D.Double {
 
 	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
-	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .25;
-	
+	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .1;
+
 	private final double PATH_MARK_IDEAL_DIST = 10;
-	
+
 	private final double PATH_MARK_MIN_DIST = PATH_MARK_IDEAL_DIST * 0.5;
 	private final double PATH_MARK_MAX_DIST = PATH_MARK_IDEAL_DIST * 1.5;
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
@@ -116,7 +116,7 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private Set<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	private Set<Message> alreadyBroadcastedMessages;
+	private Set<Message> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
 	private int botID;
 	private int zoneAssesment; // stores the bot's assessment of what sort of
 	// zones it is in
@@ -243,7 +243,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public BotInfo getBotInfo() {
-		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode == PATH_MARKER);
+		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode);
 	}
 
 
@@ -495,25 +495,29 @@ public class Bot extends Rectangle2D.Double {
 				} else {
 					//the path we just got is not complete
 
-					//make our changes to it, and pass it on
+					//make our changes to it, and pass it on if we are not a path marker
+					if(botMode == PATH_MARKER) {
+						//in this case, just pass on the incomplete path
+						passOnMessage = mes;
+					} else {
+						//first, make sure we have not already contributed to this path
+						//if we have, we should not do anything more with it
+						if(sp.getPoints().contains(this.getBotInfo())) {
+							continue;
+						}
+						//make a new version
+						SurvivorPath ourVersion = new SurvivorPath(sp);
 
-					//first, make sure we have not already contributed to this path
-					//if we have, we should not do anything more with it
-					if(sp.getPoints().contains(this.getBotInfo())) {
-						continue;
+						//see if we are in the baseZone, i.e. if it should be complete
+						if(baseZone.contains(this.getCenterLocation())) {
+							ourVersion.setComplete(true);
+						}
+						//add our current location to the path
+						ourVersion.addPoint(this.getBotInfo());
+
+						//broadcast our version of the path
+						passOnMessage = Message.constructCreatePathsMessage(this, ourVersion);
 					}
-					//make a new version
-					SurvivorPath ourVersion = new SurvivorPath(sp);
-
-					//see if we are in the baseZone, i.e. if it should be complete
-					if(baseZone.contains(this.getCenterLocation())) {
-						ourVersion.setComplete(true);
-					}
-					//add our current location to the path
-					ourVersion.addPoint(this.getBotInfo());
-
-					//broadcast our version of the path
-					passOnMessage = Message.constructCreatePathsMessage(this, ourVersion);
 				}
 
 				if(passOnMessage != null) {
@@ -649,12 +653,22 @@ public class Bot extends Rectangle2D.Double {
 			print("I know about " + otherBotInfo.size() + " other bots");
 		}
 
-		if ((!haveMoved) && (otherBotInfo.size() > 0)) {
+		//figure out how many explorers are nearby
+		//only want to move based on explorers
+		Set<BotInfo> otherExplorerBots = new HashSet<BotInfo>();
+		for(BotInfo bi : otherBotInfo) {
+			if(bi.isExplorer()) {
+				otherExplorerBots.add(bi);
+			}
+		}
+
+
+		if ((!haveMoved) && (otherExplorerBots.size() > 0)) {
 
 			Vector botSeperationVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 			double averageDistanceToNeighbors = 0.0;
 
-			for (BotInfo bi : otherBotInfo) {
+			for (BotInfo bi : otherExplorerBots) {
 				//get the location of the other bot
 				Point2D curBotLoc = bi.getCenterLocation();
 				double distToCurBot = this.getCenterLocation().distance(curBotLoc);
@@ -678,7 +692,7 @@ public class Bot extends Rectangle2D.Double {
 					//don't consider this bot
 					continue;
 				} else {
-					if(otherBotInfo.size() > FACTOR_ADJUSTMENT_BOT_NUMBER) {
+					if(otherExplorerBots.size() > FACTOR_ADJUSTMENT_BOT_NUMBER) {
 						curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, FACTOR_ADJUSTMENT_SEPERATION_VALUE);
 					} else {
 						curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
@@ -690,8 +704,8 @@ public class Bot extends Rectangle2D.Double {
 			}
 
 			//since there are several other bots, need to divide by the number of bots to end up with an average location
-			botSeperationVector = botSeperationVector.rescaleRatio(1.0/(otherBotInfo.size()));
-			averageDistanceToNeighbors = averageDistanceToNeighbors / otherBotInfo.size();
+			botSeperationVector = botSeperationVector.rescaleRatio(1.0/(otherExplorerBots.size()));
+			averageDistanceToNeighbors = averageDistanceToNeighbors / otherExplorerBots.size();
 			timestepAverageDistanceApartTotal+= averageDistanceToNeighbors;
 
 			//			print("Final sep vect mag = " + seperationVector.getMagnitude());
@@ -705,12 +719,12 @@ public class Bot extends Rectangle2D.Double {
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
 			//start by calculating the average location of all the bots
 			double xSum = 0.0, ySum = 0.0;
-			for(BotInfo curBotInfo : otherBotInfo) {
+			for(BotInfo curBotInfo : otherExplorerBots) {
 				xSum += curBotInfo.getCenterX();
 				ySum += curBotInfo.getCenterY();
 			}
-			double avgX = xSum / otherBotInfo.size();
-			double avgY = ySum / otherBotInfo.size();
+			double avgX = xSum / otherExplorerBots.size();
+			double avgY = ySum / otherExplorerBots.size();
 
 			Point2D averageNeighborLocation = new Point2D.Double(avgX, avgY);
 
@@ -1057,6 +1071,8 @@ public class Bot extends Rectangle2D.Double {
 			print("AHH! WE DON'T KNOW WHAT ZONE WE'RE IN!! - "
 					+ this.getCenterX() + ", " + getCenterY());
 			print("Just moved: " + movementVector);
+			world.stopSimulation();
+			return;
 		}
 
 		if (currentZone.isObstacle()) {
@@ -1256,53 +1272,62 @@ public class Bot extends Rectangle2D.Double {
 
 	private ArrayList<BotInfo> getPathNeighbors() {
 
-		LineSegment closestSegmentOfPath = myPathToMark.getNearestSegment(this.getCenterLocation());
-
-		Point2D zeroRadPoint = new Point2D.Double(this.getCenterX() + 1, this.getCenterY());
-		double angleToEndpoint1 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP1(), this.getCenterLocation());
-		double angleToEndpoint2 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP2(), this.getCenterLocation());
-
-		double neighborDist1 = java.lang.Double.MAX_VALUE, neighborDist2 = java.lang.Double.MAX_VALUE;
-		BotInfo neighbor1 = null, neighbor2 = null;
-
-		double curAngle;
-		double curDist;
-
+		ArrayList<BotInfo> neighbors = new ArrayList<BotInfo>();
 		for(BotInfo potentialNeighbor : otherBotInfo) {
-			if(! potentialNeighbor.isPathMarker()) {
-				//only want neighbors that are path markers
-				continue;
-			}
-
-			curAngle = Utilities.getAngleBetween(zeroRadPoint, potentialNeighbor.getCenterLocation(), this.getCenterLocation());
-			curDist = potentialNeighbor.getCenterLocation().distance(this.getCenterLocation());
-
-			if(Math.abs((curAngle - angleToEndpoint1) % (2*Math.PI)) < Math.abs((curAngle - angleToEndpoint2) % (2*Math.PI))) {
-				//it is closer to endpoint 1
-				//is it the closest we've seen so far?
-				if(curDist < neighborDist1) {
-					neighborDist1 = curDist;
-					neighbor1 = potentialNeighbor;
-				}
-			} else {
-				//it is closer to endpoint 2
-				//is it the closest we've seen so far?
-				if(curDist < neighborDist2) {
-					neighborDist2 = curDist;
-					neighbor2 = potentialNeighbor;
-				}
+			if(potentialNeighbor.isPathMarker()) {
+				neighbors.add(potentialNeighbor);
 			}
 		}
+		return neighbors;
 
-		ArrayList<BotInfo> pathNeighbors = new ArrayList<BotInfo>();
-		if(neighbor1 != null) {
-			pathNeighbors.add(neighbor1);
-		}
-		if(neighbor2 != null) {
-			pathNeighbors.add(neighbor2);
-		}
 
-		return pathNeighbors;
+		//		LineSegment closestSegmentOfPath = myPathToMark.getNearestSegment(this.getCenterLocation());
+		//
+		//		Point2D zeroRadPoint = new Point2D.Double(this.getCenterX() + 1, this.getCenterY());
+		//		double angleToEndpoint1 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP1(), this.getCenterLocation());
+		//		double angleToEndpoint2 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP2(), this.getCenterLocation());
+		//
+		//		double neighborDist1 = java.lang.Double.MAX_VALUE, neighborDist2 = java.lang.Double.MAX_VALUE;
+		//		BotInfo neighbor1 = null, neighbor2 = null;
+		//
+		//		double curAngle;
+		//		double curDist;
+		//
+		//		for(BotInfo potentialNeighbor : otherBotInfo) {
+		//			if(! potentialNeighbor.isPathMarker()) {
+		//				//only want neighbors that are path markers
+		//				continue;
+		//			}
+		//
+		//			curAngle = Utilities.getAngleBetween(zeroRadPoint, potentialNeighbor.getCenterLocation(), this.getCenterLocation());
+		//			curDist = potentialNeighbor.getCenterLocation().distance(this.getCenterLocation());
+		//
+		//			if(Math.abs((curAngle - angleToEndpoint1) % (2*Math.PI)) < Math.abs((curAngle - angleToEndpoint2) % (2*Math.PI))) {
+		//				//it is closer to endpoint 1
+		//				//is it the closest we've seen so far?
+		//				if(curDist < neighborDist1) {
+		//					neighborDist1 = curDist;
+		//					neighbor1 = potentialNeighbor;
+		//				}
+		//			} else {
+		//				//it is closer to endpoint 2
+		//				//is it the closest we've seen so far?
+		//				if(curDist < neighborDist2) {
+		//					neighborDist2 = curDist;
+		//					neighbor2 = potentialNeighbor;
+		//				}
+		//			}
+		//		}
+		//
+		//		ArrayList<BotInfo> pathNeighbors = new ArrayList<BotInfo>();
+		//		if(neighbor1 != null) {
+		//			pathNeighbors.add(neighbor1);
+		//		}
+		//		if(neighbor2 != null) {
+		//			pathNeighbors.add(neighbor2);
+		//		}
+		//
+		//		return pathNeighbors;
 	}
 
 	private double getAvgDistFromPathNeighbors() {
@@ -1316,17 +1341,40 @@ public class Bot extends Rectangle2D.Double {
 		return distSum / (double)pathNeighbors.size();
 	}
 
+	private double getDistToClosestPathNeighbor() {
+		ArrayList<BotInfo> neighbors = getPathNeighbors();
+
+		double closestDist = java.lang.Double.MAX_VALUE;
+		double curDist;
+		for(BotInfo curNeighbor : neighbors) {
+			curDist = this.getCenterLocation().distance(curNeighbor.getCenterLocation());
+			if(curDist < closestDist) {
+				closestDist = curDist;
+			}
+		}
+
+		return closestDist;
+	}
+
+
 
 	private void handlePathDensity() {
-		//see what the average distance to neighboring bots on path is
-		double avgDist = getAvgDistFromPathNeighbors();
+		//		//see what the average distance to neighboring bots on path is
+		//		double avgDist = getAvgDistFromPathNeighbors();
+		//see how close the closest neighbor is
+		double closeDist = getDistToClosestPathNeighbor();
 
-		if(avgDist <= PATH_MARK_IDEAL_DIST) {
-			//no need for more bots on this path
+		if(closeDist <= PATH_MARK_IDEAL_DIST) {
+			//no need for more bots on this part of the path
 			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
 		}
 
-		timestepAvgDistBtwnPathNeighbors += avgDist;
+		//		if(avgDist <= PATH_MARK_IDEAL_DIST) {
+		//			//no need for more bots on this path
+		//			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
+		//		}
+
+		timestepAvgDistBtwnPathNeighbors += closeDist;
 		timestepNumBotOnPaths++;
 	}
 
@@ -1368,8 +1416,8 @@ public class Bot extends Rectangle2D.Double {
 				//TODO need to find a way to force it to stay a path marker for a few steps
 				//right now, when someone leaves, most of the time that will force the space between their previous neighbors
 				//to skyrocket, seemingly requiring a need for them to come back
-				
-				
+
+
 				//with some probability, if the density is too high, stop being a marker
 				if(! possiblySwitchToMarkingPathsThisStep) {
 					if(Bot.NUM_GEN.nextDouble() < HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {

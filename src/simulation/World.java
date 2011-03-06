@@ -52,8 +52,6 @@ public class World extends JFrame implements WindowListener {
 	private static final int FRAME_WIDTH = 500;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
-	private static final boolean DRAW_BOT_RADII = false;
-
 	private static final boolean WORLD_DEBUG = false;
 
 	private static final int ZONE_COMPLEXITY = 100; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
@@ -94,6 +92,7 @@ public class World extends JFrame implements WindowListener {
 
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps; //store the time in milliseconds
+	private boolean drawBotRadii = false;
 
 	public World() {
 		this(40, 2, 5000);
@@ -263,6 +262,15 @@ public class World extends JFrame implements WindowListener {
 	 */
 	public void setTimeBetweenTimesteps(long timeBetweenTimesteps) {
 		this.timeBetweenTimesteps = timeBetweenTimesteps;
+	}
+	
+	public boolean getDrawBotRadii() {
+		return drawBotRadii;
+	}
+	
+	
+	public void setDrawBotRadii(boolean setValue) {
+		drawBotRadii = setValue;
 	}
 
 	private boolean keepGoing = false;
@@ -459,7 +467,7 @@ public class World extends JFrame implements WindowListener {
 			//			g2d.setColor(BOT_COLOR);
 			//			g2d.fill(curBot);
 
-			if(DRAW_BOT_RADII) {
+			if(drawBotRadii) {
 				g2d.setColor(AUDIO_RANGE_COLOR);
 				g2d.draw(curBot.getAuditbleArea());
 

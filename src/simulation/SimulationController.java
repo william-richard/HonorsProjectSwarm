@@ -4,19 +4,22 @@ import java.awt.BorderLayout;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ItemEvent;
+import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
-public class SimulationController extends JFrame implements PropertyChangeListener, ActionListener {
+public class SimulationController extends JFrame implements PropertyChangeListener, ActionListener, ItemListener {
 
 	private static final long serialVersionUID = 2089545078800743566L;
 
@@ -27,11 +30,15 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private int numBots = 200;
 	private int numSurvivors = 5;
 	private double timeBetweenTimestepsInSeconds = 0;
+	private static final boolean DRAW_BOT_RADII_INIT_VALUE = false;
 
 	// buttons to control the simulation
 	private JButton runSimulationButton;;
 	private JButton stopSimulationButton;
 	private JButton resetSimulationButton;
+	
+	//check boxes to set values
+	private JCheckBox drawBotRadiiCheckBox;
 
 	// feilds for variable entry
 	private JFormattedTextField numBotsField;
@@ -47,6 +54,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private JLabel numBotsLabel;
 	private JLabel numSurvivorsLabel;
 	private JLabel timeBetweenTimestepsLabel;
+	private JLabel drawBotRadiiLabel;
 
 	// Label strings
 	private final String runSimulationString = "Run";
@@ -56,9 +64,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private final String numBotsString = "Number of Bots: ";
 	private final String numSurvivorsString = "Number of Survivors: ";
 	private final String timeBetweenTimestepsString = "Time between timesteps (seconds) :";
-
-	//TODO checkbox to draw bot radii
-	
+	private final String drawBotRadiiString = "Draw bot radii: ";	
 	
 	public SimulationController() {
 		super("Simulation Controller");
@@ -88,6 +94,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		numBotsLabel = new JLabel(numBotsString);
 		numSurvivorsLabel = new JLabel(numSurvivorsString);
 		timeBetweenTimestepsLabel = new JLabel(timeBetweenTimestepsString);
+		drawBotRadiiLabel = new JLabel(drawBotRadiiString);
 	}
 
 	private void setUpFormats() {
@@ -135,6 +142,10 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		resetSimulationButton = new JButton(resetSimulationString);
 		resetSimulationButton.addActionListener(this);
+		
+		drawBotRadiiCheckBox = new JCheckBox();
+		drawBotRadiiCheckBox.setSelected(DRAW_BOT_RADII_INIT_VALUE);
+		drawBotRadiiCheckBox.addItemListener(this);
 	}
 
 
@@ -148,6 +159,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		panel.add(timeBetweenTimestepsLabel);
 		panel.add(timeBetweenTimestepsField);
+		
+		panel.add(drawBotRadiiLabel);
+		panel.add(drawBotRadiiCheckBox);
 
 		return panel;
 	}
@@ -202,6 +216,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		}
 
 		world = new World(numBots, numSurvivors, (long)(timeBetweenTimestepsInSeconds*1000));
+		world.setDrawBotRadii(drawBotRadiiCheckBox.isSelected());
 		//		world.pack();
 		world.setLocation(this.getX(), this.getY() + this.getHeight());
 		world.setVisible(true);
@@ -242,6 +257,15 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		if(source == resetSimulationButton) {
 			makeTheWorld();
+		}
+	}
+
+	@Override
+	public void itemStateChanged(ItemEvent e) {
+		Object source = e.getItemSelectable();
+		
+		if(source == drawBotRadiiCheckBox) {
+			world.setDrawBotRadii(e.getStateChange() == ItemEvent.SELECTED);
 		}
 	}
 

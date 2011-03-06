@@ -7,22 +7,22 @@ public class BotInfo {
 
 	private int botNum;
 	private Point2D location;
-	private boolean pathMarker;
+	private int mode;
 	
 	public BotInfo(int _botNum) {
 		botNum = _botNum;
 		location = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
-		pathMarker = false;
+		mode = Bot.WAITING_FOR_ACTIVATION;
 	}
 	
-	public BotInfo(int _botNum, Point2D _loc, boolean _pathMarker) {
+	public BotInfo(int _botNum, Point2D _loc, int _mode) {
 		botNum = _botNum;
 		location = _loc;
-		pathMarker = _pathMarker;
+		mode = _mode;
 	}
 
-	public BotInfo(int _botNum, double _x, double _y, boolean _pathMarker) {
-		this(_botNum, new Point2D.Double(_x, _y), _pathMarker);
+	public BotInfo(int _botNum, double _x, double _y, int _mode) {
+		this(_botNum, new Point2D.Double(_x, _y), _mode);
 	}
 
 	public BotInfo(String str) {
@@ -45,7 +45,7 @@ public class BotInfo {
 
 	public BotInfo(BotInfo i) {
 		//just to be 100% sure it copies when using the constructor
-		this(i.getBotID(), i.getCenterX(), i.getCenterY(), i.isPathMarker());
+		this(i.getBotID(), i.getCenterX(), i.getCenterY(), i.getMode());
 	}
 	
 	/**
@@ -76,11 +76,24 @@ public class BotInfo {
 		return location;
 	}
 
+	public int getMode() {
+		return mode;
+	}
+	
+	
 	/**
 	 * @return the pathMarker
 	 */
 	public boolean isPathMarker() {
-		return pathMarker;
+		return mode == Bot.PATH_MARKER;
+	}
+	
+	public boolean isExplorer() {
+		return mode == Bot.EXPLORER;
+	}
+	
+	public boolean isWaitingForActivation() {
+		return mode == Bot.WAITING_FOR_ACTIVATION;
 	}
 
 	public void merge(BotInfo newInfo) {
