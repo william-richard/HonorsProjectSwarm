@@ -132,7 +132,7 @@ public class Bot extends Rectangle2D.Double {
 	// this is useful, but it might be
 	private int mySurvivorClaimTime;
 	private World world;
-	private int botMode; //TODO have explorers ignore path markers, and only let explorers create new paths
+	private int botMode;
 
 	private boolean startedCreatingMyPath = false;
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
@@ -339,9 +339,6 @@ public class Bot extends Rectangle2D.Double {
 
 			s = new Scanner(mes.getText());
 
-			//			if (!s.hasNext())
-			//				continue;
-
 			String messageType = mes.getType();
 
 			BotInfo newBotInfo;
@@ -529,18 +526,11 @@ public class Bot extends Rectangle2D.Double {
 			} else if(messageType.equals(Message.STOP_ADDING_NEW_PATH_MARKERS)) {
 				//don't mark any paths this timestep
 				possiblySwitchToMarkingPathsThisStep = false;
-
-				//				//figure out which path we should stop marking
-				//				SurvivorPath dontMark = (SurvivorPath) mes.getAttachment(0);
-				//
-				//				if(myPathToMark != null && myPathToMark.equals(dontMark)) {
-				//					continue;
-				//				}
-
+				
 				//don't pass on this message - only bots near a path need to know not to mark it this timestep
 				//this also lets local need for bots be met without having to get the whole path to work together
 
-			}else {
+			} else {
 				continue; // this else matches up to figuring out what message type we have
 			}
 
@@ -1180,7 +1170,6 @@ public class Bot extends Rectangle2D.Double {
 		if(mySurvivor == null) return;
 
 		//what we do depends on if we've already initiated creating our survivor's path
-		//TODO after some time, we should do this again to see if paths change
 		if(! startedCreatingMyPath || numTimestepsToNextPathCreation == 0) {
 			//see if we are close to them
 			if(this.getCenterLocation().distance(mySurvivor.getCenterLocation()) <= DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH) {
@@ -1279,55 +1268,6 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 		return neighbors;
-
-
-		//		LineSegment closestSegmentOfPath = myPathToMark.getNearestSegment(this.getCenterLocation());
-		//
-		//		Point2D zeroRadPoint = new Point2D.Double(this.getCenterX() + 1, this.getCenterY());
-		//		double angleToEndpoint1 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP1(), this.getCenterLocation());
-		//		double angleToEndpoint2 = Utilities.getAngleBetween(zeroRadPoint, closestSegmentOfPath.getP2(), this.getCenterLocation());
-		//
-		//		double neighborDist1 = java.lang.Double.MAX_VALUE, neighborDist2 = java.lang.Double.MAX_VALUE;
-		//		BotInfo neighbor1 = null, neighbor2 = null;
-		//
-		//		double curAngle;
-		//		double curDist;
-		//
-		//		for(BotInfo potentialNeighbor : otherBotInfo) {
-		//			if(! potentialNeighbor.isPathMarker()) {
-		//				//only want neighbors that are path markers
-		//				continue;
-		//			}
-		//
-		//			curAngle = Utilities.getAngleBetween(zeroRadPoint, potentialNeighbor.getCenterLocation(), this.getCenterLocation());
-		//			curDist = potentialNeighbor.getCenterLocation().distance(this.getCenterLocation());
-		//
-		//			if(Math.abs((curAngle - angleToEndpoint1) % (2*Math.PI)) < Math.abs((curAngle - angleToEndpoint2) % (2*Math.PI))) {
-		//				//it is closer to endpoint 1
-		//				//is it the closest we've seen so far?
-		//				if(curDist < neighborDist1) {
-		//					neighborDist1 = curDist;
-		//					neighbor1 = potentialNeighbor;
-		//				}
-		//			} else {
-		//				//it is closer to endpoint 2
-		//				//is it the closest we've seen so far?
-		//				if(curDist < neighborDist2) {
-		//					neighborDist2 = curDist;
-		//					neighbor2 = potentialNeighbor;
-		//				}
-		//			}
-		//		}
-		//
-		//		ArrayList<BotInfo> pathNeighbors = new ArrayList<BotInfo>();
-		//		if(neighbor1 != null) {
-		//			pathNeighbors.add(neighbor1);
-		//		}
-		//		if(neighbor2 != null) {
-		//			pathNeighbors.add(neighbor2);
-		//		}
-		//
-		//		return pathNeighbors;
 	}
 
 	private double getAvgDistFromPathNeighbors() {
@@ -1364,15 +1304,12 @@ public class Bot extends Rectangle2D.Double {
 		//see how close the closest neighbor is
 		double closeDist = getDistToClosestPathNeighbor();
 
+		print("" + closeDist);
+		
 		if(closeDist <= PATH_MARK_IDEAL_DIST) {
 			//no need for more bots on this part of the path
 			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
 		}
-
-		//		if(avgDist <= PATH_MARK_IDEAL_DIST) {
-		//			//no need for more bots on this path
-		//			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
-		//		}
 
 		timestepAvgDistBtwnPathNeighbors += closeDist;
 		timestepNumBotOnPaths++;
@@ -1402,7 +1339,7 @@ public class Bot extends Rectangle2D.Double {
 					nearestPath = potentialPathToMark;
 				}
 			}
-
+			
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER) {
 				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
@@ -1413,10 +1350,9 @@ public class Bot extends Rectangle2D.Double {
 				//if we are already a path marker, make sure we are making the path we are closest to
 				myPathToMark = new SurvivorPath(nearestPath);
 
-				//TODO need to find a way to force it to stay a path marker for a few steps
+				//TODO need to find a way to force it to stay a explorer for a few steps
 				//right now, when someone leaves, most of the time that will force the space between their previous neighbors
 				//to skyrocket, seemingly requiring a need for them to come back
-
 
 				//with some probability, if the density is too high, stop being a marker
 				if(! possiblySwitchToMarkingPathsThisStep) {
