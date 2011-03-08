@@ -70,17 +70,17 @@ public class DangerZone extends Zone {
 
 	@Override
 	public double repulsionMaxDist() {
-		return Bot.DEFAULT_VISIBILITY_RADIUS;
+		return Bot.DEFAULT_VISIBILITY_RADIUS * 1.5;
 	}
 
 	@Override
 	public double repulsionCurveShape() {
-		return 4.5;
+		return 5;
 	}
 
 	@Override
 	public double repulsionScalingFactor() {
-		return 55;
+		return 60;
 	}
 
 	@Override

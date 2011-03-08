@@ -42,7 +42,7 @@ public class Fire extends DangerZone {
 
 	@Override
 	public double repulsionMaxDist() {
-		return Bot.DEFAULT_VISIBILITY_RADIUS;
+		return Bot.DEFAULT_VISIBILITY_RADIUS * 1.5;
 	}
 
 	@Override
@@ -52,7 +52,7 @@ public class Fire extends DangerZone {
 	
 	@Override
 	public double repulsionScalingFactor() {
-		return 130;
+		return 80;
 	}
 	
 }

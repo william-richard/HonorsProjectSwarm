@@ -48,16 +48,12 @@ public class Bot extends Rectangle2D.Double {
 	private final int ZONE_BASE = 3;
 
 	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
-	private final double SEPERATION_FACTOR = 									50;
+	private final double NORMAL_SEPERATION_FACTOR = 									50;
 	private final double COHESION_FACTOR = 										.5; //cohesion factor should never me more than 1
 
 	private final double SEPERATION_MIN_DIST = 5;
 	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS*2;
 	private final double SEPERATION_CURVE_SHAPE = 2.5;
-
-	//TODO danger zone factor adjustment threshold to being if the closest neighbor is too close
-	private final int FACTOR_ADJUSTMENT_BOT_NUMBER = 6;
-	private final double FACTOR_ADJUSTMENT_SEPERATION_VALUE = SEPERATION_FACTOR * 2;
 
 	public static double timestepSeperationMagnitudeTotal;
 	public static double timestepCohesionMagnitudeTotal;
@@ -74,7 +70,7 @@ public class Bot extends Rectangle2D.Double {
 
 	public final static int WAITING_FOR_ACTIVATION = 			0;
 	public final static int EXPLORER = 							1;
-	public final static int DANGER_EXPLORER = 					2;
+	public final static int DANGEROUS_EXPLORER = 				2;
 	public final static int PATH_MARKER = 						3;
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
@@ -82,6 +78,8 @@ public class Bot extends Rectangle2D.Double {
 	private final static double DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH = 1.0;
 	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
 
+	private final static double DANEROUS_EXPLORER_DANER_REDUCTION_FACTOR = 3.0;
+	
 	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
 	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .1;
@@ -119,7 +117,7 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	private Set<Message> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
+	private HashSet<Message> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
 	private int botID;
 	private int zoneAssesment; // stores the bot's assessment of what sort of
 	// zones it is in
@@ -190,7 +188,7 @@ public class Bot extends Rectangle2D.Double {
 		mySurvivor = null;
 
 		bestKnownCompletePaths = new HashSet<SurvivorPath>();
-		
+
 		//we can start marking paths now if we want to
 		lastToldNotToMarkPaths = 0 - TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
 
@@ -456,6 +454,9 @@ public class Bot extends Rectangle2D.Double {
 				}
 			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
 
+				//TODO don't let danger seeking bots add to paths???
+				
+				
 				if(MESSAGE_BOT_DEBUG) {
 					print("Got path message " + mes);
 				}
@@ -695,17 +696,13 @@ public class Bot extends Rectangle2D.Double {
 				if(distToCurBot < SEPERATION_MIN_DIST) {
 					//too close
 					//just make a vector pointing away of length 1, since the other vector calculation will be normalized to be between 0 and 1
-					curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1 * SEPERATION_FACTOR);
+					curBotVect = new Vector(this.getCenterLocation(), curBotLoc, -1 * NORMAL_SEPERATION_FACTOR);
 				} else if (distToCurBot > SEPERATION_MAX_DIST) { 
 					//too far
 					//don't consider this bot
 					continue;
 				} else {
-					if(otherExplorerBots.size() > FACTOR_ADJUSTMENT_BOT_NUMBER) {
-						curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, FACTOR_ADJUSTMENT_SEPERATION_VALUE);
-					} else {
-						curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, SEPERATION_FACTOR);
-					}
+					curBotVect = calculateFractionalPotentialVector(curBotLoc, SEPERATION_MIN_DIST, SEPERATION_MAX_DIST, SEPERATION_CURVE_SHAPE, NORMAL_SEPERATION_FACTOR);
 				}
 
 				// now add it to the seperation vector
@@ -754,8 +751,8 @@ public class Bot extends Rectangle2D.Double {
 			//			print("Num neighbors = " + otherBotInfo.size() + "\tsep = " + botSeperationVector.getMagnitude() + "\tzone = " + zoneRepulsionVector.getMagnitude());
 
 			//we want to move along the sum of these vectors
-			Vector movementVector = botSeperationVector.add(cohesionVector).add(zoneRepulsionVector);
-
+			Vector movementVector = botSeperationVector.add(cohesionVector).add(zoneRepulsionVector);			
+			
 			timestepSeperationMagnitudeTotal += botSeperationVector.getMagnitude();
 			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
 			timestepCountOfBotsAffectedBySepOrCohesion++;
@@ -898,13 +895,19 @@ public class Bot extends Rectangle2D.Double {
 
 			visSegMidpoint = visibleSegment.getMidpoint();
 
+			//set the scaling factor based on if we are a dangerous explorer or not
+			double scalingFactor = z.repulsionScalingFactor();
+			if(botMode == DANGEROUS_EXPLORER) {
+				scalingFactor /= DANEROUS_EXPLORER_DANER_REDUCTION_FACTOR;
+			}
+			
 			//calculate the force from this side and add it to the net repulsion from the zone
 			if(this.getCenterLocation().distance(visSegMidpoint) < z.repulsionMinDist()) {
 				//distance too small
 				//just have a vector of maximum size pointing away from the midpoint
-				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0 * z.repulsionScalingFactor());
+				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0 * scalingFactor);
 			} else {
-				thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape(), z.repulsionScalingFactor());
+				thisSideContribution = calculateFractionalPotentialVector(visSegMidpoint, z.repulsionMinDist(), z.repulsionMaxDist(), z.repulsionCurveShape(), scalingFactor);
 			}
 
 			//reverse the vector if we are inside the zone
@@ -912,6 +915,8 @@ public class Bot extends Rectangle2D.Double {
 				thisSideContribution = thisSideContribution.rescaleRatio(-1.0);
 			}
 
+			//add it if it has a non-zero addition
+			
 			netRepulsionFromZone = netRepulsionFromZone.add(thisSideContribution);
 			numContributingSides++;
 		}
@@ -1356,7 +1361,10 @@ public class Bot extends Rectangle2D.Double {
 				botMode = EXPLORER;
 			}
 		} else {
-
+			
+			//TODO add ways to change to danger seeking bot here
+			
+			
 			double minPathDistance = java.lang.Double.MAX_VALUE;
 			SurvivorPath nearestPath = null;
 
@@ -1368,9 +1376,9 @@ public class Bot extends Rectangle2D.Double {
 				}
 			}
 
-			print("Last told no mark = " + lastToldNotToMarkPaths + "\tTime til path marker = " + numTimestepsToWaitBeforeMarkingPaths());
-			
-			
+//			print("Last told no mark = " + lastToldNotToMarkPaths + "\tTime til path marker = " + numTimestepsToWaitBeforeMarkingPaths());
+
+
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER) {
 				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
