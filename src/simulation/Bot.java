@@ -74,7 +74,8 @@ public class Bot extends Rectangle2D.Double {
 
 	public final static int WAITING_FOR_ACTIVATION = 			0;
 	public final static int EXPLORER = 							1;
-	public final static int PATH_MARKER = 						2;
+	public final static int DANGER_EXPLORER = 					2;
+	public final static int PATH_MARKER = 						3;
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
@@ -91,6 +92,8 @@ public class Bot extends Rectangle2D.Double {
 	private final double PATH_MARK_MAX_DIST = PATH_MARK_IDEAL_DIST * 1.5;
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
 	private final double PATH_MARK_FACTOR = 50;
+
+	private final int TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS = 3;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -115,7 +118,7 @@ public class Bot extends Rectangle2D.Double {
 	// private Bot previousBot;
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
-	private Set<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
+	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
 	private Set<Message> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
 	private int botID;
 	private int zoneAssesment; // stores the bot's assessment of what sort of
@@ -140,6 +143,8 @@ public class Bot extends Rectangle2D.Double {
 	private Set<SurvivorPath> bestKnownCompletePaths;
 
 	private boolean possiblySwitchToMarkingPathsThisStep;
+	private int lastToldNotToMarkPaths;
+
 	private SurvivorPath myPathToMark;
 
 	/***************************************************************************
@@ -162,7 +167,7 @@ public class Bot extends Rectangle2D.Double {
 		otherBotInfo = new HashSet<BotInfo>();
 
 		// set up other variables with default values
-		messageBuffer = new HashSet<Message>();
+		messageBuffer = new ArrayList<Message>();
 		alreadyBroadcastedMessages = new HashSet<Message>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
@@ -185,6 +190,9 @@ public class Bot extends Rectangle2D.Double {
 		mySurvivor = null;
 
 		bestKnownCompletePaths = new HashSet<SurvivorPath>();
+		
+		//we can start marking paths now if we want to
+		lastToldNotToMarkPaths = 0 - TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
 
 		// for now, assume we're starting in a base zone
 		zoneAssesment = ZONE_BASE;
@@ -524,9 +532,20 @@ public class Bot extends Rectangle2D.Double {
 					broadcastMessage(passOnMessage);
 				}
 			} else if(messageType.equals(Message.STOP_ADDING_NEW_PATH_MARKERS)) {
+				int senderID = s.nextInt();
+
+				if(senderID == this.getID()) continue;
+
+				int sentTime = s.nextInt();
+
+				//only store this time if it is after the stored time we have
+				if(sentTime > lastToldNotToMarkPaths) {
+					lastToldNotToMarkPaths = sentTime;
+				}
+
 				//don't mark any paths this timestep
 				possiblySwitchToMarkingPathsThisStep = false;
-				
+
 				//don't pass on this message - only bots near a path need to know not to mark it this timestep
 				//this also lets local need for bots be met without having to get the whole path to work together
 
@@ -1304,16 +1323,25 @@ public class Bot extends Rectangle2D.Double {
 		//see how close the closest neighbor is
 		double closeDist = getDistToClosestPathNeighbor();
 
-		print("" + closeDist);
-		
 		if(closeDist <= PATH_MARK_IDEAL_DIST) {
 			//no need for more bots on this part of the path
-			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this, myPathToMark));
+			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this));
 		}
 
 		timestepAvgDistBtwnPathNeighbors += closeDist;
 		timestepNumBotOnPaths++;
 	}
+
+	private int numTimestepsToWaitBeforeMarkingPaths() {
+		int timeToStart = lastToldNotToMarkPaths + TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
+		int timeToWait = timeToStart - World.getCurrentTimestep();
+		return timeToWait;
+	}
+
+	private boolean canPossiblyMarkPathsNow() {
+		return numTimestepsToWaitBeforeMarkingPaths() <= 0;
+	}
+
 
 	private void reevaluateBotMode() {
 
@@ -1339,13 +1367,17 @@ public class Bot extends Rectangle2D.Double {
 					nearestPath = potentialPathToMark;
 				}
 			}
+
+			print("Last told no mark = " + lastToldNotToMarkPaths + "\tTime til path marker = " + numTimestepsToWaitBeforeMarkingPaths());
+			
 			
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER) {
-				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
+				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
+				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && canPossiblyMarkPathsNow()) {
 					botMode = PATH_MARKER;
 					myPathToMark = new SurvivorPath(nearestPath);
-				} 
+				}
 			} else if(botMode == PATH_MARKER) {
 				//if we are already a path marker, make sure we are making the path we are closest to
 				myPathToMark = new SurvivorPath(nearestPath);
@@ -1355,7 +1387,7 @@ public class Bot extends Rectangle2D.Double {
 				//to skyrocket, seemingly requiring a need for them to come back
 
 				//with some probability, if the density is too high, stop being a marker
-				if(! possiblySwitchToMarkingPathsThisStep) {
+				if(! canPossiblyMarkPathsNow()) {
 					if(Bot.NUM_GEN.nextDouble() < HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
 						botMode = EXPLORER;
 					}

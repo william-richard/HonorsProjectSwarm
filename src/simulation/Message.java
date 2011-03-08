@@ -67,8 +67,11 @@ public class Message {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result
+				+ ((attachments == null) ? 0 : attachments.hashCode());
 		result = prime * result + ((message == null) ? 0 : message.hashCode());
 		result = prime * result + ((sender == null) ? 0 : sender.hashCode());
+		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
 
@@ -84,6 +87,11 @@ public class Message {
 		if (!(obj instanceof Message))
 			return false;
 		Message other = (Message) obj;
+		if (attachments == null) {
+			if (other.attachments != null)
+				return false;
+		} else if (!attachments.equals(other.attachments))
+			return false;
 		if (message == null) {
 			if (other.message != null)
 				return false;
@@ -93,6 +101,11 @@ public class Message {
 			if (other.sender != null)
 				return false;
 		} else if (!sender.equals(other.sender))
+			return false;
+		if (type == null) {
+			if (other.type != null)
+				return false;
+		} else if (!type.equals(other.type))
 			return false;
 		return true;
 	}
@@ -126,10 +139,7 @@ public class Message {
 		return new Message(sender.getBotInfo(), CREATE_PATH_MESSAGE, sender.getID() + " " + World.getCurrentTimestep(), attachement);
 	}
 
-	public static Message constructStopAddNewPathMarkersMessage(Bot sender, SurvivorPath stopMarkingThis) {
-		ArrayList<Object> attachment = new ArrayList<Object>();
-		attachment.add(new SurvivorPath(stopMarkingThis));
-		
-		return new Message(sender.getBotInfo(), STOP_ADDING_NEW_PATH_MARKERS,  sender.getID() + " " + World.getCurrentTimestep(), attachment);
+	public static Message constructStopAddNewPathMarkersMessage(Bot sender) {		
+		return new Message(sender.getBotInfo(), STOP_ADDING_NEW_PATH_MARKERS,  sender.getID() + " " + World.getCurrentTimestep());
 	}
 }
