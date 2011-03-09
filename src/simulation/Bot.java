@@ -1352,9 +1352,13 @@ public class Bot extends Rectangle2D.Double {
 				}
 			}
 
-			//			print("Last told no mark = " + lastToldNotToMarkPaths + "\tTime til path marker = " + numTimestepsToWaitBeforeMarkingPaths());
+			//TODO no path markers in Base Zone
 
-
+			/* TODO keep probability of changing roles, and increment probability base on neighbor types and current role
+			 * Make sure it doesn't go below 0 or over 100, and change increment value on role
+			 */
+			
+			
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {

@@ -188,6 +188,7 @@ public class World extends JFrame implements WindowListener {
 		for(int i = 1; i < ZONE_COMPLEXITY; i++) {
 			do {
 				//make a random point
+				//TODO don't allow new points if they are too close to BASE_ZONE_LOC
 				curPoint = new Point((int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxX()-BOUNDING_BOX.getMinX())) + BOUNDING_BOX.getMinX()),
 						(int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxY()-BOUNDING_BOX.getMinY())) + BOUNDING_BOX.getMinY()));
 			} while(allPointsToAdd.contains(curPoint));
