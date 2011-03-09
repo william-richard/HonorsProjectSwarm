@@ -1,11 +1,13 @@
 package util.shapes;
 
+import java.awt.Shape;
 import java.awt.geom.Ellipse2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.List;
 
+import util.Utilities;
 import util.Vector;
 
 public class Circle2D extends Ellipse2D {
@@ -30,6 +32,13 @@ public class Circle2D extends Ellipse2D {
 	@Override
 	public double getWidth() {
 		return radius*2;
+	}
+
+	/**
+	 * @return the radius
+	 */
+	public double getRadius() {
+		return radius;
 	}
 
 	@Override
@@ -95,18 +104,32 @@ public class Circle2D extends Ellipse2D {
 	}
 
 	public boolean intersectsLine(LineSegment line) {
-		//make the line into a vector pointing towards the circle
-		Vector d;
-		if(line.getP1().distanceSq(center) > line.getP2().distanceSq(center)) {
-			d = new Vector(line.getP1(), line.getP2());
-		} else {
-			d = new Vector(line.getP2(), line.getP1());
-		}
+//		//make the line into a vector pointing towards the circle
+//		Vector d;
+//		if(line.getP1().distanceSq(center) > line.getP2().distanceSq(center)) {
+//			d = new Vector(line.getP1(), line.getP2());
+//		} else {
+//			d = new Vector(line.getP2(), line.getP1());
+//		}
+//		
+//		//also make the vector going from the center of the circle to the start of d
+//		Vector f = new Vector(center, d.getP1());
+//
+//		return lineCircleDiscriminant(d,f) >= 0.0;
 		
-		//also make the vector going from the center of the circle to the start of d
-		Vector f = new Vector(center, d.getP1());
-
-		return lineCircleDiscriminant(d,f) >= 0.0;
+		//see if the distance from this segment to the center is less than the radius
+		return line.ptSegDist(center) <= radius;
+	}
+	
+	public boolean intesectsShape(Shape s) {
+		//test each side for intersection
+		List<LineSegment> sides = Utilities.getSides(s);
+		for(LineSegment curSide : sides) {
+			if(this.intersectsLine(curSide)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	public List<Point2D> getLineIntersectionPoints(LineSegment line) {

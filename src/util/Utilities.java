@@ -21,6 +21,12 @@ public class Utilities {
 	
 	//finds all shapes in the shapeList that intersect the base shape
 	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, Collection<? extends Shape> shapeList) {		
+		//see if the base is a circle
+		//if it is, take a shortcut
+		if(base instanceof Circle2D) {
+			return findAreaIntersectionInList((Circle2D) base, shapeList);
+		}
+		
 		//we're going to take advantage of Area's intersect method
 		// so we need to turn base into an area		
 		Area baseArea = new Area(base);
@@ -51,6 +57,25 @@ public class Utilities {
 
 		//we have found all the intersecting shape
 		//return the list
+		return intersectingShapes;
+	}
+	
+	public static List<? extends Shape> findAreaIntersectionInList(Circle2D base, Collection<? extends Shape> shapeList) {
+		//make sure the base has an area
+		if(Utilities.shouldEqualsZero(base.getRadius())) {
+			throw new IllegalArgumentException("Base circle doesn't have any area");
+		}
+		
+		//test if each shape intesects the circle
+		//keep a list of the shapes that do
+		List<Shape> intersectingShapes = new ArrayList<Shape>();
+		for(Shape curShape : shapeList) {
+			//test if each shape intersects the base
+			if(base.intesectsShape(curShape)) {
+				intersectingShapes.add(curShape);
+			}
+		}
+		
 		return intersectingShapes;
 	}
 
