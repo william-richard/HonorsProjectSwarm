@@ -11,7 +11,7 @@ import simulation.Survivor;
 import util.shapes.Circle2D;
 
 
-public class BaseZone extends Zone {
+public class BaseZone extends SafeZone {
 
 	private static final long serialVersionUID = 1L;
 	private final static Color BaseZoneColor = new Color(0, 100, 0);

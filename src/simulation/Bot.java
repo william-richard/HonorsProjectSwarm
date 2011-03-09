@@ -18,6 +18,7 @@ import util.shapes.Circle2D;
 import util.shapes.LineSegment;
 import zones.BaseZone;
 import zones.BoundingBox;
+import zones.DangerZone;
 import zones.SafeZone;
 import zones.Zone;
 
@@ -79,7 +80,7 @@ public class Bot extends Rectangle2D.Double {
 	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
 
 	private final static double DANEROUS_EXPLORER_DANER_REDUCTION_FACTOR = 3.0;
-	
+
 	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
 	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .1;
@@ -119,7 +120,6 @@ public class Bot extends Rectangle2D.Double {
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
 	private HashSet<Message> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
 	private int botID;
-	private int zoneAssesment; // stores the bot's assessment of what sort of
 	// zones it is in
 	private Zone baseZone; // the home base zones.
 	private List<Survivor> knownSurvivors; // keep a list of survivors that have
@@ -191,9 +191,6 @@ public class Bot extends Rectangle2D.Double {
 
 		//we can start marking paths now if we want to
 		lastToldNotToMarkPaths = 0 - TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
-
-		// for now, assume we're starting in a base zone
-		zoneAssesment = ZONE_BASE;
 
 		// find out what zones we start in, and try to determine how safe it is
 		updateZoneInfo();		
@@ -455,8 +452,8 @@ public class Bot extends Rectangle2D.Double {
 			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
 
 				//TODO don't let danger seeking bots add to paths???
-				
-				
+
+
 				if(MESSAGE_BOT_DEBUG) {
 					print("Got path message " + mes);
 				}
@@ -752,7 +749,7 @@ public class Bot extends Rectangle2D.Double {
 
 			//we want to move along the sum of these vectors
 			Vector movementVector = botSeperationVector.add(cohesionVector).add(zoneRepulsionVector);			
-			
+
 			timestepSeperationMagnitudeTotal += botSeperationVector.getMagnitude();
 			timestepCohesionMagnitudeTotal += cohesionVector.getMagnitude();
 			timestepCountOfBotsAffectedBySepOrCohesion++;
@@ -900,7 +897,7 @@ public class Bot extends Rectangle2D.Double {
 			if(botMode == DANGEROUS_EXPLORER) {
 				scalingFactor /= DANEROUS_EXPLORER_DANER_REDUCTION_FACTOR;
 			}
-			
+
 			//calculate the force from this side and add it to the net repulsion from the zone
 			if(this.getCenterLocation().distance(visSegMidpoint) < z.repulsionMinDist()) {
 				//distance too small
@@ -916,7 +913,7 @@ public class Bot extends Rectangle2D.Double {
 			}
 
 			//add it if it has a non-zero addition
-			
+
 			netRepulsionFromZone = netRepulsionFromZone.add(thisSideContribution);
 			numContributingSides++;
 		}
@@ -1092,29 +1089,6 @@ public class Bot extends Rectangle2D.Double {
 		if (currentZone.isObstacle()) {
 			print("AHHHH!!!! I'M MELTING!!!!");
 			world.stopSimulation();
-		}
-
-		// reasses the zones's status if we move to a new zones
-		assessZone();
-	}
-
-	private void assessZone() {
-		// with some probability, the bot will asses the zones correctly
-		if (Bot.NUM_GEN.nextDouble() < CORRECT_ZONE_ASSESMENT_PROB) {
-			if (currentZone instanceof SafeZone) {
-				zoneAssesment = ZONE_SAFE;
-			} else if (currentZone instanceof BaseZone) {
-				zoneAssesment = ZONE_BASE;
-			} else {
-				zoneAssesment = ZONE_DANGEROUS;
-			}
-		} else {
-			// if we don't get it right, assign the incorrect value
-			if (currentZone instanceof SafeZone) {
-				zoneAssesment = ZONE_DANGEROUS;
-			} else {
-				zoneAssesment = ZONE_SAFE;
-			}
 		}
 	}
 
@@ -1354,17 +1328,19 @@ public class Bot extends Rectangle2D.Double {
 		//if we end up with more than the modes we have now (2/13/11) we're going to have problems with this method
 		//cross that bridge when you come to it
 
-		if(botMode == WAITING_FOR_ACTIVATION) {
-			//with some probability, we'll be turned on this timestep
-			//if that probability is right, turn on and move to the next phase
-			if(Bot.NUM_GEN.nextDouble() <= TURNED_ON_THIS_TIMESTEP_PROB) {
-				botMode = EXPLORER;
-			}
-		} else {
+		int decision = WAITING_FOR_ACTIVATION;
+
+		try {
+			if(botMode == WAITING_FOR_ACTIVATION) {
+				//with some probability, we'll be turned on this timestep
+				//if that probability is right, turn on and move to the next phase
+				if(Bot.NUM_GEN.nextDouble() <= TURNED_ON_THIS_TIMESTEP_PROB) {
+					decision = EXPLORER;
+					return;
+				}
+			} 
 			
-			//TODO add ways to change to danger seeking bot here
-			
-			
+			//we didn't switch yet, see if we are near paths that we should mark
 			double minPathDistance = java.lang.Double.MAX_VALUE;
 			SurvivorPath nearestPath = null;
 
@@ -1376,15 +1352,16 @@ public class Bot extends Rectangle2D.Double {
 				}
 			}
 
-//			print("Last told no mark = " + lastToldNotToMarkPaths + "\tTime til path marker = " + numTimestepsToWaitBeforeMarkingPaths());
+			//			print("Last told no mark = " + lastToldNotToMarkPaths + "\tTime til path marker = " + numTimestepsToWaitBeforeMarkingPaths());
 
 
 			//if we are currently an explorer, then see if we should start marking this path
-			if(botMode == EXPLORER) {
+			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
 				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && canPossiblyMarkPathsNow()) {
-					botMode = PATH_MARKER;
+					decision = PATH_MARKER;
 					myPathToMark = new SurvivorPath(nearestPath);
+					return;
 				}
 			} else if(botMode == PATH_MARKER) {
 				//if we are already a path marker, make sure we are making the path we are closest to
@@ -1397,15 +1374,54 @@ public class Bot extends Rectangle2D.Double {
 				//with some probability, if the density is too high, stop being a marker
 				if(! canPossiblyMarkPathsNow()) {
 					if(Bot.NUM_GEN.nextDouble() < HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
-						botMode = EXPLORER;
+						decision = EXPLORER;
+						return;
 					}
 				}
 
 				//also, if our path is no longer a best known path, switch away from being a path marker
 				if(! bestKnownCompletePaths.contains(myPathToMark)) {
-					botMode = EXPLORER;
+					decision = EXPLORER;
+					return;
 				}
 			}
+			
+			//if we still haven't switched, see if we are an explorer and if we should go to more dangerous areas
+			//first, see if we are currently in a dangerous area, thuse requiring that we go dangerous
+			if(currentZone instanceof DangerZone) {
+				decision = DANGEROUS_EXPLORER;
+				return;
+			}
+			
+			//do this test for both normal and dangerous explorers - if we happen to have gone dangerous and then find ourselves surrounded again, don't be dangerous anymore
+			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
+				//see if our neighbors all all in one direction
+				//i.e. if we are on the fringe of the group
+				Vector netNeighborDirection = new Vector(this.getCenterLocation(), this.getCenterLocation());
+				Vector curNeighborVect;
+				for(BotInfo neighbor : otherBotInfo) {
+					//get a unit vector in the direction of this neighbor
+					curNeighborVect = new Vector(this.getCenterLocation(), neighbor.getCenterLocation());
+					if(Utilities.shouldEqualsZero(curNeighborVect.getMagnitude())) {
+						continue;
+					}
+					curNeighborVect = curNeighborVect.getUnitVector();
+					netNeighborDirection = netNeighborDirection.add(curNeighborVect);
+				}
+				
+				//see if the vector has a non-close to 0 magnitude
+				//TODO possibly have a threshold here i.e. if the mag is > .5, then we count as too many in one direction
+				if(! Utilities.shouldEqualsZero(netNeighborDirection.getMagnitude())) {
+					decision = DANGEROUS_EXPLORER;
+				} else {
+					decision = EXPLORER;
+				}
+				return;
+			}
+
+
+		} finally {
+			botMode = decision;
 		}
 	}
 
@@ -1437,6 +1453,7 @@ public class Bot extends Rectangle2D.Double {
 
 				break;
 			case (EXPLORER) :
+			case (DANGEROUS_EXPLORER) :
 				// now try to move, based on the move rules.
 				exploreMove();
 			// if we have not already claimed a survivor, find out if we can see any survivors
@@ -1468,7 +1485,6 @@ public class Bot extends Rectangle2D.Double {
 		heardShouts.clear();
 		// also don't want to hang on to bot info for too long
 		otherBotInfo.clear();
-		//TODO set up arraylist of complete paths that we know about that we could mark this timestep
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
