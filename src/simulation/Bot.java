@@ -1356,8 +1356,8 @@ public class Bot extends Rectangle2D.Double {
 
 			/* TODO keep probability of changing roles, and increment probability base on neighbor types and current role
 			 * Make sure it doesn't go below 0 or over 100, and change increment value on role
+			 * adjust path markers percentage of switching to explorer based on real neighbor distance compared to ideal distance of neighbors
 			 */
-			
 			
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
