@@ -1394,7 +1394,8 @@ public class Bot extends Rectangle2D.Double {
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
-				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && canPossiblyMarkPathsNow()) {
+				//don't allow path markers to be created within base zone
+				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && canPossiblyMarkPathsNow() && ! baseZone.contains(this.getCenterLocation())) {
 					decision = PATH_MARKER;
 					myPathToMark = new SurvivorPath(nearestPath);
 					return;
