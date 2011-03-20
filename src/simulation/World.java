@@ -72,6 +72,7 @@ public class World extends JFrame implements WindowListener {
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 
 	private static final Point BASE_ZONE_LOC = new Point((int)BOUNDING_BOX.getCenterX(), (int)BOUNDING_BOX.getCenterY());
+	private static final double BASE_ZONE_BUFFER = 35;
 
 	private static final Stroke SURVIVOR_PATH_STROKE = new BasicStroke((float) 2.0);
 
@@ -192,7 +193,7 @@ public class World extends JFrame implements WindowListener {
 				//TODO don't allow new points if they are too close to BASE_ZONE_LOC
 				curPoint = new Point((int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxX()-BOUNDING_BOX.getMinX())) + BOUNDING_BOX.getMinX()),
 						(int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxY()-BOUNDING_BOX.getMinY())) + BOUNDING_BOX.getMinY()));
-			} while(allPointsToAdd.contains(curPoint));
+			} while(allPointsToAdd.contains(curPoint) || curPoint.distance(BASE_ZONE_LOC) < BASE_ZONE_BUFFER);
 			//add it to the list
 			xValues[i] = curPoint.x;
 			yValues[i] = curPoint.y;
