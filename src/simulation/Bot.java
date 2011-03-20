@@ -4,6 +4,7 @@ import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.ListIterator;
@@ -112,6 +113,8 @@ public class Bot extends Rectangle2D.Double {
 	private List<Shout> heardShouts; // the shouts that have been heard recently
 	private Vector movementVector;
 	private BoundingBox boundingBox;
+	private List<Bot> botsWithinBroadcast; //bot's that are within broadcast radius this timestep
+	
 	//TODO Add damage value - increase as bot spends more time in fire area
 
 	// private Bot previousBot;
@@ -138,7 +141,7 @@ public class Bot extends Rectangle2D.Double {
 	private boolean startedCreatingMyPath = false;
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
 
-	private Set<SurvivorPath> bestKnownCompletePaths;
+	private HashMap<Survivor, SurvivorPath> bestKnownCompletePaths;
 
 	private boolean possiblySwitchToMarkingPathsThisStep;
 	private int lastToldNotToMarkPaths;
@@ -163,6 +166,7 @@ public class Bot extends Rectangle2D.Double {
 
 		// now, set up the list of other bot information
 		otherBotInfo = new HashSet<BotInfo>();
+		botsWithinBroadcast = new ArrayList<Bot>();
 
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
@@ -187,7 +191,7 @@ public class Bot extends Rectangle2D.Double {
 
 		mySurvivor = null;
 
-		bestKnownCompletePaths = new HashSet<SurvivorPath>();
+		bestKnownCompletePaths = new HashMap<Survivor, SurvivorPath>();
 
 		//we can start marking paths now if we want to
 		lastToldNotToMarkPaths = 0 - TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
@@ -264,7 +268,7 @@ public class Bot extends Rectangle2D.Double {
 	/**
 	 * @return the bestKnownCompletePaths
 	 */
-	public Set<SurvivorPath> getKnownCompletePaths() {
+	public HashMap<Survivor, SurvivorPath> getKnownCompletePaths() {
 		return bestKnownCompletePaths;
 	}
 
@@ -319,10 +323,12 @@ public class Bot extends Rectangle2D.Double {
 		Shape broadcastRange = getBroadcastArea();
 
 		// find any nearby bots
-		List<Bot> nearbyBots = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
+		if(botsWithinBroadcast.size() == 0) {
+			botsWithinBroadcast = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
+		}
 
 		// send out the message to all the nearby bots
-		for (Bot b : nearbyBots) {
+		for (Bot b : botsWithinBroadcast) {
 			if (b.getID() == this.getID()) {
 				continue;
 			}
@@ -453,26 +459,20 @@ public class Bot extends Rectangle2D.Double {
 
 				//TODO don't let danger seeking bots add to paths???
 
-
 				if(MESSAGE_BOT_DEBUG) {
 					print("Got path message " + mes);
 				}
 
 				//remove the survivor path attachment
-				SurvivorPath sp = new SurvivorPath((SurvivorPath) mes.getAttachment(0));
+				SurvivorPath sp = (SurvivorPath) mes.getAttachment(0);
 
 				//see how it compares to what path we know of that is best for this survivor
 
 				Message passOnMessage = null;
 				if(sp.isComplete()) {
 					//if it is complete, see if we have a complete path to this survivor already
-					SurvivorPath knownPathToThisSurvivor = null;
-					for(SurvivorPath curKnownPath : bestKnownCompletePaths) {
-						if(curKnownPath.getSur().equals(sp.getSur())) {
-							knownPathToThisSurvivor = curKnownPath;
-							break;
-						}
-					}
+					SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(sp.getSur());
+
 					if(knownPathToThisSurvivor != null) {
 						//see if the path we have is the same that we just got
 						if(knownPathToThisSurvivor.equals(sp)) {
@@ -482,8 +482,7 @@ public class Bot extends Rectangle2D.Double {
 							if(knownPathToThisSurvivor.getPathLength() > sp.getPathLength()) {
 								//the new one is better is better
 								passOnMessage = Message.constructCreatePathsMessage(this, sp);
-								bestKnownCompletePaths.remove(knownPathToThisSurvivor);
-								bestKnownCompletePaths.add(new SurvivorPath(sp));
+								bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
 							} else {
 								//our's is better
 								passOnMessage = Message.constructCreatePathsMessage(this, knownPathToThisSurvivor);
@@ -492,12 +491,12 @@ public class Bot extends Rectangle2D.Double {
 					} else {
 						//we have not heard of this path before
 						//add it to our list, and pass on info about it
-						bestKnownCompletePaths.add(new SurvivorPath(sp));
+						bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
 						passOnMessage = Message.constructCreatePathsMessage(this, sp);
 					}
 				} else {
 					//the path we just got is not complete
-
+					
 					//make our changes to it, and pass it on if we are not a path marker
 					if(botMode == PATH_MARKER) {
 						//in this case, just pass on the incomplete path
@@ -508,18 +507,18 @@ public class Bot extends Rectangle2D.Double {
 						if(sp.getPoints().contains(this.getBotInfo())) {
 							continue;
 						}
-						//make a new version
-						SurvivorPath ourVersion = new SurvivorPath(sp);
+//						//make a new version
+//						SurvivorPath ourVersion = new SurvivorPath(sp);
 
 						//see if we are in the baseZone, i.e. if it should be complete
 						if(baseZone.contains(this.getCenterLocation())) {
-							ourVersion.setComplete(true);
+							sp.setComplete(true);
 						}
 						//add our current location to the path
-						ourVersion.addPoint(this.getBotInfo());
+						sp.addPoint(this.getBotInfo());
 
 						//broadcast our version of the path
-						passOnMessage = Message.constructCreatePathsMessage(this, ourVersion);
+						passOnMessage = Message.constructCreatePathsMessage(this, sp);
 					}
 				}
 
@@ -1344,7 +1343,7 @@ public class Bot extends Rectangle2D.Double {
 			double minPathDistance = java.lang.Double.MAX_VALUE;
 			SurvivorPath nearestPath = null;
 
-			for(SurvivorPath potentialPathToMark : bestKnownCompletePaths) {
+			for(SurvivorPath potentialPathToMark : bestKnownCompletePaths.values()) {
 				double distToCurPath = potentialPathToMark.ptPathDist(this.getCenterLocation());
 				if(distToCurPath < minPathDistance) {
 					minPathDistance = distToCurPath;
@@ -1384,7 +1383,7 @@ public class Bot extends Rectangle2D.Double {
 				}
 
 				//also, if our path is no longer a best known path, switch away from being a path marker
-				if(! bestKnownCompletePaths.contains(myPathToMark)) {
+				if(! bestKnownCompletePaths.get(myPathToMark.getSur()).equals(myPathToMark)) {
 					decision = EXPLORER;
 					return;
 				}
@@ -1440,6 +1439,7 @@ public class Bot extends Rectangle2D.Double {
 	public void doOneTimestep() {
 		//before anything else, reset any values that need resetting
 		possiblySwitchToMarkingPathsThisStep = true;
+		
 
 		//make sure we aren't trying to mark a path if we shouldn't be
 		if(botMode != PATH_MARKER) {
@@ -1489,6 +1489,8 @@ public class Bot extends Rectangle2D.Double {
 		heardShouts.clear();
 		// also don't want to hang on to bot info for too long
 		otherBotInfo.clear();
+		//and don't want to hang onto the list of bots within broadcast
+		botsWithinBroadcast.clear();
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {

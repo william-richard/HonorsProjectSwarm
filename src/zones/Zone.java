@@ -3,10 +3,7 @@ package zones;
 import java.awt.Color;
 import java.awt.Point;
 import java.awt.Polygon;
-import java.awt.Shape;
-import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Double;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -14,15 +11,13 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
-import com.sun.swing.internal.plaf.basic.resources.basic;
-
 import main.java.be.humphreys.voronoi.GraphEdge;
-
 import simulation.Shout;
 import simulation.Survivor;
 import simulation.World;
 import util.Utilities;
 import util.shapes.Circle2D;
+import util.shapes.LineSegment;
 
 public abstract class Zone extends Polygon {
 
@@ -31,6 +26,8 @@ public abstract class Zone extends Polygon {
 	protected int zoneID;
 	protected int[] neighbors;
 
+	protected List<LineSegment> sides;
+	
 	private final int TOP_EDGE = 0;
 	private final int BOTTOM_EDGE = 1;
 	private final int LEFT_EDGE = 2;
@@ -38,14 +35,14 @@ public abstract class Zone extends Polygon {
 	
 	public final static double CHANGE_PROBABILITY = .002;
 
-	public Zone(List<GraphEdge> _sides, int _zoneID, final Point2D center, BoundingBox bbox) {
+	public Zone(List<GraphEdge> _graphSides, int _zoneID, final Point2D center, BoundingBox bbox) {
 		super();
 
 		//store what this ID is
 		zoneID = _zoneID;
 
 		ArrayList<Point> verticies = new ArrayList<Point>();
-		for(GraphEdge curSide : _sides) {
+		for(GraphEdge curSide : _graphSides) {
 
 			Point p1 = new Point((int)curSide.x1, (int)curSide.y1);
 			Point p2 = new Point((int)curSide.x2, (int)curSide.y2);
@@ -224,11 +221,15 @@ public abstract class Zone extends Polygon {
 		}
 		
 		//now, store the neighbors
-		neighbors = new int[_sides.size()];
-		for(int i = 0; i < _sides.size(); i++) {
-			GraphEdge curEdge = _sides.get(i);
+		neighbors = new int[_graphSides.size()];
+		for(int i = 0; i < _graphSides.size(); i++) {
+			GraphEdge curEdge = _graphSides.get(i);
 			neighbors[i] = (curEdge.site1 == zoneID ? curEdge.site2 : curEdge.site1);
 		}
+		
+		//now, store the sides of this Zone as LineSegments
+		sides = Utilities.getSides(this, true);
+
 	}
 
 	public Zone(Zone other) {
@@ -236,6 +237,7 @@ public abstract class Zone extends Polygon {
 		this.zoneID = other.zoneID;
 		this.neighbors = new int[other.neighbors.length];
 		System.arraycopy(other.neighbors, 0, this.neighbors, 0, other.neighbors.length);
+		this.sides = other.sides;
 	}
 
 	protected Zone(int _zoneID, Color _zoneColor) {
@@ -283,6 +285,10 @@ public abstract class Zone extends Polygon {
 		return new Circle2D(originator, getFoundRange());
 	}
 
+	public List<LineSegment> getSides() {
+		return sides;
+	}
+	
 	public static Zone changeZoneBasedOnNeighbors(Zone z) {
 		
 		//don't change it if it's a base zone

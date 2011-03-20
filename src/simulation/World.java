@@ -17,6 +17,7 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
@@ -237,11 +238,7 @@ public class World extends JFrame implements WindowListener {
 			//otherwise, take a look at it's neighbors and change accordingly
 			allZones.put(zoneIdInteger, Zone.changeZoneBasedOnNeighbors(curZone));
 
-		}
-		
-		for(Zone z : allZones.values()) {
-			System.out.println(z);
-		}
+		}		
 	}
 
 	/**
@@ -441,7 +438,7 @@ public class World extends JFrame implements WindowListener {
 		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
 		for(Bot b : allBots) {
 			//draw all of it's paths
-			Set<SurvivorPath> survivorPaths = b.getKnownCompletePaths();
+			Collection<SurvivorPath> survivorPaths = b.getKnownCompletePaths().values();
 
 			for(SurvivorPath sp : survivorPaths) {
 				if(! pathsDrawn.contains(sp)) {

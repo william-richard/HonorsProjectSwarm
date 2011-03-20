@@ -13,6 +13,7 @@ import java.util.List;
 
 import util.shapes.Circle2D;
 import util.shapes.LineSegment;
+import zones.Zone;
 
 public class Utilities {
 
@@ -191,6 +192,15 @@ public class Utilities {
 	}
 
 	public static List<LineSegment> getSides(Shape s) {
+		return Utilities.getSides(s, false);
+	}
+	
+	public static List<LineSegment> getSides(Shape s, boolean overrideZone) {
+		//first, see if it is a zone and if we have pre-computed the sides
+		if(s instanceof Zone && !overrideZone) {
+			return ((Zone)s).getSides();
+		}
+		
 		//get s's PathIterator
 		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .01);
 

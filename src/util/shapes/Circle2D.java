@@ -9,6 +9,7 @@ import java.util.List;
 
 import util.Utilities;
 import util.Vector;
+import zones.Zone;
 
 public class Circle2D extends Ellipse2D {
 

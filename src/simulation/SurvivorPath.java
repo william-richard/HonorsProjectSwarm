@@ -12,6 +12,7 @@ public class SurvivorPath {
 	//TODO remove "point" terminology from this class
 
 	private static final long serialVersionUID = 269945074800423928L;
+	private static DecimalFormat df = new DecimalFormat("#.#####");
 
 	private double pathLength;
 	private Survivor sur;
@@ -20,24 +21,28 @@ public class SurvivorPath {
 	private boolean complete;
 
 	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, boolean _complete) {
-		super();
+		this(_sur, _pathPoints, _endPoint, -1.0, _complete);
+	}
 
+	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, double _pathLength, boolean _complete) {
 		sur = _sur;
 		complete = _complete;
 		pathWaypoints = new ArrayList<BotInfo>();
 		endPoint = _endPoint;
 
 		//want to clone the individual points, to make sure we don't have any wrong pointers - need to do a loop
-		for(BotInfo bot : _pathPoints) {
-			pathWaypoints.add(new BotInfo(bot));
+		pathWaypoints = new ArrayList<BotInfo>(_pathPoints);
+
+		if(_pathLength < 0) {
+			recalculatePathLength();
+		} else {
+			pathLength = _pathLength;
 		}
-
-		//calculate the path length
-		recalculatePathLength();
+		
 	}
-
+	
 	public SurvivorPath(SurvivorPath _original) {
-		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.isComplete());
+		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.getPathLength(), _original.isComplete());
 	}
 
 	private void recalculatePathLength() {
@@ -52,7 +57,6 @@ public class SurvivorPath {
 		pathLength += pathWaypoints.get(pathWaypoints.size() - 1).getCenterLocation().distance(endPoint);
 		
 		//round to 5 decimal places
-		DecimalFormat df = new DecimalFormat("#.#####");
 		pathLength = Double.parseDouble(df.format(pathLength));
 	}
 
@@ -93,8 +97,19 @@ public class SurvivorPath {
 	}
 
 	public void addPoint(BotInfo pointToAdd) {
+		//first, adjust the path length down, removing the distance from the previous last waypoint to the endpoint
+		BotInfo previousLast = pathWaypoints.get(pathWaypoints.size() - 1);
+		pathLength -= previousLast.getCenterLocation().distance(endPoint);
+		
+		//add the new point to the path
 		pathWaypoints.add(pointToAdd);
-		recalculatePathLength();
+
+		//add the distance from the previous last point to the new point, and from the new point to the end point
+		pathLength += previousLast.getCenterLocation().distance(pointToAdd.getCenterLocation());
+		pathLength += pointToAdd.getCenterLocation().distance(endPoint);
+		
+		//round it
+		pathLength = Double.parseDouble(df.format(pathLength));
 	}
 
 	public double ptPathDist(Point2D pt) {
