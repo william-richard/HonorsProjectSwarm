@@ -4,8 +4,11 @@ import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -114,7 +117,7 @@ public class Bot extends Rectangle2D.Double {
 	private Vector movementVector;
 	private BoundingBox boundingBox;
 	private List<Bot> botsWithinBroadcast; //bot's that are within broadcast radius this timestep
-	
+
 	//TODO Add damage value - increase as bot spends more time in fire area
 
 	// private Bot previousBot;
@@ -339,8 +342,6 @@ public class Bot extends Rectangle2D.Double {
 	private void readMessages() {
 		// go through all the messages
 
-		print("I have " + messageBuffer.size() + " messages to read");
-		
 		// make a scanner to make going through the messages a bit easier
 		Scanner s;
 		// go through the messages and update the stored info about the other
@@ -498,7 +499,7 @@ public class Bot extends Rectangle2D.Double {
 					}
 				} else {
 					//the path we just got is not complete
-					
+
 					//make our changes to it, and pass it on if we are not a path marker
 					if(botMode == PATH_MARKER) {
 						//in this case, just pass on the incomplete path
@@ -509,8 +510,8 @@ public class Bot extends Rectangle2D.Double {
 						if(sp.getPoints().contains(this.getBotInfo())) {
 							continue;
 						}
-//						//make a new version
-//						SurvivorPath ourVersion = new SurvivorPath(sp);
+						//						//make a new version
+						//						SurvivorPath ourVersion = new SurvivorPath(sp);
 
 						//if we have a complete path to this survivor already
 						//and the complete path is shorter than this partial path
@@ -518,7 +519,7 @@ public class Bot extends Rectangle2D.Double {
 						if(bestKnownCompletePaths.containsKey(sp.getSur()) && bestKnownCompletePaths.get(sp.getSur()).getPathLength() < sp.getPathLength()) {
 							continue;
 						}
-						
+
 						//see if we are in the baseZone, i.e. if it should be complete
 						if(baseZone.contains(this.getCenterLocation())) {
 							sp.setComplete(true);
@@ -1221,11 +1222,35 @@ public class Bot extends Rectangle2D.Double {
 		//try to distribute ourself equally between these two neighbors
 		//along the path
 		ArrayList<BotInfo> pathNeighbors = getPathNeighbors();
+		
+		//get the 2 closest neighbors on the path
+		LinkedList<BotInfo> closetNeighbors = new LinkedList<BotInfo>();
+		final int numClosestNeighbors = 2;
+		final Bot thisBot = this;
+
+		for(BotInfo curNeighbor : pathNeighbors) {
+			closetNeighbors.add(curNeighbor);
+
+			if(closetNeighbors.size() > numClosestNeighbors) {
+				//get the list sorted
+				Collections.sort(closetNeighbors, new Comparator<BotInfo>() {
+					@Override
+					public int compare(BotInfo o1, BotInfo o2) {
+						double d1 = o1.getCenterLocation().distance(thisBot.getCenterLocation());
+						double d2 = o2.getCenterLocation().distance(thisBot.getCenterLocation());
+						
+						return d1 < d2 ? -1 : (d1 == d2 ? 0 : 1);
+					}
+				});
+				//remove the last element in the list
+				closetNeighbors.removeLast();
+			}
+		}
 
 		Vector pathSegVector = new Vector(closestSegmentOfPath);
 		Vector movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 
-		for(BotInfo curNeighbor : pathNeighbors) {
+		for(BotInfo curNeighbor : closetNeighbors) {
 			//TODO DUPLICATE CODE! We should just have a method that gives us a vector away from a neighbor for both move methods
 			Point2D curBotLoc = curNeighbor.getCenterLocation();
 			double distToCurNeighbor = curNeighbor.getCenterLocation().distance(this.getCenterLocation());
@@ -1254,7 +1279,7 @@ public class Bot extends Rectangle2D.Double {
 			movementVector = movementVector.add(curBotVect);
 		}
 
-		if(pathNeighbors.size() != 0) {
+		if(closetNeighbors.size() != 0) {
 			movementVector = movementVector.rescaleRatio(1.0 / pathNeighbors.size());
 		}
 
@@ -1333,10 +1358,9 @@ public class Bot extends Rectangle2D.Double {
 	private void reevaluateBotMode() {
 
 		//depending on which mode we're in, we're going to reevaluate differently
-		//if we end up with more than the modes we have now (2/13/11) we're going to have problems with this method
-		//cross that bridge when you come to it
-
-		int decision = WAITING_FOR_ACTIVATION;
+		
+		//unless something changes it, keep the same mode as we had
+		int decision = botMode;
 
 		try {
 			if(botMode == WAITING_FOR_ACTIVATION) {
@@ -1347,7 +1371,7 @@ public class Bot extends Rectangle2D.Double {
 					return;
 				}
 			} 
-			
+
 			//we didn't switch yet, see if we are near paths that we should mark
 			double minPathDistance = java.lang.Double.MAX_VALUE;
 			SurvivorPath nearestPath = null;
@@ -1366,7 +1390,7 @@ public class Bot extends Rectangle2D.Double {
 			 * Make sure it doesn't go below 0 or over 100, and change increment value on role
 			 * adjust path markers percentage of switching to explorer based on real neighbor distance compared to ideal distance of neighbors
 			 */
-			
+
 			//if we are currently an explorer, then see if we should start marking this path
 			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
@@ -1397,14 +1421,14 @@ public class Bot extends Rectangle2D.Double {
 					return;
 				}
 			}
-			
+
 			//if we still haven't switched, see if we are an explorer and if we should go to more dangerous areas
 			//first, see if we are currently in a dangerous area, thuse requiring that we go dangerous
-			if(currentZone instanceof DangerZone) {
+			if(currentZone instanceof DangerZone && botMode != PATH_MARKER) {
 				decision = DANGEROUS_EXPLORER;
 				return;
 			}
-			
+
 			//do this test for both normal and dangerous explorers - if we happen to have gone dangerous and then find ourselves surrounded again, don't be dangerous anymore
 			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 				//see if our neighbors all all in one direction
@@ -1420,7 +1444,7 @@ public class Bot extends Rectangle2D.Double {
 					curNeighborVect = curNeighborVect.getUnitVector();
 					netNeighborDirection = netNeighborDirection.add(curNeighborVect);
 				}
-				
+
 				//see if the vector has a non-close to 0 magnitude
 				//TODO possibly have a threshold here i.e. if the mag is > .5, then we count as too many in one direction
 				if(! Utilities.shouldEqualsZero(netNeighborDirection.getMagnitude())) {
@@ -1448,7 +1472,7 @@ public class Bot extends Rectangle2D.Double {
 	public void doOneTimestep() {
 		//before anything else, reset any values that need resetting
 		possiblySwitchToMarkingPathsThisStep = true;
-		
+
 
 		//make sure we aren't trying to mark a path if we shouldn't be
 		if(botMode != PATH_MARKER) {
