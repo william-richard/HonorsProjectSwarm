@@ -85,4 +85,9 @@ public class DummyZone extends Zone {
 		return Color.white;
 	}
 
+	@Override
+	public double getPathWeightPerPixel() {
+		return 0;
+	}
+
 }

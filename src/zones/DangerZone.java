@@ -87,6 +87,11 @@ public class DangerZone extends Zone {
 	public Color getColor() {
 		return DangerZoneColor;
 	}
+
+	@Override
+	public double getPathWeightPerPixel() {
+		return 3;
+	}
 	
 	
 	

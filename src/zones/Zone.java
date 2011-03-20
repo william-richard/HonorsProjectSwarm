@@ -371,6 +371,8 @@ public abstract class Zone extends Polygon {
 	public abstract double repulsionScalingFactor();
 
 	public abstract boolean isObstacle();
+	
+	public abstract double getPathWeightPerPixel();
 
 	public abstract Color getColor();
 }

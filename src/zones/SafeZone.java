@@ -89,4 +89,9 @@ public class SafeZone extends Zone {
 		return SafeZoneColor;
 	}
 
+	@Override
+	public double getPathWeightPerPixel() {
+		return 1;
+	}
+
 }
