@@ -339,6 +339,8 @@ public class Bot extends Rectangle2D.Double {
 	private void readMessages() {
 		// go through all the messages
 
+		print("I have " + messageBuffer.size() + " messages to read");
+		
 		// make a scanner to make going through the messages a bit easier
 		Scanner s;
 		// go through the messages and update the stored info about the other
@@ -510,6 +512,13 @@ public class Bot extends Rectangle2D.Double {
 //						//make a new version
 //						SurvivorPath ourVersion = new SurvivorPath(sp);
 
+						//if we have a complete path to this survivor already
+						//and the complete path is shorter than this partial path
+						//then don't do anything more with it
+						if(bestKnownCompletePaths.containsKey(sp.getSur()) && bestKnownCompletePaths.get(sp.getSur()).getPathLength() < sp.getPathLength()) {
+							continue;
+						}
+						
 						//see if we are in the baseZone, i.e. if it should be complete
 						if(baseZone.contains(this.getCenterLocation())) {
 							sp.setComplete(true);
