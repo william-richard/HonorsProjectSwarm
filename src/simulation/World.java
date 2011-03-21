@@ -5,7 +5,6 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.Polygon;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.WindowEvent;
@@ -14,29 +13,25 @@ import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
-import java.util.Set;
 
+import javax.print.attribute.standard.Fidelity;
 import javax.swing.JFrame;
 
-import main.java.be.humphreys.voronoi.GraphEdge;
-import main.java.be.humphreys.voronoi.Site;
-import main.java.be.humphreys.voronoi.Voronoi;
+import org.jgrapht.util.FibonacciHeap;
+import org.jgrapht.util.FibonacciHeapNode;
 
+import main.java.be.humphreys.voronoi.GraphEdge;
+import main.java.be.humphreys.voronoi.Voronoi;
 import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
-import zones.DangerZone;
 import zones.DummyZone;
-import zones.Fire;
-import zones.SafeZone;
 import zones.Zone;
 
 
@@ -70,6 +65,7 @@ public class World extends JFrame implements WindowListener {
 	private static final Color ZONE_OUTLINE_COLOR = Color.black;
 	private static final Color SURVIVOR_PATH_COLOR = new Color(0,154,205);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
+	private static final Color OPTIMAL_SURVIVOR_PATH_COLOR = new Color(255,105,180);
 
 	private static final Point BASE_ZONE_LOC = new Point((int)BOUNDING_BOX.getCenterX(), (int)BOUNDING_BOX.getCenterY());
 	private static final double BASE_ZONE_BUFFER = 35;
@@ -83,8 +79,6 @@ public class World extends JFrame implements WindowListener {
 	public static java.util.Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static List<Survivor> allSurvivors; //The survivors
-	public ListIterator<Bot> allBotSnapshot;
-	public ListIterator<Survivor> allSurvivorSnapshot;
 
 	private BaseZone homeBase;
 
@@ -95,6 +89,14 @@ public class World extends JFrame implements WindowListener {
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps; //store the time in milliseconds
 	private boolean drawBotRadii = false;
+
+	private ArrayList<ArrayList<FibonacciHeapNode<DPixel>>> dNodes;
+
+
+
+
+
+
 
 	public World() {
 		this(40, 2, 5000);
@@ -110,9 +112,8 @@ public class World extends JFrame implements WindowListener {
 
 		//set them up using the Voronoi Algorithm
 		voronoiZones();
-
-		//		checkZoneSanity();
-
+		checkZoneSanity();
+		
 		//initialize the bots
 		allBots = new ArrayList<Bot>();
 
@@ -137,6 +138,10 @@ public class World extends JFrame implements WindowListener {
 
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
+
+		dNodes = new ArrayList<ArrayList<FibonacciHeapNode<DPixel>>>();
+		initializeDNodes();
+		dijkstrasFromBaseZone();
 	}
 
 	private void setupFrame() {
@@ -200,7 +205,7 @@ public class World extends JFrame implements WindowListener {
 		}
 
 		//now, get the edges from the Voronoi algorithm
-		Voronoi vor = new Voronoi(.5);
+		Voronoi vor = new Voronoi(1.0);
 		List<GraphEdge> voronoiEdges = vor.generateVoronoi(xValues, yValues, BOUNDING_BOX.getMinX(), BOUNDING_BOX.getMaxX(), BOUNDING_BOX.getMinY(), BOUNDING_BOX.getMaxY());
 
 		//we should have <ZONE_COMPLEXITY> shapes
@@ -243,6 +248,87 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	/**
+	 * set up the Fibonacci Nodes for the Fibonacci Heap for Dijkstra's
+	 */
+	private void initializeDNodes() {
+		//add all the nodes for the first time
+		for(int curX = 0; curX < 500; curX++) {
+			dNodes.add(new ArrayList<FibonacciHeapNode<DPixel>>());
+			ArrayList<FibonacciHeapNode<DPixel>> curList = dNodes.get(curX);
+			for(int curY = 21; curY < 521; curY ++) {
+				DPixel newPix = new DPixel(curX, curY);
+				FibonacciHeapNode<DPixel> newNode = new FibonacciHeapNode<World.DPixel>(newPix);
+				curList.add(newNode);
+			}
+		}
+	}
+
+	/**
+	 * Do Dijkstra's algorithm on the dNodes, to find the shortest path from the base location to all other points
+	 */
+	private void dijkstrasFromBaseZone() {
+		//reset the nodes
+		//and add them to our Fib Heap
+		FibonacciHeap<DPixel> fibHeap = new FibonacciHeap<World.DPixel>();
+		for(int curX = 0; curX < dNodes.size(); curX++) {
+			ArrayList<FibonacciHeapNode<DPixel>> curList = dNodes.get(curX);
+			for(int curY = 0; curY < curList.size(); curY++) {
+				curList.get(curY).getData().setVisited(false);
+				curList.get(curY).getData().setPrevious(null);
+				fibHeap.insert(curList.get(curY), Double.MAX_VALUE);
+			}
+		}
+		//set the source distance to 0
+		fibHeap.decreaseKey(dNodes.get(BASE_ZONE_LOC.x).get(BASE_ZONE_LOC.y), 0.0);
+		
+		FibonacciHeapNode<DPixel> nextNode;
+		while(! fibHeap.isEmpty()) {
+			nextNode = fibHeap.removeMin();
+			if(nextNode.getKey() == Double.MAX_VALUE) {
+				//no other nodes are reachable
+				break;
+			}
+			
+			int nextNodeX = nextNode.getData().getX();
+			int nextNodeY = nextNode.getData().getY();
+			double distThruNextNode = nextNode.getKey() + nextNode.getData().getWeight();
+			for(int curNeiX = nextNodeX - 1; curNeiX < nextNodeX + 1; curNeiX++) {
+				for(int curNeiY = nextNodeY - 1; curNeiY < nextNodeY + 1; curNeiY++) {
+					//don't examine ourselves
+					if(curNeiX == nextNodeX && curNeiY == nextNodeY) {
+						continue;
+					}
+					//don't examine pixels that are out of bounds
+					if(curNeiX < 0 || curNeiX >= 500 || curNeiY < 21 || curNeiY >= 521) {
+						continue;
+					}
+					//don't look at the neighbor if it has been visited already
+					FibonacciHeapNode<DPixel> curNei = dNodes.get(curNeiX).get(curNeiY-MENUBAR_HEIGHT);
+					if(curNei.getData().isVisited()) {
+						continue;
+					}
+
+					if(distThruNextNode < curNei.getKey()) {
+						fibHeap.decreaseKey(curNei, distThruNextNode);
+						curNei.getData().setPrevious(nextNode.getData());
+					}
+				}
+			}
+		}
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+	/**
 	 * @return the currentTimestep
 	 */
 	public static int getCurrentTimestep() {
@@ -262,12 +348,12 @@ public class World extends JFrame implements WindowListener {
 	public void setTimeBetweenTimesteps(long timeBetweenTimesteps) {
 		this.timeBetweenTimesteps = timeBetweenTimesteps;
 	}
-	
+
 	public boolean getDrawBotRadii() {
 		return drawBotRadii;
 	}
-	
-	
+
+
 	public void setDrawBotRadii(boolean setValue) {
 		drawBotRadii = setValue;
 	}
@@ -313,6 +399,10 @@ public class World extends JFrame implements WindowListener {
 			}
 			System.out.println("Done with survivors");
 
+			//recalculate optimal paths to all points, so we know optimal paths to survivors
+			//should only really do this if a zone changes, but for now do it every time
+			dijkstrasFromBaseZone();
+			
 			//do all the bots
 			//print out percent checkpoints
 			double lastPercentCheckpoint = 0.0;
@@ -391,10 +481,6 @@ public class World extends JFrame implements WindowListener {
 		g2d.setColor(BACKGROUND_COLOR);
 		g2d.fill(BOUNDING_BOX);
 
-		//get a snapshot of the bots and survivors
-		allBotSnapshot = allBots.listIterator();
-		allSurvivorSnapshot = allSurvivors.listIterator();
-
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
 		for(Zone z : allZones.values()) {
@@ -403,18 +489,28 @@ public class World extends JFrame implements WindowListener {
 			g2d.setColor(ZONE_OUTLINE_COLOR);
 			g2d.draw(z);
 		}
-//		for(Zone z : allZones.values()) {
-//			g2d.setColor(ZONE_OUTLINE_COLOR);
-//			g2d.draw(z);
-//			g2d.setColor(LABEL_COLOR);
-//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
-//		}
+		//		for(Zone z : allZones.values()) {
+		//			g2d.setColor(ZONE_OUTLINE_COLOR);
+		//			g2d.draw(z);
+		//			g2d.setColor(LABEL_COLOR);
+		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+		//		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
-		Bot firstBot = (Bot) allBotSnapshot.next().clone();
-		//go previous one, so that when we start to draw the bots, we'll start at the beginning
-		allBotSnapshot.previous();
-
+		Bot firstBot = allBots.get(0);
+		
+		//draw optimal paths to all survivors
+		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
+		g2d.setStroke(SURVIVOR_PATH_STROKE);
+		for(Survivor curSur : allSurvivors) {
+			//get the DPixel for this survivor
+			DPixel curSurPix = dNodes.get((int)curSur.getX()).get((int)curSur.getY()).getData();
+			while(curSurPix.previous != null) {
+				g2d.drawLine(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY());
+				curSurPix = curSurPix.getPrevious();
+			}			
+		}
+		
 		//now, drow all of the shouts
 		g2d.setColor(SHOUT_COLOR);
 		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
@@ -424,9 +520,7 @@ public class World extends JFrame implements WindowListener {
 
 		//draw all the survivors
 		g2d.setColor(SURVIVOR_COLOR);
-		while(allSurvivorSnapshot.hasNext()) {
-			Survivor curSur = allSurvivorSnapshot.next();
-
+		for(Survivor curSur : allSurvivors) {
 			g2d.fill(curSur);
 		}
 
@@ -460,9 +554,7 @@ public class World extends JFrame implements WindowListener {
 
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
-		while(allBotSnapshot.hasNext()) {
-			Bot curBot = allBotSnapshot.next();
-
+		for(Bot curBot : allBots) {
 			//			g2d.setColor(BOT_COLOR);
 			//			g2d.fill(curBot);
 
@@ -487,10 +579,7 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 
-		allBotSnapshot = allBots.listIterator();
-		while(allBotSnapshot.hasNext()) {
-			Bot curBot = allBotSnapshot.next();
-
+		for(Bot curBot : allBots) {
 			switch(curBot.getBotMode()) {
 				case(Bot.WAITING_FOR_ACTIVATION):
 					g2d.setColor(DEACTIVATED_BOT_COLOR);
@@ -583,4 +672,69 @@ public class World extends JFrame implements WindowListener {
 	@Override
 	public void windowOpened(WindowEvent e) {}
 
+
+
+
+	private class DPixel {
+		private int x, y;
+		private Zone parentZone;
+		//previous pixel in best path
+		private DPixel previous;
+		private boolean visited;
+
+		public DPixel(int _x, int _y) {
+			x = _x;
+			y = _y;
+			//figure out what zone we're in
+			parentZone = World.findZone(new Point(x,y));
+			previous = null;
+		}
+
+		public double getWeight() {
+			return parentZone.getPathWeightPerPixel();
+		}
+
+		public DPixel getPrevious() {
+			return previous;
+		}
+		
+		public void setPrevious(DPixel _prev) {
+			previous = _prev;
+		}
+
+		/**
+		 * @return the visited
+		 */
+		public boolean isVisited() {
+			return visited;
+		}
+
+		/**
+		 * @param visited the visited to set
+		 */
+		public void setVisited(boolean visited) {
+			this.visited = visited;
+		}
+
+		/**
+		 * @return the x
+		 */
+		public int getX() {
+			return x;
+		}
+
+		/**
+		 * @return the y
+		 */
+		public int getY() {
+			return y;
+		}
+
+		/**
+		 * @return the parentZone
+		 */
+		public Zone getParentZone() {
+			return parentZone;
+		}
+	}
 }

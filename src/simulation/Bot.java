@@ -20,10 +20,8 @@ import util.Utilities;
 import util.Vector;
 import util.shapes.Circle2D;
 import util.shapes.LineSegment;
-import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerZone;
-import zones.SafeZone;
 import zones.Zone;
 
 public class Bot extends Rectangle2D.Double {
