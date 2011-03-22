@@ -20,14 +20,12 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
-import javax.print.attribute.standard.Fidelity;
 import javax.swing.JFrame;
-
-import org.jgrapht.util.FibonacciHeap;
-import org.jgrapht.util.FibonacciHeapNode;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
 import main.java.be.humphreys.voronoi.Voronoi;
+import util.DPixel;
+import util.Dijkstras;
 import util.Utilities;
 import zones.BaseZone;
 import zones.BoundingBox;
@@ -89,13 +87,8 @@ public class World extends JFrame implements WindowListener {
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps; //store the time in milliseconds
 	private boolean drawBotRadii = false;
-
-	private ArrayList<ArrayList<FibonacciHeapNode<DPixel>>> dNodes;
-
-
-
-
-
+	
+	private Dijkstras distancesToAllPoints;
 
 
 	public World() {
@@ -112,8 +105,8 @@ public class World extends JFrame implements WindowListener {
 
 		//set them up using the Voronoi Algorithm
 		voronoiZones();
-		checkZoneSanity();
-		
+		//		checkZoneSanity();
+
 		//initialize the bots
 		allBots = new ArrayList<Bot>();
 
@@ -139,9 +132,8 @@ public class World extends JFrame implements WindowListener {
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
 
-		dNodes = new ArrayList<ArrayList<FibonacciHeapNode<DPixel>>>();
-		initializeDNodes();
-		dijkstrasFromBaseZone();
+		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 	}
 
 	private void setupFrame() {
@@ -221,7 +213,6 @@ public class World extends JFrame implements WindowListener {
 			voronoiEdgesOrganizedByShape[curEdge.site1].add(curEdge);
 			voronoiEdgesOrganizedByShape[curEdge.site2].add(curEdge);
 		}
-		System.out.flush();
 
 		//make them into Zones
 		//start with DummyZones
@@ -247,75 +238,6 @@ public class World extends JFrame implements WindowListener {
 		}		
 	}
 
-	/**
-	 * set up the Fibonacci Nodes for the Fibonacci Heap for Dijkstra's
-	 */
-	private void initializeDNodes() {
-		//add all the nodes for the first time
-		for(int curX = 0; curX < 500; curX++) {
-			dNodes.add(new ArrayList<FibonacciHeapNode<DPixel>>());
-			ArrayList<FibonacciHeapNode<DPixel>> curList = dNodes.get(curX);
-			for(int curY = 21; curY < 521; curY ++) {
-				DPixel newPix = new DPixel(curX, curY);
-				FibonacciHeapNode<DPixel> newNode = new FibonacciHeapNode<World.DPixel>(newPix);
-				curList.add(newNode);
-			}
-		}
-	}
-
-	/**
-	 * Do Dijkstra's algorithm on the dNodes, to find the shortest path from the base location to all other points
-	 */
-	private void dijkstrasFromBaseZone() {
-		//reset the nodes
-		//and add them to our Fib Heap
-		FibonacciHeap<DPixel> fibHeap = new FibonacciHeap<World.DPixel>();
-		for(int curX = 0; curX < dNodes.size(); curX++) {
-			ArrayList<FibonacciHeapNode<DPixel>> curList = dNodes.get(curX);
-			for(int curY = 0; curY < curList.size(); curY++) {
-				curList.get(curY).getData().setVisited(false);
-				curList.get(curY).getData().setPrevious(null);
-				fibHeap.insert(curList.get(curY), Double.MAX_VALUE);
-			}
-		}
-		//set the source distance to 0
-		fibHeap.decreaseKey(dNodes.get(BASE_ZONE_LOC.x).get(BASE_ZONE_LOC.y), 0.0);
-		
-		FibonacciHeapNode<DPixel> nextNode;
-		while(! fibHeap.isEmpty()) {
-			nextNode = fibHeap.removeMin();
-			if(nextNode.getKey() == Double.MAX_VALUE) {
-				//no other nodes are reachable
-				break;
-			}
-			
-			int nextNodeX = nextNode.getData().getX();
-			int nextNodeY = nextNode.getData().getY();
-			double distThruNextNode = nextNode.getKey() + nextNode.getData().getWeight();
-			for(int curNeiX = nextNodeX - 1; curNeiX < nextNodeX + 1; curNeiX++) {
-				for(int curNeiY = nextNodeY - 1; curNeiY < nextNodeY + 1; curNeiY++) {
-					//don't examine ourselves
-					if(curNeiX == nextNodeX && curNeiY == nextNodeY) {
-						continue;
-					}
-					//don't examine pixels that are out of bounds
-					if(curNeiX < 0 || curNeiX >= 500 || curNeiY < 21 || curNeiY >= 521) {
-						continue;
-					}
-					//don't look at the neighbor if it has been visited already
-					FibonacciHeapNode<DPixel> curNei = dNodes.get(curNeiX).get(curNeiY-MENUBAR_HEIGHT);
-					if(curNei.getData().isVisited()) {
-						continue;
-					}
-
-					if(distThruNextNode < curNei.getKey()) {
-						fibHeap.decreaseKey(curNei, distThruNextNode);
-						curNei.getData().setPrevious(nextNode.getData());
-					}
-				}
-			}
-		}
-	}
 
 
 
@@ -401,8 +323,8 @@ public class World extends JFrame implements WindowListener {
 
 			//recalculate optimal paths to all points, so we know optimal paths to survivors
 			//should only really do this if a zone changes, but for now do it every time
-			dijkstrasFromBaseZone();
-			
+			distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
+
 			//do all the bots
 			//print out percent checkpoints
 			double lastPercentCheckpoint = 0.0;
@@ -486,31 +408,17 @@ public class World extends JFrame implements WindowListener {
 		for(Zone z : allZones.values()) {
 			g2d.setColor(z.getColor());
 			g2d.fill(z);
-			g2d.setColor(ZONE_OUTLINE_COLOR);
-			g2d.draw(z);
+						g2d.setColor(ZONE_OUTLINE_COLOR);
+						g2d.draw(z);
 		}
-		//		for(Zone z : allZones.values()) {
-		//			g2d.setColor(ZONE_OUTLINE_COLOR);
-		//			g2d.draw(z);
-		//			g2d.setColor(LABEL_COLOR);
-		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
-		//		}
+//		for(Zone z : allZones.values()) {
+//			g2d.setColor(LABEL_COLOR);
+//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+//		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
 		Bot firstBot = allBots.get(0);
-		
-		//draw optimal paths to all survivors
-		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
-		g2d.setStroke(SURVIVOR_PATH_STROKE);
-		for(Survivor curSur : allSurvivors) {
-			//get the DPixel for this survivor
-			DPixel curSurPix = dNodes.get((int)curSur.getX()).get((int)curSur.getY()).getData();
-			while(curSurPix.previous != null) {
-				g2d.drawLine(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY());
-				curSurPix = curSurPix.getPrevious();
-			}			
-		}
-		
+
 		//now, drow all of the shouts
 		g2d.setColor(SHOUT_COLOR);
 		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
@@ -524,6 +432,18 @@ public class World extends JFrame implements WindowListener {
 			g2d.fill(curSur);
 		}
 
+		//draw optimal paths to all survivors
+		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
+		g2d.setStroke(SURVIVOR_PATH_STROKE);
+		for(Survivor curSur : allSurvivors) {
+			//get the DPixel for this survivor
+			DPixel curSurPix = distancesToAllPoints.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
+			while(curSurPix.getPrevious() != null) {
+				g2d.drawLine(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY());
+				curSurPix = curSurPix.getPrevious();
+			}			
+		}
+		
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
@@ -631,9 +551,21 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 
-		System.out.println("Could not find a zone for " + point.getX() + ", " + point.getY());
+		//from some weird reason, the Veronoi algorithm will sometimes leave out a few pixels
+		//if we get here, that's happened
+		//basically, do the voronoi for it - try to find which zone's point is closest to this point
+		//TODO MAYBE? Have zones store these extra points so we only have to do this once? Probably will only do this a handful of times anyway..... maybe not worth it
+		double minimumDistance = Double.MAX_VALUE;
+		Zone closestZone = null;
+		for(Zone z : allZones.values()) {
+			double curDist = point.distance(z.getCenterLocation());
+			if(curDist < minimumDistance) {
+				minimumDistance = curDist;
+				closestZone = z;
+			}
+		}
 
-		return null;
+		return closestZone;
 	}
 
 	public static void createAndShowGUI() {
@@ -672,69 +604,4 @@ public class World extends JFrame implements WindowListener {
 	@Override
 	public void windowOpened(WindowEvent e) {}
 
-
-
-
-	private class DPixel {
-		private int x, y;
-		private Zone parentZone;
-		//previous pixel in best path
-		private DPixel previous;
-		private boolean visited;
-
-		public DPixel(int _x, int _y) {
-			x = _x;
-			y = _y;
-			//figure out what zone we're in
-			parentZone = World.findZone(new Point(x,y));
-			previous = null;
-		}
-
-		public double getWeight() {
-			return parentZone.getPathWeightPerPixel();
-		}
-
-		public DPixel getPrevious() {
-			return previous;
-		}
-		
-		public void setPrevious(DPixel _prev) {
-			previous = _prev;
-		}
-
-		/**
-		 * @return the visited
-		 */
-		public boolean isVisited() {
-			return visited;
-		}
-
-		/**
-		 * @param visited the visited to set
-		 */
-		public void setVisited(boolean visited) {
-			this.visited = visited;
-		}
-
-		/**
-		 * @return the x
-		 */
-		public int getX() {
-			return x;
-		}
-
-		/**
-		 * @return the y
-		 */
-		public int getY() {
-			return y;
-		}
-
-		/**
-		 * @return the parentZone
-		 */
-		public Zone getParentZone() {
-			return parentZone;
-		}
-	}
 }

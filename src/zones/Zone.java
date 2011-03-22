@@ -23,8 +23,11 @@ public abstract class Zone extends Polygon {
 
 	private static final long serialVersionUID = -3828823916299213104L;
 
+	
+	//REMEMBER to change BOTH constructors, especially the one that clones a Zone
 	protected int zoneID;
 	protected int[] neighbors;
+	public Point2D center;
 
 	protected List<LineSegment> sides;
 	
@@ -35,12 +38,15 @@ public abstract class Zone extends Polygon {
 	
 	public final static double CHANGE_PROBABILITY = .002;
 
-	public Zone(List<GraphEdge> _graphSides, int _zoneID, final Point2D center, BoundingBox bbox) {
+	public Zone(List<GraphEdge> _graphSides, int _zoneID, final Point2D _center, BoundingBox bbox) {
 		super();
 
 		//store what this ID is
 		zoneID = _zoneID;
 
+		//store the 'center'
+		center = new Point2D.Double(_center.getX(), _center.getY());
+		
 		ArrayList<Point> verticies = new ArrayList<Point>();
 		for(GraphEdge curSide : _graphSides) {
 
@@ -140,16 +146,16 @@ public abstract class Zone extends Polygon {
 
 			@Override
 			public int compare(Point o1, Point o2) {
-				double angle1 = Utilities.getAngleFromZero(center, o1);
-				double angle2 = Utilities.getAngleFromZero(center, o2);
+				double angle1 = Utilities.getAngleFromZero(_center, o1);
+				double angle2 = Utilities.getAngleFromZero(_center, o2);
 
-				if(o1.getY() == center.getY() && o2.getY() == center.getY()) {
+				if(o1.getY() == _center.getY() && o2.getY() == _center.getY()) {
 					//they are both on the same plane as center
 					//see if they are on opposite sides
-					if(o1.getX() > center.getX() && o2.getX() < center.getX()) {
+					if(o1.getX() > _center.getX() && o2.getX() < _center.getX()) {
 						//o1 < o2
 						return -1;
-					} else if(o1.getX() < center.getX() && o2.getX() > center.getX()) {
+					} else if(o1.getX() < _center.getX() && o2.getX() > _center.getX()) {
 						//o1 > o2
 						return 1;
 					} else {
@@ -157,12 +163,12 @@ public abstract class Zone extends Polygon {
 						return 0;
 					}
 				}
-				if(o1.getY() == center.getY()) {
-					if(o1.getX() > center.getX()) {
+				if(o1.getY() == _center.getY()) {
+					if(o1.getX() > _center.getX()) {
 						//o1 < EVERYTHING
 						return -1;
 					} else {
-						if(o2.getY() < center.getY()) {
+						if(o2.getY() < _center.getY()) {
 							//o2 < o1
 							return 1;
 						} else {
@@ -172,12 +178,12 @@ public abstract class Zone extends Polygon {
 					}
 				}
 				
-				if(o2.getY() == center.getY()) {
-					if(o2.getX() > center.getX()) {
+				if(o2.getY() == _center.getY()) {
+					if(o2.getX() > _center.getX()) {
 						//o2 < EVERYTHING
 						return 1;
 					} else {
-						if(o1.getY() < center.getY()) {
+						if(o1.getY() < _center.getY()) {
 							//o1 < o2
 							return -1;
 						} else {
@@ -188,18 +194,18 @@ public abstract class Zone extends Polygon {
 				}
 				
 				
-				if(o1.getY() < center.getY() && o2.getY() > center.getY()) {
+				if(o1.getY() < _center.getY() && o2.getY() > _center.getY()) {
 					//points above the center go first
 					//so o1 < o2
 					return -1;
 				}
-				if(o1.getY() > center.getY() && o2.getY() < center.getY()) {
+				if(o1.getY() > _center.getY() && o2.getY() < _center.getY()) {
 					//o2 < o1
 					return 1;
 				}
 				
 				//they are both above or below
-				if(o1.getY() < center.getY()) {
+				if(o1.getY() < _center.getY()) {
 					//they are above
 					//angles closer to 0 go first
 					if(angle1 < angle2) {return -1;} 
@@ -219,6 +225,7 @@ public abstract class Zone extends Polygon {
 		for(Point p : verticies) {
 			this.addPoint(p.x, p.y);
 		}
+
 		
 		//now, store the neighbors
 		neighbors = new int[_graphSides.size()];
@@ -229,7 +236,6 @@ public abstract class Zone extends Polygon {
 		
 		//now, store the sides of this Zone as LineSegments
 		sides = Utilities.getSides(this, true);
-
 	}
 
 	public Zone(Zone other) {
@@ -238,6 +244,7 @@ public abstract class Zone extends Polygon {
 		this.neighbors = new int[other.neighbors.length];
 		System.arraycopy(other.neighbors, 0, this.neighbors, 0, other.neighbors.length);
 		this.sides = other.sides;
+		this.center = other.center;
 	}
 
 	protected Zone(int _zoneID, Color _zoneColor) {
@@ -258,15 +265,15 @@ public abstract class Zone extends Polygon {
 	}
 
 	public double getCenterX() {
-		return this.getBounds2D().getCenterX();
+		return this.getCenterLocation().getX();
 	}
 
 	public double getCenterY() {
-		return this.getBounds2D().getCenterY();
+		return this.getCenterLocation().getY();
 	}
 
 	public Point2D getCenterLocation() {
-		return new Point2D.Double(getCenterX(), getCenterY());
+		return this.center;
 	}
 
 	public Circle2D getBroadcastArea(Point2D originator) {
@@ -353,6 +360,7 @@ public abstract class Zone extends Polygon {
 		for(int i = 0; i < npoints; i++) {
 			result += "(" + xpoints[i] + ", "+ ypoints[i] + ") ";
 		}
+		result += "\tcent = " + center;
 		return result;
 	}
 	
