@@ -13,8 +13,14 @@ import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
@@ -73,10 +79,16 @@ public class World extends JFrame implements WindowListener {
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
 
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM.dd.yy-HH:mm:ss");
+
 	/** VARIABLES */
 	public static java.util.Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static List<Survivor> allSurvivors; //The survivors
+
+	public ListIterator<Bot> allBotSnapshot;
+	public ListIterator<Survivor> allSurvivorSnapshot;
+	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -87,9 +99,10 @@ public class World extends JFrame implements WindowListener {
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps; //store the time in milliseconds
 	private boolean drawBotRadii = false;
-	
+
 	private Dijkstras distancesToAllPoints;
 
+	private Date firstStartTime = null;
 
 	public World() {
 		this(40, 2, 5000);
@@ -132,8 +145,8 @@ public class World extends JFrame implements WindowListener {
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
 
-		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
-		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
+		//		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+		distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
 	}
 
 	private void setupFrame() {
@@ -141,6 +154,24 @@ public class World extends JFrame implements WindowListener {
 		setResizable(false);
 		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setBackground(BACKGROUND_COLOR);
+	}
+
+	private void setupFiles() {
+		//make the directory for this run
+		String directory = "data/" + DATE_FORMAT.format(firstStartTime);
+		new File(directory).mkdir();
+		//create the information about number of bots, survivors etc
+		try {
+			BufferedWriter infoWriter = new BufferedWriter(new FileWriter(directory + "/info.txt"));
+			infoWriter.write("bots = " + allBots.size());
+			infoWriter.newLine();
+			infoWriter.write("sur = " + allSurvivors.size());
+			infoWriter.newLine();
+			//TODO eventually, put map info here too?
+			infoWriter.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void checkZoneSanity() {
@@ -293,6 +324,11 @@ public class World extends JFrame implements WindowListener {
 
 		long timestepStartTime, timestepStopTime, timestepDuration;
 
+		if(firstStartTime == null) {
+			firstStartTime = new Date();
+			setupFiles();
+		}
+
 		//then, start with timesteps
 		for(; keepGoing; currentTimestep++) {			
 			System.out.println("************************************");
@@ -309,9 +345,20 @@ public class World extends JFrame implements WindowListener {
 					continue;
 				}
 
+				boolean aZoneChanged = false;
 				if(World.RANDOM_GENERATOR.nextDouble() < Zone.CHANGE_PROBABILITY) {
-					allZones.put(new Integer(z.getID()), Zone.changeZoneBasedOnNeighbors(z));
-				}				
+					Zone newZone = Zone.changeZoneBasedOnNeighbors(z);
+					allZones.put(new Integer(z.getID()), newZone);
+					if(! newZone.getClass().equals(z.getClass())) {
+						aZoneChanged = true;
+					}
+				}	
+
+				if(aZoneChanged) {
+					//recalculate optimal paths to all points, so we know optimal paths to survivors
+					distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+				}
+
 			}
 
 
@@ -320,10 +367,6 @@ public class World extends JFrame implements WindowListener {
 				s.doOneTimestep();
 			}
 			System.out.println("Done with survivors");
-
-			//recalculate optimal paths to all points, so we know optimal paths to survivors
-			//should only really do this if a zone changes, but for now do it every time
-			distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 
 			//do all the bots
 			//print out percent checkpoints
@@ -403,21 +446,28 @@ public class World extends JFrame implements WindowListener {
 		g2d.setColor(BACKGROUND_COLOR);
 		g2d.fill(BOUNDING_BOX);
 
+		//get a snapshot of the bots and survivors
+		allBotSnapshot = allBots.listIterator();
+		allSurvivorSnapshot = allSurvivors.listIterator();
+		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
 		for(Zone z : allZones.values()) {
 			g2d.setColor(z.getColor());
 			g2d.fill(z);
-						g2d.setColor(ZONE_OUTLINE_COLOR);
-						g2d.draw(z);
+			g2d.setColor(ZONE_OUTLINE_COLOR);
+			g2d.draw(z);
 		}
-//		for(Zone z : allZones.values()) {
-//			g2d.setColor(LABEL_COLOR);
-//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
-//		}
+		//		for(Zone z : allZones.values()) {
+		//			g2d.setColor(LABEL_COLOR);
+		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
+		//		}
 
 		//all bots should know about all shouts, so draw them all based on what the first bot knows
-		Bot firstBot = allBots.get(0);
+		Bot firstBot = (Bot) allBotSnapshot.next().clone();
+		//go previous one, so that when we start to draw the bots, we'll start at the beginning
+		allBotSnapshot.previous();
 
 		//now, drow all of the shouts
 		g2d.setColor(SHOUT_COLOR);
@@ -428,7 +478,9 @@ public class World extends JFrame implements WindowListener {
 
 		//draw all the survivors
 		g2d.setColor(SURVIVOR_COLOR);
-		for(Survivor curSur : allSurvivors) {
+		while(allSurvivorSnapshot.hasNext()) {
+			Survivor curSur = allSurvivorSnapshot.next();
+
 			g2d.fill(curSur);
 		}
 
@@ -437,13 +489,13 @@ public class World extends JFrame implements WindowListener {
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		for(Survivor curSur : allSurvivors) {
 			//get the DPixel for this survivor
-			DPixel curSurPix = distancesToAllPoints.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
+			DPixel curSurPix = dijkstrasSnapshot.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
 			while(curSurPix.getPrevious() != null) {
-				g2d.drawLine(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY());
-				curSurPix = curSurPix.getPrevious();
+				g2d.drawLine(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().x, curSurPix.getPrevious().y);
+				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
 			}			
 		}
-		
+
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
@@ -474,7 +526,9 @@ public class World extends JFrame implements WindowListener {
 
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
-		for(Bot curBot : allBots) {
+		while(allBotSnapshot.hasNext()) {
+			Bot curBot = allBotSnapshot.next();
+
 			//			g2d.setColor(BOT_COLOR);
 			//			g2d.fill(curBot);
 
@@ -499,7 +553,10 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 
-		for(Bot curBot : allBots) {
+		allBotSnapshot = allBots.listIterator();
+		while(allBotSnapshot.hasNext()) {
+			Bot curBot = allBotSnapshot.next();
+
 			switch(curBot.getBotMode()) {
 				case(Bot.WAITING_FOR_ACTIVATION):
 					g2d.setColor(DEACTIVATED_BOT_COLOR);

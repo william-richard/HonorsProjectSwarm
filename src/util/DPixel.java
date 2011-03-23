@@ -5,13 +5,13 @@ import java.awt.Point;
 import simulation.World;
 import zones.Zone;
 
-public class DPixel implements Comparable<DPixel>{
+public class DPixel implements Comparable<DPixel> {
 	private int x, y;
 	private Zone parentZone;
 	//previous pixel in best path
-	private DPixel previous;
+	private Point previous;
+	@Deprecated
 	private double distanceToSource;
-	
 	
 	public DPixel(int _x, int _y) {
 		x = _x;
@@ -20,16 +20,23 @@ public class DPixel implements Comparable<DPixel>{
 		parentZone = World.findZone(new Point(x,y));
 		previous = null;
 	}
+	
+	public DPixel(DPixel other) {
+		x = other.x;
+		y = other.y;
+		parentZone = other.parentZone;
+		previous = other.previous;
+	}
 
 	public double getWeight() {
 		return getParentZone().getPathWeightPerPixel();
 	}
 
-	public DPixel getPrevious() {
+	public Point getPrevious() {
 		return previous;
 	}
 
-	public void setPrevious(DPixel _prev) {
+	public void setPrevious(Point _prev) {
 		previous = _prev;
 	}
 
@@ -47,6 +54,10 @@ public class DPixel implements Comparable<DPixel>{
 		return y;
 	}
 
+	public Point getLocation() {
+		return new Point(x,y);
+	}
+	
 	/**
 	 * @return the parentZone
 	 */
@@ -109,6 +120,6 @@ public class DPixel implements Comparable<DPixel>{
 	@Override
 	public int compareTo(DPixel o) {
 		return Utilities.shouldEqualsZero(this.getDistanceToSource() - o.getDistanceToSource()) ? 0 : (this.getDistanceToSource() < o.getDistanceToSource() ? -1 : 1);
-	}
+	}	
 }
 
