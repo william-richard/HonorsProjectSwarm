@@ -87,7 +87,7 @@ public class DummyZone extends Zone {
 
 	@Override
 	public double getPathWeightPerPixel() {
-		return 0;
+		return 1;
 	}
 
 }
