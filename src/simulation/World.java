@@ -337,6 +337,7 @@ public class World extends JFrame implements WindowListener {
 			timestepStartTime = System.currentTimeMillis();
 
 			//do the zones
+			boolean aZoneChanged = false;
 			for(Zone z : allZones.values()) {
 				//needs to be implimented here rather than in a "doOneTimestep" method because we need to store the results
 				//with some probability, each zone is going to change
@@ -345,7 +346,6 @@ public class World extends JFrame implements WindowListener {
 					continue;
 				}
 
-				boolean aZoneChanged = false;
 				if(World.RANDOM_GENERATOR.nextDouble() < Zone.CHANGE_PROBABILITY) {
 					Zone newZone = Zone.changeZoneBasedOnNeighbors(z);
 					allZones.put(new Integer(z.getID()), newZone);
@@ -353,13 +353,12 @@ public class World extends JFrame implements WindowListener {
 						aZoneChanged = true;
 					}
 				}	
-
-				if(aZoneChanged) {
-					//recalculate optimal paths to all points, so we know optimal paths to survivors
-					distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
-				}
-
 			}
+			if(aZoneChanged) {
+				//recalculate optimal paths to all points, so we know optimal paths to survivors
+				distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+			}
+
 
 
 			//do all the survivors

@@ -2,27 +2,33 @@ package simulation;
 import java.awt.geom.Point2D;
 import java.util.Scanner;
 
+import zones.DummyZone;
+import zones.Zone;
+
 
 public class BotInfo {
 
 	private int botNum;
 	private Point2D location;
 	private int mode;
+	private double zoneMultiplier;
 	
 	public BotInfo(int _botNum) {
 		botNum = _botNum;
 		location = new Point2D.Double(java.lang.Double.MAX_VALUE, java.lang.Double.MAX_VALUE);
 		mode = Bot.WAITING_FOR_ACTIVATION;
+		zoneMultiplier = 0.0;
 	}
 	
-	public BotInfo(int _botNum, Point2D _loc, int _mode) {
+	public BotInfo(int _botNum, Point2D _loc, int _mode, double _zoneMultiplier) {
 		botNum = _botNum;
 		location = _loc;
 		mode = _mode;
+		zoneMultiplier = _zoneMultiplier;
 	}
 
-	public BotInfo(int _botNum, double _x, double _y, int _mode) {
-		this(_botNum, new Point2D.Double(_x, _y), _mode);
+	public BotInfo(int _botNum, double _x, double _y, int _mode, double _zoneMultiplier) {
+		this(_botNum, new Point2D.Double(_x, _y), _mode, _zoneMultiplier);
 	}
 
 	public BotInfo(String str) {
@@ -45,7 +51,7 @@ public class BotInfo {
 
 	public BotInfo(BotInfo i) {
 		//just to be 100% sure it copies when using the constructor
-		this(i.getBotID(), i.getCenterX(), i.getCenterY(), i.getMode());
+		this(i.getBotID(), i.getCenterX(), i.getCenterY(), i.getMode(), i.getZoneMultiplier());
 	}
 	
 	/**
@@ -81,6 +87,13 @@ public class BotInfo {
 	}
 	
 	
+	/**
+	 * @return the zoneMultiplier
+	 */
+	public double getZoneMultiplier() {
+		return zoneMultiplier;
+	}
+
 	/**
 	 * @return the pathMarker
 	 */

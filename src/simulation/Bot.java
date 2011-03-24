@@ -35,7 +35,6 @@ public class Bot extends Rectangle2D.Double {
 	private static final double VISUAL_ID_SURVIVOR_PROB = .70;
 	private static final double HEAR_SURVIVOR_PROB = .75;
 	private static final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
-	private static final double CORRECT_ZONE_ASSESMENT_PROB = .8; // the probability that the bot will asses the zones correctly
 
 	//1 px = 2 m
 	public static final double DEFAULT_BROADCAST_RADIUS = 40; //40 px = 80 m
@@ -45,10 +44,6 @@ public class Bot extends Rectangle2D.Double {
 	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
 
 	private final static Random NUM_GEN = new Random();
-
-	private final int ZONE_SAFE = 1;
-	private final int ZONE_DANGEROUS = 2;
-	private final int ZONE_BASE = 3;
 
 	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
 	private final double NORMAL_SEPERATION_FACTOR = 									50;
@@ -251,7 +246,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public BotInfo getBotInfo() {
-		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode);
+		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode, currentZone.getPathWeightPerPixel());
 	}
 
 
@@ -465,7 +460,7 @@ public class Bot extends Rectangle2D.Double {
 				}
 
 				//remove the survivor path attachment
-				SurvivorPath sp = (SurvivorPath) mes.getAttachment(0);
+				SurvivorPath sp = new SurvivorPath((SurvivorPath) mes.getAttachment(0));
 
 				//see how it compares to what path we know of that is best for this survivor
 
@@ -503,13 +498,11 @@ public class Bot extends Rectangle2D.Double {
 						//in this case, just pass on the incomplete path
 						passOnMessage = mes;
 					} else {
-						//first, make sure we have not already contributed to this path
-						//if we have, we should not do anything more with it
-						if(sp.getPoints().contains(this.getBotInfo())) {
-							continue;
-						}
-						//						//make a new version
-						//						SurvivorPath ourVersion = new SurvivorPath(sp);
+//						//first, make sure we have not already contributed to this path
+//						//if we have, we should not do anything more with it
+//						if(sp.getPoints().contains(this.getBotInfo())) {
+//							continue;
+//						}
 
 						//if we have a complete path to this survivor already
 						//and the complete path is shorter than this partial path
