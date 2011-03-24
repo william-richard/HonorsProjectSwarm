@@ -2,9 +2,6 @@ package simulation;
 import java.awt.geom.Point2D;
 import java.util.Scanner;
 
-import zones.DummyZone;
-import zones.Zone;
-
 
 public class BotInfo {
 

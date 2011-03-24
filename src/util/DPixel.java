@@ -1,8 +1,6 @@
 package util;
 
-import java.awt.Point;
 import java.awt.geom.Point2D;
-import java.awt.geom.Point2D.Double;
 
 import simulation.World;
 import zones.Zone;
