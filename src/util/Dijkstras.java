@@ -8,6 +8,10 @@ import org.jgrapht.util.FibonacciHeapNode;
 
 public class Dijkstras {
 	
+	/*TODO because this needs to visit each pixel, it sometimes ends up getting worse answers than it should
+	 * need to think of a way to have Dijkstras' return the real shortest path - maybe consider every 1/10 of a pixel instead of every full pixel
+	 */
+	
 	private ArrayList<ArrayList<FibonacciHeapNode<DPixel>>> dNodes;
 	int minX, maxX, minY, maxY;
 	
