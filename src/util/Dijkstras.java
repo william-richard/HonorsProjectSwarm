@@ -1,6 +1,7 @@
 package util;
 
 import java.awt.Point;
+import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 import org.jgrapht.util.FibonacciHeap;
@@ -87,8 +88,8 @@ public class Dijkstras {
 				break;
 			}
 
-			int nextNodeX = nextNode.getData().getX();
-			int nextNodeY = nextNode.getData().getY();
+			int nextNodeX = (int)nextNode.getData().getX();
+			int nextNodeY = (int)nextNode.getData().getY();
 			double distThruNextNode = nextNode.getKey() + nextNode.getData().getWeight();
 			for(int curNeiX = nextNodeX - 1; curNeiX <= nextNodeX + 1; curNeiX++) {
 				for(int curNeiY = nextNodeY - 1; curNeiY <= nextNodeY + 1; curNeiY++) {
@@ -119,8 +120,8 @@ public class Dijkstras {
 		return getNode(x,y).getKey();
 	}
 	
-	public DPixel getPixel(Point p) {
-		return getPixel(p.x, p.y);
+	public DPixel getPixel(Point2D p) {
+		return getPixel((int)p.getX(), (int)p.getY());
 	}
 	
 	public DPixel getPixel(int x, int y) {

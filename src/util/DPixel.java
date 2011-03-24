@@ -1,23 +1,25 @@
 package util;
 
 import java.awt.Point;
+import java.awt.geom.Point2D;
+import java.awt.geom.Point2D.Double;
 
 import simulation.World;
 import zones.Zone;
 
 public class DPixel implements Comparable<DPixel> {
-	private int x, y;
+	private double x, y;
 	private Zone parentZone;
 	//previous pixel in best path
-	private Point previous;
+	private Point2D previous;
 	@Deprecated
 	private double distanceToSource;
 	
-	public DPixel(int _x, int _y) {
+	public DPixel(double _x, double _y) {
 		x = _x;
 		y = _y;
 		//figure out what zone we're in
-		parentZone = World.findZone(new Point(x,y));
+		parentZone = World.findZone(new Point2D.Double(x,y));
 		previous = null;
 	}
 	
@@ -32,30 +34,30 @@ public class DPixel implements Comparable<DPixel> {
 		return getParentZone().getPathWeightPerPixel();
 	}
 
-	public Point getPrevious() {
+	public Point2D getPrevious() {
 		return previous;
 	}
 
-	public void setPrevious(Point _prev) {
+	public void setPrevious(Point2D _prev) {
 		previous = _prev;
 	}
 
 	/**
 	 * @return the x
 	 */
-	public int getX() {
+	public double getX() {
 		return x;
 	}
 
 	/**
 	 * @return the y
 	 */
-	public int getY() {
+	public double getY() {
 		return y;
 	}
 
-	public Point getLocation() {
-		return new Point(x,y);
+	public Point2D getLocation() {
+		return new Point2D.Double(x,y);
 	}
 	
 	/**
@@ -88,8 +90,11 @@ public class DPixel implements Comparable<DPixel> {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + x;
-		result = prime * result + y;
+		long temp;
+		temp = java.lang.Double.doubleToLongBits(x);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
+		temp = java.lang.Double.doubleToLongBits(y);
+		result = prime * result + (int) (temp ^ (temp >>> 32));
 		return result;
 	}
 
@@ -105,9 +110,11 @@ public class DPixel implements Comparable<DPixel> {
 		if (!(obj instanceof DPixel))
 			return false;
 		DPixel other = (DPixel) obj;
-		if (x != other.x)
+		if (java.lang.Double.doubleToLongBits(x) != java.lang.Double
+				.doubleToLongBits(other.x))
 			return false;
-		if (y != other.y)
+		if (java.lang.Double.doubleToLongBits(y) != java.lang.Double
+				.doubleToLongBits(other.y))
 			return false;
 		return true;
 	}

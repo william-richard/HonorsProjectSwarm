@@ -589,7 +589,7 @@ public class World extends JFrame implements WindowListener {
 			//get the DPixel for this survivor
 			DPixel curSurPix = dijkstrasSnapshot.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
 			while(curSurPix.getPrevious() != null) {
-				g2d.drawLine(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().x, curSurPix.getPrevious().y);
+				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
 				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
 			}			
 		}
