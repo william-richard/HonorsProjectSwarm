@@ -99,7 +99,15 @@ public class BotInfo {
 	}
 	
 	public boolean isExplorer() {
-		return mode == Bot.EXPLORER || mode == Bot.DANGEROUS_EXPLORER;
+		return this.isNormalExplorer() || this.isDangerExplorer();
+	}
+	
+	public boolean isNormalExplorer() {
+		return mode == Bot.EXPLORER;
+	}
+	
+	public boolean isDangerExplorer() {
+		return mode == Bot.DANGEROUS_EXPLORER;
 	}
 	
 	public boolean isWaitingForActivation() {

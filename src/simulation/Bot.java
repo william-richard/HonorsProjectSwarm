@@ -4,6 +4,7 @@ import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -20,6 +21,7 @@ import util.Utilities;
 import util.Vector;
 import util.shapes.Circle2D;
 import util.shapes.LineSegment;
+import zones.BaseZone;
 import zones.BoundingBox;
 import zones.DangerZone;
 import zones.Zone;
@@ -144,6 +146,9 @@ public class Bot extends Rectangle2D.Double {
 
 	private SurvivorPath myPathToMark;
 
+	//organized by mode number - the prob to changing to that role is stored in the idex that that role has
+	private double[] roleChangeProbabilites;
+
 	/***************************************************************************
 	 * CONSTRUCTORS
 	 **************************************************************************/
@@ -179,11 +184,15 @@ public class Bot extends Rectangle2D.Double {
 
 		boundingBox = _bounds;
 
-		movementVector = new Vector(this.getCenterLocation(), this
-				.getCenterLocation());
+		movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
 
 		// start deactivaed
 		botMode = WAITING_FOR_ACTIVATION;
+
+		int roleChangeProbSize = Math.max(WAITING_FOR_ACTIVATION, Math.max(EXPLORER, Math.max(DANGEROUS_EXPLORER, PATH_MARKER))) + 1;
+		roleChangeProbabilites = new double[roleChangeProbSize];
+		Arrays.fill(roleChangeProbabilites, 0.0);
+		roleChangeProbabilites[EXPLORER] = TURNED_ON_THIS_TIMESTEP_PROB;
 
 		mySurvivor = null;
 
@@ -271,8 +280,8 @@ public class Bot extends Rectangle2D.Double {
 	public List<Survivor> getClaimedSurvivors() {
 		return claimedSurvivors;
 	}
-	
-	
+
+
 	/**
 	 * @return the mySurvivorClaimTime
 	 */
@@ -503,11 +512,11 @@ public class Bot extends Rectangle2D.Double {
 						//in this case, just pass on the incomplete path
 						passOnMessage = mes;
 					} else {
-//						//first, make sure we have not already contributed to this path
-//						//if we have, we should not do anything more with it
-//						if(sp.getPoints().contains(this.getBotInfo())) {
-//							continue;
-//						}
+						//						//first, make sure we have not already contributed to this path
+						//						//if we have, we should not do anything more with it
+						//						if(sp.getPoints().contains(this.getBotInfo())) {
+						//							continue;
+						//						}
 
 						//if we have a complete path to this survivor already
 						//and the complete path is shorter than this partial path
@@ -1195,6 +1204,39 @@ public class Bot extends Rectangle2D.Double {
 
 	}
 
+	private List<BotInfo> getClosestKnownPathNeighbors(int numNeighbors) {
+		return getClosetKnownPathNeighbors(this.getBotInfo(), numNeighbors);
+	}
+
+	private List<BotInfo> getClosetKnownPathNeighbors(final BotInfo toThisBot, final int numNeighbors) {
+		ArrayList<BotInfo> pathNeighbors = getKnownPathMarkers();
+
+		//get the 2 closest neighbors on the path
+		LinkedList<BotInfo> closetNeighbors = new LinkedList<BotInfo>();
+
+		for(BotInfo curNeighbor : pathNeighbors) {
+			closetNeighbors.add(curNeighbor);
+
+			if(closetNeighbors.size() > numNeighbors) {
+				//get the list sorted
+				Collections.sort(closetNeighbors, new Comparator<BotInfo>() {
+					@Override
+					public int compare(BotInfo o1, BotInfo o2) {
+						double d1 = o1.getCenterLocation().distance(toThisBot.getCenterLocation());
+						double d2 = o2.getCenterLocation().distance(toThisBot.getCenterLocation());
+
+						return d1 < d2 ? -1 : (d1 == d2 ? 0 : 1);
+					}
+				});
+				//remove the last element in the list
+				closetNeighbors.removeLast();
+			}
+		}
+
+		return closetNeighbors;
+
+	}
+
 	private void pathMarkMove() {
 		//want to move toward our path, or distribute ourselves on the path
 		//first, try to move toward our path
@@ -1217,31 +1259,7 @@ public class Bot extends Rectangle2D.Double {
 
 		//try to distribute ourself equally between these two neighbors
 		//along the path
-		ArrayList<BotInfo> pathNeighbors = getPathNeighbors();
-		
-		//get the 2 closest neighbors on the path
-		LinkedList<BotInfo> closetNeighbors = new LinkedList<BotInfo>();
-		final int numClosestNeighbors = 2;
-		final Bot thisBot = this;
-
-		for(BotInfo curNeighbor : pathNeighbors) {
-			closetNeighbors.add(curNeighbor);
-
-			if(closetNeighbors.size() > numClosestNeighbors) {
-				//get the list sorted
-				Collections.sort(closetNeighbors, new Comparator<BotInfo>() {
-					@Override
-					public int compare(BotInfo o1, BotInfo o2) {
-						double d1 = o1.getCenterLocation().distance(thisBot.getCenterLocation());
-						double d2 = o2.getCenterLocation().distance(thisBot.getCenterLocation());
-						
-						return d1 < d2 ? -1 : (d1 == d2 ? 0 : 1);
-					}
-				});
-				//remove the last element in the list
-				closetNeighbors.removeLast();
-			}
-		}
+		List<BotInfo> closetNeighbors = getClosestKnownPathNeighbors(2);
 
 		Vector pathSegVector = new Vector(closestSegmentOfPath);
 		Vector movementVector = new Vector(this.getCenterLocation(), this.getCenterLocation());
@@ -1276,7 +1294,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 
 		if(closetNeighbors.size() != 0) {
-			movementVector = movementVector.rescaleRatio(1.0 / pathNeighbors.size());
+			movementVector = movementVector.rescaleRatio(1.0 / closetNeighbors.size());
 		}
 
 		if(Utilities.shouldEqualsZero(movementVector.getMagnitude())) {
@@ -1286,7 +1304,7 @@ public class Bot extends Rectangle2D.Double {
 		actuallyMoveAlong(movementVector);
 	}
 
-	private ArrayList<BotInfo> getPathNeighbors() {
+	private ArrayList<BotInfo> getKnownPathMarkers() {
 
 		ArrayList<BotInfo> neighbors = new ArrayList<BotInfo>();
 		for(BotInfo potentialNeighbor : otherBotInfo) {
@@ -1297,19 +1315,9 @@ public class Bot extends Rectangle2D.Double {
 		return neighbors;
 	}
 
-	private double getAvgDistFromPathNeighbors() {
-		ArrayList<BotInfo> pathNeighbors = getPathNeighbors();
-
-		double distSum = 0.0;
-		for(BotInfo curNeighbor : pathNeighbors) {
-			distSum += curNeighbor.getCenterLocation().distance(this.getCenterLocation());
-		}
-
-		return distSum / (double)pathNeighbors.size();
-	}
-
+	@Deprecated
 	private double getDistToClosestPathNeighbor() {
-		ArrayList<BotInfo> neighbors = getPathNeighbors();
+		ArrayList<BotInfo> neighbors = getKnownPathMarkers();
 
 		double closestDist = java.lang.Double.MAX_VALUE;
 		double curDist;
@@ -1323,17 +1331,31 @@ public class Bot extends Rectangle2D.Double {
 		return closestDist;
 	}
 
-	public boolean isPathDensityAcceptable() {
+	private double getAvgDistToClosestPathNeighbors(int numNeighbors) {
 		if(botMode != PATH_MARKER) {
 			//we shouldn't be asking this question
 			throw new IllegalStateException(this.getID() + " is not a path marker");
 		}
-		
-		double closeDist = getDistToClosestPathNeighbor();
-		
-		return (closeDist <= PATH_MARK_IDEAL_DIST * 1.2) && (closeDist >= PATH_MARK_IDEAL_DIST * .8);
-		
+
+		List<BotInfo> closestNeighbors = getClosestKnownPathNeighbors(numNeighbors);
+
+		if(closestNeighbors.size() == 0) {
+			return -1.0;
+		}
+
+		//average their distances
+		double distSum = 0.0;
+		for(BotInfo b : closestNeighbors) {
+			distSum += b.getCenterLocation().distance(this.getCenterLocation());
+		}
+		return distSum / closestNeighbors.size();
 	}
+
+	public boolean isPathDensityAcceptable() {
+		double avgDistToNeighbors = getAvgDistToClosestPathNeighbors(2);
+		if(avgDistToNeighbors < 0) return false;
+		return (avgDistToNeighbors <= PATH_MARK_IDEAL_DIST * 1.2) && (avgDistToNeighbors >= PATH_MARK_IDEAL_DIST * .8);
+	}	
 
 	private void handlePathDensity() {
 		//		//see what the average distance to neighboring bots on path is
@@ -1360,114 +1382,195 @@ public class Bot extends Rectangle2D.Double {
 		return numTimestepsToWaitBeforeMarkingPaths() <= 0;
 	}
 
+	private void adjustRoleChangeProb(int index, double incrementAmount) {
+		if(index >= roleChangeProbabilites.length || index < 0) {
+			throw new IndexOutOfBoundsException();
+		}
 
-	private void reevaluateBotMode() {
-
-		//depending on which mode we're in, we're going to reevaluate differently
-		
-		//unless something changes it, keep the same mode as we had
-		int decision = botMode;
-
-		try {
-			if(botMode == WAITING_FOR_ACTIVATION) {
-				//with some probability, we'll be turned on this timestep
-				//if that probability is right, turn on and move to the next phase
-				if(Bot.NUM_GEN.nextDouble() <= TURNED_ON_THIS_TIMESTEP_PROB) {
-					decision = EXPLORER;
-					return;
-				}
-			} 
-
-			//we didn't switch yet, see if we are near paths that we should mark
-			double minPathDistance = java.lang.Double.MAX_VALUE;
-			SurvivorPath nearestPath = null;
-
-			for(SurvivorPath potentialPathToMark : bestKnownCompletePaths.values()) {
-				double distToCurPath = potentialPathToMark.ptPathDist(this.getCenterLocation());
-				if(distToCurPath < minPathDistance) {
-					minPathDistance = distToCurPath;
-					nearestPath = potentialPathToMark;
-				}
-			}
-
-			//TODO no path markers in Base Zone
-
-			/* TODO keep probability of changing roles, and increment probability base on neighbor types and current role
-			 * Make sure it doesn't go below 0 or over 100, and change increment value on role
-			 * adjust path markers percentage of switching to explorer based on real neighbor distance compared to ideal distance of neighbors
-			 */
-
-			//if we are currently an explorer, then see if we should start marking this path
-			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
-				//				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && possiblySwitchToMarkingPathsThisStep) {
-				//don't allow path markers to be created within base zone
-				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST && canPossiblyMarkPathsNow() && ! baseZone.contains(this.getCenterLocation())) {
-					decision = PATH_MARKER;
-					myPathToMark = new SurvivorPath(nearestPath);
-					return;
-				}
-			} else if(botMode == PATH_MARKER) {
-				//if we are already a path marker, make sure we are making the path we are closest to
-				myPathToMark = new SurvivorPath(nearestPath);
-
-				//TODO need to find a way to force it to stay a explorer for a few steps
-				//right now, when someone leaves, most of the time that will force the space between their previous neighbors
-				//to skyrocket, seemingly requiring a need for them to come back
-
-				//with some probability, if the density is too high, stop being a marker
-				if(! canPossiblyMarkPathsNow()) {
-					if(Bot.NUM_GEN.nextDouble() < HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB) {
-						decision = EXPLORER;
-						return;
-					}
-				}
-
-				//also, if our path is no longer a best known path, switch away from being a path marker
-				if(! bestKnownCompletePaths.get(myPathToMark.getSur()).equals(myPathToMark)) {
-					decision = EXPLORER;
-					return;
-				}
-			}
-
-			//if we still haven't switched, see if we are an explorer and if we should go to more dangerous areas
-			//first, see if we are currently in a dangerous area, thuse requiring that we go dangerous
-			if(currentZone instanceof DangerZone && botMode != PATH_MARKER) {
-				decision = DANGEROUS_EXPLORER;
-				return;
-			}
-
-			//do this test for both normal and dangerous explorers - if we happen to have gone dangerous and then find ourselves surrounded again, don't be dangerous anymore
-			if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
-				//see if our neighbors all all in one direction
-				//i.e. if we are on the fringe of the group
-				Vector netNeighborDirection = new Vector(this.getCenterLocation(), this.getCenterLocation());
-				Vector curNeighborVect;
-				for(BotInfo neighbor : otherBotInfo) {
-					//get a unit vector in the direction of this neighbor
-					curNeighborVect = new Vector(this.getCenterLocation(), neighbor.getCenterLocation());
-					if(Utilities.shouldEqualsZero(curNeighborVect.getMagnitude())) {
-						continue;
-					}
-					curNeighborVect = curNeighborVect.getUnitVector();
-					netNeighborDirection = netNeighborDirection.add(curNeighborVect);
-				}
-
-				//see if the vector has a non-close to 0 magnitude
-				//TODO possibly have a threshold here i.e. if the mag is > .5, then we count as too many in one direction
-				if(! Utilities.shouldEqualsZero(netNeighborDirection.getMagnitude())) {
-					decision = DANGEROUS_EXPLORER;
-				} else {
-					decision = EXPLORER;
-				}
-				return;
-			}
-
-
-		} finally {
-			botMode = decision;
+		roleChangeProbabilites[index] += incrementAmount;
+		if(roleChangeProbabilites[index] < 0.0) {
+			roleChangeProbabilites[index] = 0.0;
+		}
+		if(roleChangeProbabilites[index] > 1.0) {
+			roleChangeProbabilites[index] = 1.0;
 		}
 	}
 
+	private void reevaluateBotMode() {
+
+		//first, adjust the probabilities
+		//if we're some sort of explorer, adjust the probability that we should become a path marker
+		SurvivorPath closestPath = null;
+		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
+			//firstly, don't switch to being a path marker if we're in a base zone
+			if(currentZone instanceof BaseZone) {
+				adjustRoleChangeProb(PATH_MARKER, -2.0);
+			} else {
+				//see if we are near a path, and thus if we should be exploring the possibility of switching to being a path marker
+				double minPathDistance = java.lang.Double.MAX_VALUE;
+
+				for(SurvivorPath potentialPathToMark : bestKnownCompletePaths.values()) {
+					double distToCurPath = potentialPathToMark.ptPathDist(this.getCenterLocation());
+					if(distToCurPath < minPathDistance) {
+						minPathDistance = distToCurPath;
+						closestPath = potentialPathToMark;
+					}
+				}
+
+				//see if we are close enough to this path
+				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST) {
+					//see how the path coverage is
+					List<BotInfo> knownPathMarkers = getKnownPathMarkers();
+
+					//if we can't see any path makers, up the probability to switch by a lot
+					if(knownPathMarkers.size() == 0) {
+						adjustRoleChangeProb(PATH_MARKER, .5);
+					} else {
+						//find the average distance between closest path marker neighbors
+						double distanceBtwnPathNeighborSum = 0.0;
+
+						for(BotInfo curBot : knownPathMarkers) {
+							List<BotInfo> curBotClosestNeighbors = getClosetKnownPathNeighbors(curBot, 2);
+							//average the differences between the current bot and it's 2 closest neighbors
+							double curBotDistanceSum = 0.0;
+							for(BotInfo curNei : curBotClosestNeighbors) {
+								curBotDistanceSum += curNei.getCenterLocation().distance(curBot.getCenterLocation());
+							}
+							//if this bot doesn't have 2 neighbors, make up the difference with a maximum distance
+							if(curBotClosestNeighbors.size() < 2) {
+								for(int i = 0; i < 2 - curBotClosestNeighbors.size(); i++) {
+									curBotDistanceSum += currentZone.getBroadcastRange();
+								}
+							}
+							double curBotNeigAvgDist = curBotDistanceSum / 2.0;
+							distanceBtwnPathNeighborSum += curBotNeigAvgDist;
+						}
+
+						double avgDistBtwnPathNeighbors = distanceBtwnPathNeighborSum / knownPathMarkers.size();
+
+						if(avgDistBtwnPathNeighbors > PATH_MARK_IDEAL_DIST) {
+							//they need more path makers
+							adjustRoleChangeProb(PATH_MARKER, .2);
+						} else {
+							//they don't need as many path makers
+							adjustRoleChangeProb(PATH_MARKER, -.2);
+						}
+					}
+				}
+			}
+		}
+		//if we're a normal explorer, adjust the probability that we become a dangerous explorer
+		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
+			if(currentZone instanceof DangerZone) {
+				//we should be a dangerous explorer
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, 1.0);
+				adjustRoleChangeProb(EXPLORER, -.5);
+			} else {
+				//if we can see a Dangerous zone, and most of our neighbors are not exploring it, up the prob we'll become a dangerous explorer
+				//otherwise, lower that probability
+				List<? extends Shape> visibleZones = Utilities.findAreaIntersectionsInList(getVisibleArea(), World.allZones.values());
+				boolean canSeeDangerousZone = false;
+				for(Shape s : visibleZones) {
+					if(s instanceof Zone) {
+						Zone z = (Zone) s;
+						if(z instanceof DangerZone) {
+							canSeeDangerousZone = true;
+							break;
+						}
+					}
+				}
+
+				if(canSeeDangerousZone) {
+					//count up how many of our neighbors are normal explorers vs dangerous explorers
+					int normalCount = 0, dangerCount = 0;
+					for(BotInfo b : otherBotInfo) {
+						if(b.getBotID() == this.getID()) {
+							continue;
+						}
+						if(b.isNormalExplorer()) {
+							normalCount++;
+						}
+						if(b.isDangerExplorer()) {
+							dangerCount++;
+						}
+					}
+					//if there are more normals that dangerouses, we should up our prob of becoming a dangerous explorer
+					if(normalCount > dangerCount) {
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, .2);
+						adjustRoleChangeProb(EXPLORER, -.1);
+					} else {
+						//there are more dangerous than normal
+						//lower the chance than we become dangerous
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
+						adjustRoleChangeProb(EXPLORER, .1);
+					}
+				} else {
+					//we can't see a dangerous zone
+					//lower the probability that we'll become a dangerous explorer
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
+					adjustRoleChangeProb(EXPLORER, .1);
+				}
+			}
+		}
+
+		//adjust the probability that we will switch from being a path marker to an explorer
+		if(botMode == PATH_MARKER) {
+			//get the average distance to our 2 closest neighbors
+			double avgNeiDist = getAvgDistToClosestPathNeighbors(2);
+
+			//if the average is negative, than we don't have any neighbors
+			//in that case, reduce the chance that we become an explorer
+			if(avgNeiDist < 0) {
+				adjustRoleChangeProb(EXPLORER, -.1);
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
+				adjustRoleChangeProb(PATH_MARKER, .1);
+			} else {
+				//we have at least 1 neighboring path marker
+				//depending on if the averge distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
+				//TODO add a buffer region where everything is just right?
+				if(avgNeiDist > PATH_MARK_IDEAL_DIST) {
+					//we want to stay a path marker
+					adjustRoleChangeProb(PATH_MARKER, .1);
+					adjustRoleChangeProb(EXPLORER, -.1);
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
+				} else {
+					//there are too many path markers
+					adjustRoleChangeProb(PATH_MARKER, -.1);
+					adjustRoleChangeProb(EXPLORER, .1);
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, .1);
+				}
+			}
+		}
+
+		//now, based on the probabilites, switch roles
+		//find the probability that is maximized
+		int maxProbIndex;
+		if(botMode == 0) {
+			maxProbIndex = 1;
+		} else {
+			maxProbIndex = 0;
+		}
+		for(int i = 0; i < roleChangeProbabilites.length; i++) {
+			if(i == botMode) {
+				continue;
+			}
+			if(i == PATH_MARKER && closestPath == null) {
+				continue;
+			}
+			if(roleChangeProbabilites[i] > roleChangeProbabilites[maxProbIndex]) {
+				maxProbIndex = i;
+			}
+
+		}
+
+		//see if we are switching to the role that is most probable
+		if(NUM_GEN.nextDouble() <= roleChangeProbabilites[maxProbIndex]) {
+			botMode = maxProbIndex;
+			if(botMode == PATH_MARKER) {
+				myPathToMark = closestPath;
+			}
+		}
+	}
 
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
