@@ -217,7 +217,12 @@ public class World extends JFrame implements WindowListener {
 			pathPercentagesSum += (botPath.getPathLength() / optimalPathPixel.getKey());
 		}
 		//average the percentages
-		return pathPercentagesSum / bestCompletePaths.size();
+		double avgPercent = pathPercentagesSum / bestCompletePaths.size();
+		if(Double.isInfinite(avgPercent) || Double.isNaN(avgPercent)) {
+			return 0.0;
+		} else {
+			return avgPercent;
+		}
 	}
 	
 	private double calcPathCoverageMetric() {
@@ -230,11 +235,21 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 		//return the average value
-		return ((double) coverageMetricSum) / numPathMarkers;
+		double pathCoverage = ((double) coverageMetricSum) / numPathMarkers;
+		if(Double.isInfinite(pathCoverage) || Double.isNaN(pathCoverage)) {
+			return 0.0;
+		} else {
+			return pathCoverage;
+		}
 	}
 	
 	private double calcOverallMetric(double perSurFound, double pathQuality, double pathCoverage) {
-		return perSurFound / (pathQuality * pathCoverage);
+		double overallMetric = perSurFound / (pathQuality * pathCoverage);
+		if(Double.isInfinite(overallMetric) || Double.isNaN(overallMetric)) {
+			return 0.0;
+		} else {
+			return overallMetric;
+		}
 	}
 	
 	
