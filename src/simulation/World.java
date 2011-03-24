@@ -17,16 +17,21 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
 import javax.swing.JFrame;
+
+import org.jgrapht.util.FibonacciHeapNode;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
 import main.java.be.humphreys.voronoi.Voronoi;
@@ -79,7 +84,10 @@ public class World extends JFrame implements WindowListener {
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
 
-	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM.dd.yy-HH:mm:ss");
+
+	private static final String DATA_FILENAME = "data.txt";
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM.dd.yy-HH;mm;ss");
+	private static final DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#.####");
 
 	/** VARIABLES */
 	public static java.util.Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
@@ -103,6 +111,8 @@ public class World extends JFrame implements WindowListener {
 	private Dijkstras distancesToAllPoints;
 
 	private Date firstStartTime = null;
+
+	private String dataDirectory;
 
 	public World() {
 		this(40, 2, 5000);
@@ -158,11 +168,11 @@ public class World extends JFrame implements WindowListener {
 
 	private void setupFiles() {
 		//make the directory for this run
-		String directory = "data/" + DATE_FORMAT.format(firstStartTime);
-		new File(directory).mkdir();
+		dataDirectory = "data/" + DATE_FORMAT.format(firstStartTime) + "/";
+		new File(dataDirectory).mkdir();
 		//create the information about number of bots, survivors etc
 		try {
-			BufferedWriter infoWriter = new BufferedWriter(new FileWriter(directory + "/info.txt"));
+			BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dataDirectory + "info.txt"));
 			infoWriter.write("bots = " + allBots.size());
 			infoWriter.newLine();
 			infoWriter.write("sur = " + allSurvivors.size());
@@ -170,6 +180,78 @@ public class World extends JFrame implements WindowListener {
 			//TODO eventually, put map info here too?
 			infoWriter.close();
 		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
+
+	private double calcPercentSurFound() {
+		HashSet<Survivor> allClaimedSurvivors = new HashSet<Survivor>();
+		for(Bot b : allBots) {
+			allClaimedSurvivors.addAll(b.getClaimedSurvivors());
+		}
+		return ((double)allClaimedSurvivors.size()) / allSurvivors.size();
+	}
+	
+	private double calcAvgPathQuality() {
+		HashMap<Survivor, SurvivorPath> bestCompletePaths = new HashMap<Survivor, SurvivorPath>();
+		for(Bot b : allBots) {
+			HashMap<Survivor, SurvivorPath> thisBotsPaths = b.getBestKnownCompletePaths();
+			for(Survivor sur : thisBotsPaths.keySet()) {
+				if(bestCompletePaths.containsKey(sur)) {
+					//take the path that is better
+					if(bestCompletePaths.get(sur).getPathLength() > thisBotsPaths.get(sur).getPathLength()) {
+						bestCompletePaths.put(sur, thisBotsPaths.get(sur));
+					}
+				} else {
+					bestCompletePaths.put(sur, thisBotsPaths.get(sur));
+				}
+			}
+		}
+
+		//now we should have all the best paths known by any bot to each survivor
+		//get the length of each of these paths, and compare them to the optimal lengths computed by Dijkstra's
+		double pathPercentagesSum = 0.0;
+		for(Survivor sur : bestCompletePaths.keySet()) {
+			SurvivorPath botPath = bestCompletePaths.get(sur);
+			FibonacciHeapNode<DPixel> optimalPathPixel = distancesToAllPoints.getNode((int)sur.getX(), (int)sur.getY());
+			pathPercentagesSum += (botPath.getPathLength() / optimalPathPixel.getKey());
+		}
+		//average the percentages
+		return pathPercentagesSum / bestCompletePaths.size();
+	}
+	
+	private double calcPathCoverageMetric() {
+		int coverageMetricSum = 0;
+		int numPathMarkers = 0;
+		for(Bot b : allBots) {
+			if(b.getBotMode() == Bot.PATH_MARKER) {
+				coverageMetricSum += b.isPathDensityAcceptable() ? 1 : 0;
+				numPathMarkers++;
+			}
+		}
+		//return the average value
+		return ((double) coverageMetricSum) / numPathMarkers;
+	}
+	
+	private double calcOverallMetric(double perSurFound, double pathQuality, double pathCoverage) {
+		return perSurFound / (pathQuality * pathCoverage);
+	}
+	
+	
+	private void writeADatapoint() {
+		try {
+			BufferedWriter dataWriter = new BufferedWriter(new FileWriter(dataDirectory + DATA_FILENAME, true));
+			//write:
+			//<timestep>	<% sur found>	<path quality>	<coverage metric>	<overall metric>
+			double perSurFound = calcPercentSurFound();
+			double pathQuality = calcAvgPathQuality();
+			double pathCoverage = calcPathCoverageMetric();
+			double overallMetric = calcOverallMetric(perSurFound, pathQuality, pathCoverage);
+			dataWriter.write(World.getCurrentTimestep() + "\t" + DOUBLE_FORMAT.format(perSurFound) + '\t' + DOUBLE_FORMAT.format(pathQuality) + '\t' + DOUBLE_FORMAT.format(pathCoverage) + '\t' + DOUBLE_FORMAT.format(overallMetric));
+			dataWriter.newLine();
+			dataWriter.close();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 	}
@@ -403,6 +485,8 @@ public class World extends JFrame implements WindowListener {
 			System.out.println("Avg dist btwn bots on paths = " + (Bot.timestepAvgDistBtwnPathNeighbors / Bot.timestepNumBotOnPaths));
 			System.out.println(Bot.timestepNumBotOnPaths + " bots marking paths");
 
+			writeADatapoint();
+			
 			//repaint the scenario
 			repaint();
 			System.out.println("Done with repaint");
@@ -504,7 +588,7 @@ public class World extends JFrame implements WindowListener {
 		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
 		for(Bot b : allBots) {
 			//draw all of it's paths
-			Collection<SurvivorPath> survivorPaths = b.getKnownCompletePaths().values();
+			Collection<SurvivorPath> survivorPaths = b.getBestKnownCompletePaths().values();
 
 			for(SurvivorPath sp : survivorPaths) {
 				if(! pathsDrawn.contains(sp)) {

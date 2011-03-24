@@ -264,10 +264,15 @@ public class Bot extends Rectangle2D.Double {
 	/**
 	 * @return the bestKnownCompletePaths
 	 */
-	public HashMap<Survivor, SurvivorPath> getKnownCompletePaths() {
+	public HashMap<Survivor, SurvivorPath> getBestKnownCompletePaths() {
 		return bestKnownCompletePaths;
 	}
 
+	public List<Survivor> getClaimedSurvivors() {
+		return claimedSurvivors;
+	}
+	
+	
 	/**
 	 * @return the mySurvivorClaimTime
 	 */
@@ -1318,7 +1323,17 @@ public class Bot extends Rectangle2D.Double {
 		return closestDist;
 	}
 
-
+	public boolean isPathDensityAcceptable() {
+		if(botMode != PATH_MARKER) {
+			//we shouldn't be asking this question
+			throw new IllegalStateException(this.getID() + " is not a path marker");
+		}
+		
+		double closeDist = getDistToClosestPathNeighbor();
+		
+		return (closeDist <= PATH_MARK_IDEAL_DIST * 1.2) && (closeDist >= PATH_MARK_IDEAL_DIST * .8);
+		
+	}
 
 	private void handlePathDensity() {
 		//		//see what the average distance to neighboring bots on path is
