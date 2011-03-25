@@ -147,7 +147,7 @@ public class World extends JFrame implements WindowListener {
 			//don't let survivors be in the basezone
 			do {
 				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
-			} while(!homeBase.contains(curSurvivor.getCenterLocation()));
+			} while( homeBase.contains(curSurvivor.getCenterLocation()));
 
 			allSurvivors.add(curSurvivor);
 		}
