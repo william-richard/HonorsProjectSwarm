@@ -91,7 +91,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
 	private final double PATH_MARK_FACTOR = 50;
 
-	private final int TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS = 3;
+	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 5;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -119,7 +119,7 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	private HashSet<Message> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
+	private LinkedList<HashSet<Message>> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
 	private int botID;
 	// zones it is in
 	private Zone baseZone; // the home base zones.
@@ -140,9 +140,6 @@ public class Bot extends Rectangle2D.Double {
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
 
 	private HashMap<Survivor, SurvivorPath> bestKnownCompletePaths;
-
-	private boolean possiblySwitchToMarkingPathsThisStep;
-	private int lastToldNotToMarkPaths;
 
 	private SurvivorPath myPathToMark;
 
@@ -171,7 +168,7 @@ public class Bot extends Rectangle2D.Double {
 
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
-		alreadyBroadcastedMessages = new HashSet<Message>();
+		alreadyBroadcastedMessages = new LinkedList<HashSet<Message>>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -197,9 +194,6 @@ public class Bot extends Rectangle2D.Double {
 		mySurvivor = null;
 
 		bestKnownCompletePaths = new HashMap<Survivor, SurvivorPath>();
-
-		//we can start marking paths now if we want to
-		lastToldNotToMarkPaths = 0 - TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
 
 		// find out what zones we start in, and try to determine how safe it is
 		updateZoneInfo();		
@@ -322,12 +316,18 @@ public class Bot extends Rectangle2D.Double {
 
 		//really firstly, make sure we haven't broadcasted this message before
 		//if we have broadcastetd it before, don't do it again
-		if(alreadyBroadcastedMessages.contains(mes)) {
+		boolean alreadyBroadcasted = false;
+		for(HashSet<Message> set : alreadyBroadcastedMessages) {
+			if(set.contains(mes)) {
+				alreadyBroadcasted = true;
+			}
+		}
+		if(alreadyBroadcasted) {
 			return;
 		}
 
 		//make sure we record that we are broadcasting this message
-		alreadyBroadcastedMessages.add(mes);
+		alreadyBroadcastedMessages.get(0).add(mes);
 
 		// first, get our broadcast range
 		Shape broadcastRange = getBroadcastArea();
@@ -549,14 +549,6 @@ public class Bot extends Rectangle2D.Double {
 				if(senderID == this.getID()) continue;
 
 				int sentTime = s.nextInt();
-
-				//only store this time if it is after the stored time we have
-				if(sentTime > lastToldNotToMarkPaths) {
-					lastToldNotToMarkPaths = sentTime;
-				}
-
-				//don't mark any paths this timestep
-				possiblySwitchToMarkingPathsThisStep = false;
 
 				//don't pass on this message - only bots near a path need to know not to mark it this timestep
 				//this also lets local need for bots be met without having to get the whole path to work together
@@ -1376,16 +1368,6 @@ public class Bot extends Rectangle2D.Double {
 		timestepNumBotOnPaths++;
 	}
 
-	private int numTimestepsToWaitBeforeMarkingPaths() {
-		int timeToStart = lastToldNotToMarkPaths + TIMESTEPS_TO_WAIT_BEFORE_MARKING_PATHS;
-		int timeToWait = timeToStart - World.getCurrentTimestep();
-		return timeToWait;
-	}
-
-	private boolean canPossiblyMarkPathsNow() {
-		return numTimestepsToWaitBeforeMarkingPaths() <= 0;
-	}
-
 	private void adjustRoleChangeProb(int index, boolean positive) {
 		if(positive) {
 			adjustRoleChangeProb(index, .1);
@@ -1437,6 +1419,8 @@ public class Bot extends Rectangle2D.Double {
 					//if we can't see any path makers, up the probability to switch by a lot
 					if(knownPathMarkers.size() == 0) {
 						adjustRoleChangeProb(PATH_MARKER, true);
+						adjustRoleChangeProb(EXPLORER, false);
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 					} else {
 						//find the average distance between closest path marker neighbors
 						double distanceBtwnPathNeighborSum = 0.0;
@@ -1463,6 +1447,8 @@ public class Bot extends Rectangle2D.Double {
 						if(avgDistBtwnPathNeighbors > PATH_MARK_IDEAL_DIST) {
 							//they need more path makers
 							adjustRoleChangeProb(PATH_MARKER, true);
+							adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
+							adjustRoleChangeProb(EXPLORER, false);
 						} else {
 							//they don't need as many path makers
 							adjustRoleChangeProb(PATH_MARKER, false);
@@ -1475,7 +1461,7 @@ public class Bot extends Rectangle2D.Double {
 		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 			if(currentZone instanceof DangerZone) {
 				//we should be a dangerous explorer
-				adjustRoleChangeProb(DANGEROUS_EXPLORER, .2);
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, true);
 				adjustRoleChangeProb(EXPLORER, false);
 			} else {
 				//if we can see a Dangerous zone, and most of our neighbors are not exploring it, up the prob we'll become a dangerous explorer
@@ -1593,10 +1579,6 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public void doOneTimestep() {
-		//before anything else, reset any values that need resetting
-		possiblySwitchToMarkingPathsThisStep = true;
-
-
 		//make sure we aren't trying to mark a path if we shouldn't be
 		if(botMode != PATH_MARKER) {
 			myPathToMark = null;
@@ -1647,6 +1629,12 @@ public class Bot extends Rectangle2D.Double {
 		otherBotInfo.clear();
 		//and don't want to hang onto the list of bots within broadcast
 		botsWithinBroadcast.clear();
+		
+		alreadyBroadcastedMessages.add(new HashSet<Message>());
+		if(alreadyBroadcastedMessages.size() > NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES) {
+			alreadyBroadcastedMessages.removeLast();
+		}
+			
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {

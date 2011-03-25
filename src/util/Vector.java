@@ -159,6 +159,9 @@ public class Vector extends Line2D{
 		if(Utilities.shouldEqualsZero(newMag)) {
 			return new Vector(this.getP1(), this.getP1());
 		}
+		if(Utilities.shouldEqualsZero(this.getMagnitude())) {
+			throw new IllegalArgumentException("Trying to rescale a 0 magnitude vector to a non-zero magnitude");
+		}
 		return rescaleRatio(newMag/this.getMagnitude()); 
 	}
 

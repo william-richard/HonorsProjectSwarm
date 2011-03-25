@@ -161,7 +161,7 @@ public class World extends JFrame implements WindowListener {
 		setDrawBotRadii(_drawBotRadii);
 
 		//		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
-		distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+		distancesToAllPoints = Dijkstras.dijkstras(distancesToAllPoints, BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
 	}
 
 	private void setupFrame() {
@@ -460,7 +460,7 @@ public class World extends JFrame implements WindowListener {
 			}
 			if(aZoneChanged) {
 				//recalculate optimal paths to all points, so we know optimal paths to survivors
-				distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+				distancesToAllPoints = Dijkstras.dijkstras(distancesToAllPoints, BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
 			}
 
 

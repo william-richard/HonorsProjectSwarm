@@ -56,9 +56,9 @@ public class Dijkstras {
 	/**
 	 * Do Dijkstra's algorithm on the dNodes, to find the shortest path from the base location to all other points
 	 */
-	public static Dijkstras dijkstras(Point source, int _minX, int _maxX, int _minY, int _maxY) {
+	public static Dijkstras dijkstras(Dijkstras dij, Point source, int _minX, int _maxX, int _minY, int _maxY) {
 		
-		Dijkstras dij = new Dijkstras(_minX, _maxX, _minY, _maxY);
+		dij = new Dijkstras(_minX, _maxX, _minY, _maxY);
 		
 		System.out.println("Staring dijkstras from "  + source);
 		FibonacciHeap<DPixel> heap = new FibonacciHeap<DPixel>();
