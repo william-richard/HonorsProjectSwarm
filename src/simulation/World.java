@@ -96,7 +96,7 @@ public class World extends JFrame implements WindowListener {
 
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
-	public Dijkstras dijkstrasSnapshot;
+//	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -115,10 +115,10 @@ public class World extends JFrame implements WindowListener {
 	private String dataDirectory;
 
 	public World() {
-		this(40, 2, 5000);
+		this(40, 2, 5000, false);
 	}
 
-	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps) {
+	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii) {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
@@ -158,6 +158,7 @@ public class World extends JFrame implements WindowListener {
 
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
+		setDrawBotRadii(_drawBotRadii);
 
 		//		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
 		distancesToAllPoints = Dijkstras.dijkstras(BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
@@ -238,6 +239,8 @@ public class World extends JFrame implements WindowListener {
 				numPathMarkers++;
 			}
 		}
+		
+		System.out.println("coverage sum = " + coverageMetricSum + "\tnum path markers = " + numPathMarkers);
 		//return the average value
 		double pathCoverage = ((double) coverageMetricSum) / numPathMarkers;
 		if(Double.isInfinite(pathCoverage) || Double.isNaN(pathCoverage)) {
@@ -551,7 +554,7 @@ public class World extends JFrame implements WindowListener {
 		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
-		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -591,10 +594,10 @@ public class World extends JFrame implements WindowListener {
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		for(Survivor curSur : allSurvivors) {
 			//get the DPixel for this survivor
-			DPixel curSurPix = dijkstrasSnapshot.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
+			DPixel curSurPix = distancesToAllPoints.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
 			while(curSurPix.getPrevious() != null) {
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
-				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
+				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
 			}			
 		}
 

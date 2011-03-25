@@ -215,7 +215,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 			world.dispose();
 		}
 
-		world = new World(numBots, numSurvivors, (long)(timeBetweenTimestepsInSeconds*1000));
+		world = new World(numBots, numSurvivors, (long)(timeBetweenTimestepsInSeconds*1000), drawBotRadiiCheckBox.isSelected());
 		world.setDrawBotRadii(drawBotRadiiCheckBox.isSelected());
 		//		world.pack();
 		world.setLocation(this.getX(), this.getY() + this.getHeight());
@@ -264,7 +264,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	public void itemStateChanged(ItemEvent e) {
 		Object source = e.getItemSelectable();
 		
-		if(source == drawBotRadiiCheckBox) {
+		if(world!= null && source == drawBotRadiiCheckBox) {
 			world.setDrawBotRadii(e.getStateChange() == ItemEvent.SELECTED);
 		}
 	}
