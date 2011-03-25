@@ -1346,8 +1346,12 @@ public class Bot extends Rectangle2D.Double {
 		//average their distances
 		double distSum = 0.0;
 		for(BotInfo b : closestNeighbors) {
+			if(b.getBotID() == this.getID()) {
+				continue;
+			}
 			distSum += b.getCenterLocation().distance(this.getCenterLocation());
 		}
+
 		return distSum / closestNeighbors.size();
 	}
 
@@ -1382,12 +1386,20 @@ public class Bot extends Rectangle2D.Double {
 		return numTimestepsToWaitBeforeMarkingPaths() <= 0;
 	}
 
-	private void adjustRoleChangeProb(int index, double incrementAmount) {
+	private void adjustRoleChangeProb(int index, boolean positive) {
+		if(positive) {
+			adjustRoleChangeProb(index, .1);
+		} else {
+			adjustRoleChangeProb(index, -.1);
+		}
+	}
+
+	private void adjustRoleChangeProb(int index, double incrementAmt) {
 		if(index >= roleChangeProbabilites.length || index < 0) {
 			throw new IndexOutOfBoundsException();
 		}
 
-		roleChangeProbabilites[index] += incrementAmount;
+		roleChangeProbabilites[index] += incrementAmt;
 		if(roleChangeProbabilites[index] < 0.0) {
 			roleChangeProbabilites[index] = 0.0;
 		}
@@ -1404,7 +1416,7 @@ public class Bot extends Rectangle2D.Double {
 		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 			//firstly, don't switch to being a path marker if we're in a base zone
 			if(currentZone instanceof BaseZone) {
-				adjustRoleChangeProb(PATH_MARKER, -2.0);
+				adjustRoleChangeProb(PATH_MARKER, false);
 			} else {
 				//see if we are near a path, and thus if we should be exploring the possibility of switching to being a path marker
 				double minPathDistance = java.lang.Double.MAX_VALUE;
@@ -1424,7 +1436,7 @@ public class Bot extends Rectangle2D.Double {
 
 					//if we can't see any path makers, up the probability to switch by a lot
 					if(knownPathMarkers.size() == 0) {
-						adjustRoleChangeProb(PATH_MARKER, .5);
+						adjustRoleChangeProb(PATH_MARKER, true);
 					} else {
 						//find the average distance between closest path marker neighbors
 						double distanceBtwnPathNeighborSum = 0.0;
@@ -1450,10 +1462,10 @@ public class Bot extends Rectangle2D.Double {
 
 						if(avgDistBtwnPathNeighbors > PATH_MARK_IDEAL_DIST) {
 							//they need more path makers
-							adjustRoleChangeProb(PATH_MARKER, .2);
+							adjustRoleChangeProb(PATH_MARKER, true);
 						} else {
 							//they don't need as many path makers
-							adjustRoleChangeProb(PATH_MARKER, -.2);
+							adjustRoleChangeProb(PATH_MARKER, false);
 						}
 					}
 				}
@@ -1463,8 +1475,8 @@ public class Bot extends Rectangle2D.Double {
 		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 			if(currentZone instanceof DangerZone) {
 				//we should be a dangerous explorer
-				adjustRoleChangeProb(DANGEROUS_EXPLORER, 1.0);
-				adjustRoleChangeProb(EXPLORER, -.5);
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, .2);
+				adjustRoleChangeProb(EXPLORER, false);
 			} else {
 				//if we can see a Dangerous zone, and most of our neighbors are not exploring it, up the prob we'll become a dangerous explorer
 				//otherwise, lower that probability
@@ -1497,18 +1509,18 @@ public class Bot extends Rectangle2D.Double {
 					//if there are more normals that dangerouses, we should up our prob of becoming a dangerous explorer
 					if(normalCount > dangerCount) {
 						adjustRoleChangeProb(DANGEROUS_EXPLORER, .2);
-						adjustRoleChangeProb(EXPLORER, -.1);
+						adjustRoleChangeProb(EXPLORER, false);
 					} else {
 						//there are more dangerous than normal
 						//lower the chance than we become dangerous
-						adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
-						adjustRoleChangeProb(EXPLORER, .1);
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
+						adjustRoleChangeProb(EXPLORER, true);
 					}
 				} else {
 					//we can't see a dangerous zone
 					//lower the probability that we'll become a dangerous explorer
-					adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
-					adjustRoleChangeProb(EXPLORER, .1);
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
+					adjustRoleChangeProb(EXPLORER, true);
 				}
 			}
 		}
@@ -1521,23 +1533,23 @@ public class Bot extends Rectangle2D.Double {
 			//if the average is negative, than we don't have any neighbors
 			//in that case, reduce the chance that we become an explorer
 			if(avgNeiDist < 0) {
-				adjustRoleChangeProb(EXPLORER, -.1);
-				adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
-				adjustRoleChangeProb(PATH_MARKER, .1);
+				adjustRoleChangeProb(EXPLORER, false);
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
+				adjustRoleChangeProb(PATH_MARKER, true);
 			} else {
 				//we have at least 1 neighboring path marker
 				//depending on if the averge distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
 				//TODO add a buffer region where everything is just right?
 				if(avgNeiDist > PATH_MARK_IDEAL_DIST) {
 					//we want to stay a path marker
-					adjustRoleChangeProb(PATH_MARKER, .1);
-					adjustRoleChangeProb(EXPLORER, -.1);
-					adjustRoleChangeProb(DANGEROUS_EXPLORER, -.1);
+					adjustRoleChangeProb(PATH_MARKER, true);
+					adjustRoleChangeProb(EXPLORER, false);
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 				} else {
 					//there are too many path markers
-					adjustRoleChangeProb(PATH_MARKER, -.1);
-					adjustRoleChangeProb(EXPLORER, .1);
-					adjustRoleChangeProb(DANGEROUS_EXPLORER, .1);
+					adjustRoleChangeProb(PATH_MARKER, false);
+					adjustRoleChangeProb(EXPLORER, true);
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, true);
 				}
 			}
 		}
@@ -1551,25 +1563,26 @@ public class Bot extends Rectangle2D.Double {
 			maxProbIndex = 0;
 		}
 		for(int i = 0; i < roleChangeProbabilites.length; i++) {
-			if(i == botMode) {
-				continue;
-			}
 			if(i == PATH_MARKER && closestPath == null) {
 				continue;
 			}
 			if(roleChangeProbabilites[i] > roleChangeProbabilites[maxProbIndex]) {
 				maxProbIndex = i;
 			}
-
 		}
 
+		print(botMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + maxProbIndex);
+
+
 		//see if we are switching to the role that is most probable
-		if(NUM_GEN.nextDouble() <= roleChangeProbabilites[maxProbIndex]) {
+		//don't waste time doing the calculation if our current role is the one we might be switiching to
+		if(maxProbIndex != botMode && NUM_GEN.nextDouble() <= roleChangeProbabilites[maxProbIndex]) {
 			botMode = maxProbIndex;
 			if(botMode == PATH_MARKER) {
 				myPathToMark = closestPath;
 			}
 		}
+
 	}
 
 	private void print(String message) {
