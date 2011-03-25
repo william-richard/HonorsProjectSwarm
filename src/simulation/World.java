@@ -144,7 +144,11 @@ public class World extends JFrame implements WindowListener {
 		Survivor curSurvivor;
 
 		for(int i = 0; i < numSurvivors; i++) {
-			curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
+			//don't let survivors be in the basezone
+			do {
+				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
+			} while(!homeBase.contains(curSurvivor.getCenterLocation()));
+
 			allSurvivors.add(curSurvivor);
 		}
 
@@ -191,7 +195,7 @@ public class World extends JFrame implements WindowListener {
 		}
 		return ((double)allClaimedSurvivors.size()) / allSurvivors.size();
 	}
-	
+
 	private double calcAvgPathQuality() {
 		HashMap<Survivor, SurvivorPath> bestCompletePaths = new HashMap<Survivor, SurvivorPath>();
 		for(Bot b : allBots) {
@@ -224,7 +228,7 @@ public class World extends JFrame implements WindowListener {
 			return avgPercent;
 		}
 	}
-	
+
 	private double calcPathCoverageMetric() {
 		int coverageMetricSum = 0;
 		int numPathMarkers = 0;
@@ -242,7 +246,7 @@ public class World extends JFrame implements WindowListener {
 			return pathCoverage;
 		}
 	}
-	
+
 	private double calcOverallMetric(double perSurFound, double pathQuality, double pathCoverage) {
 		double overallMetric = perSurFound / (pathQuality * pathCoverage);
 		if(Double.isInfinite(overallMetric) || Double.isNaN(overallMetric)) {
@@ -251,8 +255,8 @@ public class World extends JFrame implements WindowListener {
 			return overallMetric;
 		}
 	}
-	
-	
+
+
 	private void writeADatapoint() {
 		try {
 			BufferedWriter dataWriter = new BufferedWriter(new FileWriter(dataDirectory + DATA_FILENAME, true));
@@ -501,7 +505,7 @@ public class World extends JFrame implements WindowListener {
 			System.out.println(Bot.timestepNumBotOnPaths + " bots marking paths");
 
 			writeADatapoint();
-			
+
 			//repaint the scenario
 			repaint();
 			System.out.println("Done with repaint");
