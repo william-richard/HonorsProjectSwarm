@@ -13,7 +13,8 @@ public class Dijkstras {
 	 * need to think of a way to have Dijkstras' return the real shortest path - maybe consider every 1/10 of a pixel instead of every full pixel
 	 */
 	
-	private ArrayList<ArrayList<FibonacciHeapNode<DPixel>>> dNodes;
+	private ArrayList<ArrayList<DPixel>> pixels;
+	private ArrayList<ArrayList<FibonacciHeapNode<DPixel>>> nodes;
 	int minX, maxX, minY, maxY;
 	
 	public Dijkstras(int _minX, int _maxX, int _minY, int _maxY) {
@@ -23,14 +24,15 @@ public class Dijkstras {
 		minY = _minY;
 		maxY = _maxY;
 		
-		//add all the nodes into storage the first time
-		dNodes = new ArrayList<ArrayList<FibonacciHeapNode<DPixel>>>();
+		//add all the pixels to the storage array list
+		pixels = new ArrayList<ArrayList<DPixel>>(maxX);
+		nodes = new ArrayList<ArrayList<FibonacciHeapNode<DPixel>>>();
 		for(int curX = 0; curX < maxX; curX++) {
-			dNodes.add(new ArrayList<FibonacciHeapNode<DPixel>>());
-			ArrayList<FibonacciHeapNode<DPixel>> curList = dNodes.get(curX);
+			pixels.add(new ArrayList<DPixel>(maxY));
+			ArrayList<DPixel> curList = pixels.get(curX);
 			for(int curY = 0; curY < maxY; curY ++) {
 				DPixel newPix = new DPixel(curX, curY);
-				curList.add(new FibonacciHeapNode<DPixel>(newPix));
+				curList.add(newPix);
 			}
 		}
 		System.out.println("finished dijkstras constructor");
@@ -42,41 +44,43 @@ public class Dijkstras {
 		minY = other.minY;
 		maxY = other.maxY;
 
-		dNodes = new ArrayList<ArrayList<FibonacciHeapNode<DPixel>>>(maxX);
+		pixels = new ArrayList<ArrayList<DPixel>>(maxX);
 		for(int x = 0; x < maxX; x++) {
-			dNodes.add(new ArrayList<FibonacciHeapNode<DPixel>>(maxY));
+			pixels.add(new ArrayList<DPixel>(maxY));
 			for(int y = 0; y < maxY; y++) {
 				DPixel newPix = new DPixel(other.getPixel(x, y));
-				dNodes.get(x).add(new FibonacciHeapNode<DPixel>(newPix));
+				pixels.get(x).add(newPix);
 			}
 		}
 	}
 	
 	
 	/**
-	 * Do Dijkstra's algorithm on the dNodes, to find the shortest path from the base location to all other points
+	 * Do Dijkstra's algorithm on the nodes, to find the shortest path from the base location to all other points
 	 */
-	public static Dijkstras dijkstras(Dijkstras dij, Point source, int _minX, int _maxX, int _minY, int _maxY) {
-		
-		dij = new Dijkstras(_minX, _maxX, _minY, _maxY);
+	public void dijkstras(Point source) {
 		
 		System.out.println("Staring dijkstras from "  + source);
 		FibonacciHeap<DPixel> heap = new FibonacciHeap<DPixel>();
+		nodes = new ArrayList<ArrayList<FibonacciHeapNode<DPixel>>>(maxX);
 		//reset the nodes
 		//and add them to our Queue
-		for(int curX = 0; curX < _maxX; curX++) {
-			for(int curY = 0; curY < _maxY; curY++) {
-				FibonacciHeapNode<DPixel> curNode = dij.getNode(curX, curY);
-				curNode.getData().setPrevious(null);
-				heap.insert(curNode, Double.MAX_VALUE);
+		for(int curX = 0; curX < maxX; curX++) {
+			nodes.add(new ArrayList<FibonacciHeapNode<DPixel>>(maxY));
+			for(int curY = 0; curY < maxY; curY++) {
+				DPixel curPix = getPixel(curX, curY);
+				curPix.setPrevious(null);
+				FibonacciHeapNode<DPixel> newNode = new FibonacciHeapNode<DPixel>(curPix);
+				heap.insert(newNode, Double.MAX_VALUE);
+				nodes.get(curX).add(newNode);
 			}
 		}
 		
-//		DijkstraHeap heap = new DijkstraHeap(dNodes);
+//		DijkstraHeap heap = new DijkstraHeap(nodes);
 
 		
 		//set the source distance to 0
-		heap.decreaseKey(dij.getNode(source.x, source.y), 0.0);
+		heap.decreaseKey(getNode(source.x, source.y), 0.0);
 
 		System.out.println("Done with the initializations");
 				
@@ -98,10 +102,10 @@ public class Dijkstras {
 						continue;
 					}
 					//don't examine pixels that are out of bounds
-					if(curNeiX < _minX || curNeiX >= _maxX || curNeiY < _minY || curNeiY >= _maxY) {
+					if(curNeiX < minX || curNeiX >= maxX || curNeiY < minY || curNeiY >= maxY) {
 						continue;
 					}
-					FibonacciHeapNode<DPixel> curNei = dij.getNode(curNeiX, curNeiY);
+					FibonacciHeapNode<DPixel> curNei = getNode(curNeiX, curNeiY);
 					
 					if(distThruNextNode < curNei.getKey()) {
 						heap.decreaseKey(curNei, distThruNextNode);
@@ -111,9 +115,7 @@ public class Dijkstras {
 			}
 		}
 		
-		System.out.println("Finished dijkstras's from " + source);
-		
-		return dij;
+		System.out.println("Finished dijkstras's from " + source);		
 	}	
 	
 	public double getDistanceTo(int x, int y) {
@@ -125,10 +127,10 @@ public class Dijkstras {
 	}
 	
 	public DPixel getPixel(int x, int y) {
-		return getNode(x, y).getData();
+		return pixels.get(x).get(y);
 	}
 	
 	public FibonacciHeapNode<DPixel> getNode(int x, int y) {
-		return dNodes.get(x).get(y);
+		return nodes.get(x).get(y);
 	}
 }

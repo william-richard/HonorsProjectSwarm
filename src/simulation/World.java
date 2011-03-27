@@ -96,7 +96,7 @@ public class World extends JFrame implements WindowListener {
 
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
-//	public Dijkstras dijkstrasSnapshot;
+	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -161,7 +161,8 @@ public class World extends JFrame implements WindowListener {
 		setDrawBotRadii(_drawBotRadii);
 
 		//		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
-		distancesToAllPoints = Dijkstras.dijkstras(distancesToAllPoints, BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 	}
 
 	private void setupFrame() {
@@ -460,7 +461,7 @@ public class World extends JFrame implements WindowListener {
 			}
 			if(aZoneChanged) {
 				//recalculate optimal paths to all points, so we know optimal paths to survivors
-				distancesToAllPoints = Dijkstras.dijkstras(distancesToAllPoints, BASE_ZONE_LOC, 0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+				distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 			}
 
 
@@ -554,7 +555,7 @@ public class World extends JFrame implements WindowListener {
 		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
-//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -597,7 +598,7 @@ public class World extends JFrame implements WindowListener {
 			DPixel curSurPix = distancesToAllPoints.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
 			while(curSurPix.getPrevious() != null) {
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
-				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
+				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
 			}			
 		}
 
