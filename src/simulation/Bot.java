@@ -68,10 +68,11 @@ public class Bot extends Rectangle2D.Double {
 	public static double timestepAvgDistBtwnPathNeighbors;
 	public static int timestepNumBotOnPaths;
 
-	public final static int WAITING_FOR_ACTIVATION = 			0;
+	//order the role values in the order of importance, so that the more important roles win ties
+	public final static int PATH_MARKER = 						0;	
 	public final static int EXPLORER = 							1;
 	public final static int DANGEROUS_EXPLORER = 				2;
-	public final static int PATH_MARKER = 						3;
+	public final static int WAITING_FOR_ACTIVATION = 			3;
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
@@ -1399,6 +1400,8 @@ public class Bot extends Rectangle2D.Double {
 			//firstly, don't switch to being a path marker if we're in a base zone
 			if(currentZone instanceof BaseZone) {
 				adjustRoleChangeProb(PATH_MARKER, false);
+				adjustRoleChangeProb(EXPLORER, true);
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 			} else {
 				//see if we are near a path, and thus if we should be exploring the possibility of switching to being a path marker
 				double minPathDistance = java.lang.Double.MAX_VALUE;
@@ -1446,7 +1449,7 @@ public class Bot extends Rectangle2D.Double {
 
 						if(avgDistBtwnPathNeighbors > PATH_MARK_IDEAL_DIST) {
 							//they need more path makers
-							adjustRoleChangeProb(PATH_MARKER, true);
+							adjustRoleChangeProb(PATH_MARKER, .2);
 							adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 							adjustRoleChangeProb(EXPLORER, false);
 						} else {
@@ -1521,7 +1524,7 @@ public class Bot extends Rectangle2D.Double {
 			if(avgNeiDist < 0) {
 				adjustRoleChangeProb(EXPLORER, false);
 				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
-				adjustRoleChangeProb(PATH_MARKER, true);
+				adjustRoleChangeProb(PATH_MARKER, .2);
 			} else {
 				//we have at least 1 neighboring path marker
 				//depending on if the averge distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
@@ -1549,6 +1552,9 @@ public class Bot extends Rectangle2D.Double {
 			maxProbIndex = 0;
 		}
 		for(int i = 0; i < roleChangeProbabilites.length; i++) {
+//			if(i == botMode) {
+//				continue;
+//			}
 			if(i == PATH_MARKER && closestPath == null) {
 				continue;
 			}
@@ -1570,7 +1576,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 
 	}
-
+	
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
