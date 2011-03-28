@@ -94,7 +94,7 @@ public class World extends JFrame implements WindowListener {
 
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
-//	public Dijkstras dijkstrasSnapshot;
+	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -159,7 +159,7 @@ public class World extends JFrame implements WindowListener {
 		setDrawBotRadii(_drawBotRadii);
 
 		//		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
-		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
+		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
 		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 	}
 
@@ -552,7 +552,8 @@ public class World extends JFrame implements WindowListener {
 		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
-//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+		//DON'T REMOVE THIS - IT WILL BREAK THE DISPLAY!!!
+		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -592,12 +593,12 @@ public class World extends JFrame implements WindowListener {
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		for(Survivor curSur : allSurvivors) {
 			//get the DPixel for this survivor
-			DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
+			DPixel curSurPix = dijkstrasSnapshot.getClosestPixel(curSur.getCenterLocation());
 			//draw the first line
 			g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
 			while(curSurPix.getPrevious() != null) {
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
-				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
+				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
 			}			
 		}
 

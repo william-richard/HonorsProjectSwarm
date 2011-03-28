@@ -63,7 +63,39 @@ public class Dijkstras {
 
 		System.out.println("finished dijkstras constructor");
 	}
-
+	
+	public Dijkstras(Dijkstras other) {
+		minX = other.minX;
+		maxX = other.maxX;
+		minY = other.minY;
+		maxY = other.maxY;
+		
+		pixels = new ArrayList<DPixel>();
+		nodes = new ArrayList<FibonacciHeapNode<DPixel>>();
+		for(DPixel oPix : other.pixels) {
+			pixels.add(new DPixel(oPix));
+		}		
+		//the heap insert method sets the key - use it to set things correctly
+		FibonacciHeap<DPixel> heap = new FibonacciHeap<DPixel>();
+		for(FibonacciHeapNode<DPixel> oNode : other.nodes) {
+			FibonacciHeapNode<DPixel> newNode = new FibonacciHeapNode<DPixel>(oNode.getData());
+			heap.insert(newNode, oNode.getKey());
+			nodes.add(newNode);
+		}
+		
+		//also, set up the nodesByZone
+		nodesByZone = new HashMap<Integer, List<FibonacciHeapNode<DPixel>>>();
+		for(FibonacciHeapNode<DPixel> curNode : nodes) {
+			DPixel curPix = curNode.getData();
+			for(Integer curNeighborZone : curPix.getParentZoneIds()) {
+				if(nodesByZone.get(curNeighborZone) == null) {
+					nodesByZone.put(curNeighborZone, new ArrayList<FibonacciHeapNode<DPixel>>());
+				}
+				nodesByZone.get(curNeighborZone).add(curNode);
+			}
+		}
+	}	
+	
 	/**
 	 * Do Dijkstra's algorithm on the nodes, to find the shortest path from the base location to all other points
 	 */
@@ -102,8 +134,8 @@ public class Dijkstras {
 		pixels.add(sourcePix);
 		FibonacciHeapNode<DPixel> newNode = new FibonacciHeapNode<DPixel>(sourcePix);
 		nodes.add(newNode);
-		heap.insert(newNode, 0.0);
-
+		heap.insert(newNode, 0.0);		
+		
 		System.out.println("Done with the initializations");
 
 		FibonacciHeapNode<DPixel> nextNode;

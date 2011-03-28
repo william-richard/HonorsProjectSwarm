@@ -23,6 +23,12 @@ public class DPixel implements Comparable<DPixel> {
 		this(new Point(_x, _y));
 	}
 	
+	public DPixel(DPixel other) {
+		loc = other.loc;
+		parentZoneIds = new HashSet<Integer>(other.parentZoneIds);
+		previous = other.previous;
+	}
+	
 	@Deprecated
 	public double getWeight() {
 //		return getParentZone().getPathWeightPerPixel();
