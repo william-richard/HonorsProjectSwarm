@@ -1,8 +1,11 @@
 package util.shapes;
 
+import java.awt.Point;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.util.HashSet;
+import java.util.Set;
 
 import util.Utilities;
 
@@ -277,6 +280,39 @@ public class LineSegment extends Line2D {
 		double midY = (p1.getY() + p2.getY()) / 2.0;
 		
 		return new Point2D.Double(midX, midY);
+	}
+	
+	private double getYValue(double x) {
+		return getSlope() * x + getYInercept();
+	}
+	
+	private double getXValue(double y) {
+		return (y - getYInercept()) / getSlope();
+	}
+	
+	public Set<Point> getIntegerPoints() { 
+		HashSet<Point> result = new HashSet<Point>();
+		//start with endpoint with min integer x value and go to the other endpoint
+		//going to have to mess with that endpoint a bit
+		int minIntEndX = getX1() < getX2() ? (int) getX1() : (int) getX2();
+		int maxIntEndX = getX1() >= getX2() ? (int) getX1() : (int) getX2();
+		
+		if(minIntEndX == maxIntEndX) {
+			//vertical line
+			//going to have to do integer y values instead
+			int minIntEndY = getY1() < getY2() ? (int) getY1() : (int) getY2();
+			int maxIntEndY = getY1() >= getY2() ? (int) getY1() : (int) getY2();
+			
+			for(int i = minIntEndY; i <= maxIntEndY; i++) {
+				result.add(new Point((int)getXValue(i), i));
+			}
+		} else {
+			for(int i = minIntEndX; i <= maxIntEndX; i++) {
+				result.add(new Point(i, (int)getYValue(i)));
+			}
+		}
+		
+		return result;
 	}
 	
 	

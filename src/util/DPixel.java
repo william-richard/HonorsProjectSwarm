@@ -1,35 +1,32 @@
 package util;
 
+import java.awt.Point;
 import java.awt.geom.Point2D;
-
-import simulation.World;
-import zones.Zone;
+import java.util.HashSet;
+import java.util.Set;
 
 public class DPixel implements Comparable<DPixel> {
-	private double x, y;
-	private Zone parentZone;
+	private Point loc;
+	private Set<Integer> parentZoneIds;
 	//previous pixel in best path
 	private Point2D previous;
 	@Deprecated
 	private double distanceToSource;
 	
-	public DPixel(double _x, double _y) {
-		x = _x;
-		y = _y;
-		//figure out what zone we're in
-		parentZone = World.findZone(new Point2D.Double(x,y));
+	public DPixel(Point p) {
+		loc = p;
 		previous = null;
+		parentZoneIds = new HashSet<Integer>();
 	}
 	
-	public DPixel(DPixel other) {
-		x = other.x;
-		y = other.y;
-		parentZone = other.parentZone;
-		previous = other.previous;
+	public DPixel(int _x, int _y) {
+		this(new Point(_x, _y));
 	}
-
+	
+	@Deprecated
 	public double getWeight() {
-		return getParentZone().getPathWeightPerPixel();
+//		return getParentZone().getPathWeightPerPixel();
+		return 0.0;
 	}
 
 	public Point2D getPrevious() {
@@ -43,26 +40,30 @@ public class DPixel implements Comparable<DPixel> {
 	/**
 	 * @return the x
 	 */
-	public double getX() {
-		return x;
+	public int getX() {
+		return loc.x;
 	}
 
 	/**
 	 * @return the y
 	 */
-	public double getY() {
-		return y;
+	public int getY() {
+		return loc.y;
 	}
 
-	public Point2D getLocation() {
-		return new Point2D.Double(x,y);
+	public Point getLocation() {
+		return loc;
 	}
 	
 	/**
 	 * @return the parentZone
 	 */
-	public Zone getParentZone() {
-		return parentZone;
+	public Set<Integer> getParentZoneIds() {
+		return parentZoneIds;
+	}
+	
+	protected void addParentZone(Integer newParentId) {
+		parentZoneIds.add(newParentId);
 	}
 
 	/**
@@ -88,11 +89,7 @@ public class DPixel implements Comparable<DPixel> {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		long temp;
-		temp = java.lang.Double.doubleToLongBits(x);
-		result = prime * result + (int) (temp ^ (temp >>> 32));
-		temp = java.lang.Double.doubleToLongBits(y);
-		result = prime * result + (int) (temp ^ (temp >>> 32));
+		result = prime * result + ((loc == null) ? 0 : loc.hashCode());
 		return result;
 	}
 
@@ -108,18 +105,17 @@ public class DPixel implements Comparable<DPixel> {
 		if (!(obj instanceof DPixel))
 			return false;
 		DPixel other = (DPixel) obj;
-		if (java.lang.Double.doubleToLongBits(x) != java.lang.Double
-				.doubleToLongBits(other.x))
-			return false;
-		if (java.lang.Double.doubleToLongBits(y) != java.lang.Double
-				.doubleToLongBits(other.y))
+		if (loc == null) {
+			if (other.loc != null)
+				return false;
+		} else if (!loc.equals(other.loc))
 			return false;
 		return true;
 	}
 
 	@Override
 	public String toString() {
-		return "(" + x + ", " + y + ")";
+		return "(" + loc.x + ", " + loc.y + ")";
 	}
 
 	@Override

@@ -31,8 +31,6 @@ import java.util.Random;
 
 import javax.swing.JFrame;
 
-import org.jgrapht.util.FibonacciHeapNode;
-
 import main.java.be.humphreys.voronoi.GraphEdge;
 import main.java.be.humphreys.voronoi.Voronoi;
 import util.DPixel;
@@ -90,13 +88,13 @@ public class World extends JFrame implements WindowListener {
 	private static final DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#.####");
 
 	/** VARIABLES */
-	public static java.util.Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
+	public static Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static List<Survivor> allSurvivors; //The survivors
 
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
-	public Dijkstras dijkstrasSnapshot;
+//	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -219,8 +217,7 @@ public class World extends JFrame implements WindowListener {
 		double pathPercentagesSum = 0.0;
 		for(Survivor sur : bestCompletePaths.keySet()) {
 			SurvivorPath botPath = bestCompletePaths.get(sur);
-			FibonacciHeapNode<DPixel> optimalPathPixel = distancesToAllPoints.getNode((int)sur.getX(), (int)sur.getY());
-			pathPercentagesSum += (botPath.getPathLength() / optimalPathPixel.getKey());
+			pathPercentagesSum += (botPath.getPathLength() / distancesToAllPoints.getDistanceTo(botPath.getSur().getCenterLocation()));
 		}
 		//average the percentages
 		double avgPercent = pathPercentagesSum / bestCompletePaths.size();
@@ -415,7 +412,7 @@ public class World extends JFrame implements WindowListener {
 	public void setDrawBotRadii(boolean setValue) {
 		drawBotRadii = setValue;
 	}
-
+	
 	private boolean keepGoing = false;
 
 	public boolean isGoing() {
@@ -555,7 +552,7 @@ public class World extends JFrame implements WindowListener {
 		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
-		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -595,10 +592,12 @@ public class World extends JFrame implements WindowListener {
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		for(Survivor curSur : allSurvivors) {
 			//get the DPixel for this survivor
-			DPixel curSurPix = distancesToAllPoints.getPixel((int)curSur.getCenterX(), (int)curSur.getCenterY());
+			DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
+			//draw the first line
+			g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
 			while(curSurPix.getPrevious() != null) {
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
-				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
+				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
 			}			
 		}
 
