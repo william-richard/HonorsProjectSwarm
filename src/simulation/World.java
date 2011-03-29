@@ -94,7 +94,7 @@ public class World extends JFrame implements WindowListener {
 
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
-	public Dijkstras dijkstrasSnapshot;
+//	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -508,8 +508,10 @@ public class World extends JFrame implements WindowListener {
 			writeADatapoint();
 
 			//repaint the scenario
-			repaint();
-			System.out.println("Done with repaint");
+			repaint(timeBetweenTimesteps);
+
+			int qLength = distancesToAllPoints.rwl.getQueueLength();
+			System.out.println("Dijkstra lock queue length = " + qLength);
 
 			timestepStopTime = System.currentTimeMillis();
 			timestepDuration = timestepStopTime - timestepStartTime;
@@ -552,8 +554,7 @@ public class World extends JFrame implements WindowListener {
 		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
-		//DON'T REMOVE THIS - IT WILL BREAK THE DISPLAY!!!
-		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -592,16 +593,19 @@ public class World extends JFrame implements WindowListener {
 		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		for(Survivor curSur : allSurvivors) {
+			System.out.println("Painting " + curSur);
 			//get the DPixel for this survivor
-			DPixel curSurPix = dijkstrasSnapshot.getClosestPixel(curSur.getCenterLocation());
+			DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
 			//draw the first line
 			g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
 			while(curSurPix.getPrevious() != null) {
+				System.out.println("While painting " + curSur + ", painting DPixel " + curSurPix);
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
-				curSurPix = dijkstrasSnapshot.getPixel(curSurPix.getPrevious());
+				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
 			}			
+			System.out.println("Done painting " + curSur);
 		}
-
+		
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
@@ -702,6 +706,8 @@ public class World extends JFrame implements WindowListener {
 			//			}
 			//			debugRepulsionVectors.clear();
 		}
+		
+		System.out.println("Done with repaint");
 	}
 
 	//figures out which zones the passed point is in, and returns it.

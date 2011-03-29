@@ -1562,7 +1562,7 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
-		print(botMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + maxProbIndex);
+//		print(botMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + maxProbIndex);
 
 
 		//see if we are switching to the role that is most probable
