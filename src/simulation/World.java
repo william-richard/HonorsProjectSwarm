@@ -593,17 +593,14 @@ public class World extends JFrame implements WindowListener {
 		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
 		for(Survivor curSur : allSurvivors) {
-			System.out.println("Painting " + curSur);
 			//get the DPixel for this survivor
 			DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
 			//draw the first line
 			g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
 			while(curSurPix.getPrevious() != null) {
-				System.out.println("While painting " + curSur + ", painting DPixel " + curSurPix);
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
 				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
 			}			
-			System.out.println("Done painting " + curSur);
 		}
 		
 		//paint all the survivor paths
