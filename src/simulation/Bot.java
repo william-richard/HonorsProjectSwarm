@@ -1391,8 +1391,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 	}
 
-	private void reevaluateBotMode() {
-
+	private void reevaluateBotMode() {		
 		//first, adjust the probabilities
 		//if we're some sort of explorer, adjust the probability that we should become a path marker
 		SurvivorPath closestPath = null;
@@ -1571,7 +1570,7 @@ public class Bot extends Rectangle2D.Double {
 		if(maxProbIndex != botMode && NUM_GEN.nextDouble() <= roleChangeProbabilites[maxProbIndex]) {
 			botMode = maxProbIndex;
 			if(botMode == PATH_MARKER) {
-				myPathToMark = closestPath;
+				myPathToMark = new SurvivorPath(closestPath);
 			}
 		}
 
