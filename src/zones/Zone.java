@@ -53,10 +53,11 @@ public abstract class Zone extends Polygon {
 			Point p1 = new Point((int)curSide.x1, (int)curSide.y1);
 			Point p2 = new Point((int)curSide.x2, (int)curSide.y2);
 			
-			if(p1.equals(p2)) {
+			if(Utilities.shouldEqualsZero(p1.distance(p2))) {
 				//weird artifact - handle it
 				continue;
 			}
+			
 			
 			if(!verticies.contains(p1)) {
 				verticies.add(p1);
