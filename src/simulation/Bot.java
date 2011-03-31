@@ -549,12 +549,13 @@ public class Bot extends Rectangle2D.Double {
 								continue;
 							}
 
+							//add our current location to the path
+							sp.addPoint(this.getBotInfo());
+							
 							//see if we are in the baseZone, i.e. if it should be complete
 							if(baseZone.contains(this.getCenterLocation())) {
 								sp.setNowComplete();
 							}
-							//add our current location to the path
-							sp.addPoint(this.getBotInfo());
 
 							//broadcast our version of the path
 							passOnMessage = Message.constructCreatePathsMessage(this, sp);
@@ -1504,7 +1505,7 @@ public class Bot extends Rectangle2D.Double {
 					}
 					//if there are more normals that dangerouses, we should up our prob of becoming a dangerous explorer
 					if(normalCount > dangerCount) {
-						adjustRoleChangeProb(DANGEROUS_EXPLORER, .2);
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, .25);
 						adjustRoleChangeProb(EXPLORER, false);
 					} else {
 						//there are more dangerous than normal
