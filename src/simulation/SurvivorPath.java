@@ -99,13 +99,15 @@ public class SurvivorPath {
 	}
 
 	/**
-	 * @param complete the complete to set
 	 */
-	public void setComplete(boolean complete) {
-		this.complete = complete;
+	public void setNowComplete() {
+			this.complete = true;
 	}
 
 	public void addPoint(BotInfo pointToAdd) {
+		if(this.isComplete()) {
+			throw new IllegalAccessError("This path is complete - you cannot change it");
+		}
 //		//first, adjust the path length down, removing the distance from the previous last waypoint to the endpoint
 //		BotInfo previousLast = pathWaypoints.get(pathWaypoints.size() - 1);
 //		pathLength -= previousLast.getCenterLocation().distance(endPoint);

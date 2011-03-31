@@ -551,7 +551,7 @@ public class Bot extends Rectangle2D.Double {
 
 							//see if we are in the baseZone, i.e. if it should be complete
 							if(baseZone.contains(this.getCenterLocation())) {
-								sp.setComplete(true);
+								sp.setNowComplete();
 							}
 							//add our current location to the path
 							sp.addPoint(this.getBotInfo());
