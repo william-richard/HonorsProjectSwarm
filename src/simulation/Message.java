@@ -70,7 +70,6 @@ public class Message {
 		result = prime * result
 				+ ((attachments == null) ? 0 : attachments.hashCode());
 		result = prime * result + ((message == null) ? 0 : message.hashCode());
-		result = prime * result + ((sender == null) ? 0 : sender.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		return result;
 	}
@@ -96,11 +95,6 @@ public class Message {
 			if (other.message != null)
 				return false;
 		} else if (!message.equals(other.message))
-			return false;
-		if (sender == null) {
-			if (other.sender != null)
-				return false;
-		} else if (!sender.equals(other.sender))
 			return false;
 		if (type == null) {
 			if (other.type != null)

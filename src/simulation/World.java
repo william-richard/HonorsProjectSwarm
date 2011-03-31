@@ -240,6 +240,7 @@ public class World extends JFrame implements WindowListener {
 		
 		System.out.println("coverage sum = " + coverageMetricSum + "\tnum path markers = " + numPathMarkers);
 		//return the average value
+		//TODO need to still scale this such that it goes from 1 to about 1/10 of empirically found path quality values
 		double pathCoverage = ((double) coverageMetricSum) / numPathMarkers;
 		if(Double.isInfinite(pathCoverage) || Double.isNaN(pathCoverage)) {
 			return 0.0;

@@ -311,7 +311,7 @@ public class Bot extends Rectangle2D.Double {
 	public void recieveMessage(Message message) {
 		//don't add this message to our buffer if it is one we have already sent
 		boolean alreadyBroadcasted = false;
-		for(HashSet mesList : alreadyBroadcastedMessages) {
+		for(HashSet<Message> mesList : alreadyBroadcastedMessages) {
 			if(mesList.contains(message)) {
 				alreadyBroadcasted = true;
 			}

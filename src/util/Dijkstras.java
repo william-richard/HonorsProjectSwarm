@@ -17,8 +17,7 @@ import zones.Zone;
 
 public class Dijkstras {
 
-	/*TODO because this needs to visit each pixel, it sometimes ends up getting worse answers than it should
-	 * need to think of a way to have Dijkstras' return the real shortest path - maybe consider every 1/10 of a pixel instead of every full pixel
+	/*TODO Bots are still finding better paths than Dijkstra's, even with zone edges being the basis of calculation. Need to reevaluate
 	 */
 
 	private HashMap<Integer, List<FibonacciHeapNode<DPixel>>> nodesByZone;
