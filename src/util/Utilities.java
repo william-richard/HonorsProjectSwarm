@@ -18,8 +18,8 @@ import zones.Zone;
 public class Utilities {
 
 	public final static double SMALL_EPSILON = .001;
-	
-	
+
+
 	//finds all shapes in the shapeList that intersect the base shape
 	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, Collection<? extends Shape> shapeList) {		
 		//see if the base is a circle
@@ -27,7 +27,7 @@ public class Utilities {
 		if(base instanceof Circle2D) {
 			return findAreaIntersectionInList((Circle2D) base, shapeList);
 		}
-		
+
 		//we're going to take advantage of Area's intersect method
 		// so we need to turn base into an area		
 		Area baseArea = new Area(base);
@@ -60,13 +60,13 @@ public class Utilities {
 		//return the list
 		return intersectingShapes;
 	}
-	
+
 	public static List<? extends Shape> findAreaIntersectionInList(Circle2D base, Collection<? extends Shape> shapeList) {
 		//make sure the base has an area
 		if(Utilities.shouldEqualsZero(base.getRadius())) {
 			throw new IllegalArgumentException("Base circle doesn't have any area");
 		}
-		
+
 		//test if each shape intesects the circle
 		//keep a list of the shapes that do
 		List<Shape> intersectingShapes = new ArrayList<Shape>();
@@ -76,7 +76,7 @@ public class Utilities {
 				intersectingShapes.add(curShape);
 			}
 		}
-		
+
 		return intersectingShapes;
 	}
 
@@ -194,13 +194,13 @@ public class Utilities {
 	public static List<LineSegment> getSides(Shape s) {
 		return Utilities.getSides(s, false);
 	}
-	
+
 	public static List<LineSegment> getSides(Shape s, boolean overrideZone) {
 		//first, see if it is a zone and if we have pre-computed the sides
 		if(s instanceof Zone && !overrideZone) {
 			return ((Zone)s).getSides();
 		}
-		
+
 		//get s's PathIterator
 		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .01);
 
@@ -261,7 +261,12 @@ public class Utilities {
 		Vector vectToThisPoint = new Vector(closestVector.getP1(), toThisPoint);
 
 		//get the scalar projection of <vectToThisPoint> onto <closestVector>
-		double distToPointONClosestSide = vectToThisPoint.scalerProjectionOnto(closestVector);
+		double distToPointONClosestSide;
+		if(Utilities.shouldEqualsZero(closestVector.getMagnitude())) {
+			distToPointONClosestSide = 0.0;
+		} else {
+			distToPointONClosestSide = vectToThisPoint.scalerProjectionOnto(closestVector);
+		}
 
 		//rescale the closest side to that length, so now it's end point will be the closest point
 		closestVector = closestVector.rescale(distToPointONClosestSide);
@@ -295,7 +300,7 @@ public class Utilities {
 		Vector v2 = new Vector(fromThisPoint, andThisOtherPoint);
 		return v1.getAngleBetween(v2);
 	}
-	
+
 	public static double getAngleFromZero(Point2D pivot, Point2D anglePoint) {
 		Vector v1 = Vector.getHorizontalUnitVector(pivot);
 		return getAngleBetween(v1.getP2(), anglePoint, pivot);
@@ -386,7 +391,7 @@ public class Utilities {
 		if(diff < 0.0) diff *= -1.0;
 		return diff <= epsilon;
 	}
-	
+
 	public static boolean shouldEqualsZero(double d) {
 		return equalsWithin(d, 0.0, SMALL_EPSILON);
 	}
