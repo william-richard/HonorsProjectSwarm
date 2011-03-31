@@ -259,6 +259,7 @@ public class World extends JFrame implements WindowListener {
 
 
 	private void writeADatapoint() {
+		//TODO also record "real time" duration - store the average calculation time so we have an idea of how long each timestep would last in the real world
 		try {
 			BufferedWriter dataWriter = new BufferedWriter(new FileWriter(dataDirectory + DATA_FILENAME, true));
 			//write:
@@ -509,9 +510,6 @@ public class World extends JFrame implements WindowListener {
 
 			//repaint the scenario
 			repaint(timeBetweenTimesteps);
-
-			int qLength = distancesToAllPoints.rwl.getQueueLength();
-			System.out.println("Dijkstra lock queue length = " + qLength);
 
 			timestepStopTime = System.currentTimeMillis();
 			timestepDuration = timestepStopTime - timestepStartTime;

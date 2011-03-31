@@ -109,6 +109,7 @@ public class Dijkstras {
 	 * Do Dijkstra's algorithm on the nodes, to find the shortest path from the base location to all other points
 	 */
 	public void dijkstras(Point source) {
+		//FIXME in basezone, Dijkstra will find closest point to source, and then have all paths go thru that point - weird bug
 		//get the write lock
 		rwl.writeLock().lock();
 		try {

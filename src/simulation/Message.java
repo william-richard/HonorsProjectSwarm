@@ -138,8 +138,4 @@ public class Message {
 
 		return new Message(sender.getBotInfo(), CREATE_PATH_MESSAGE, sender.getID() + " " + World.getCurrentTimestep(), attachement);
 	}
-
-	public static Message constructStopAddNewPathMarkersMessage(Bot sender) {		
-		return new Message(sender.getBotInfo(), STOP_ADDING_NEW_PATH_MARKERS,  sender.getID() + " " + World.getCurrentTimestep());
-	}
 }

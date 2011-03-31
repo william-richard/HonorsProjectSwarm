@@ -12,7 +12,7 @@ public class SurvivorPath {
 	//TODO remove "point" terminology from this class
 
 	private static final long serialVersionUID = 269945074800423928L;
-	private static DecimalFormat df = new DecimalFormat("#.#####");
+	private static final DecimalFormat df = new DecimalFormat("#.#####");
 
 	private double pathLength;
 	private Survivor sur;

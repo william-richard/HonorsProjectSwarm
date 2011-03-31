@@ -79,7 +79,7 @@ public class Bot extends Rectangle2D.Double {
 	private final static double DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH = 1.0;
 	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
 
-	private final static double DANEROUS_EXPLORER_DANER_REDUCTION_FACTOR = 3.0;
+	private final static double DANGEROUS_EXPLORER_DANER_REDUCTION_FACTOR = 3.0;
 
 	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
@@ -309,7 +309,16 @@ public class Bot extends Rectangle2D.Double {
 	 * METHODS
 	 **************************************************************************/
 	public void recieveMessage(Message message) {
-		messageBuffer.add(message);
+		//don't add this message to our buffer if it is one we have already sent
+		boolean alreadyBroadcasted = false;
+		for(HashSet mesList : alreadyBroadcastedMessages) {
+			if(mesList.contains(message)) {
+				alreadyBroadcasted = true;
+			}
+		}
+		if(! alreadyBroadcasted) {
+			messageBuffer.add(message);
+		}
 	}
 
 	@SuppressWarnings("unchecked")
@@ -348,6 +357,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	private void readMessages() {
+		//FIXME Still gets clogged up when making new paths or just after path creation?
 		// go through all the messages
 
 		// make a scanner to make going through the messages a bit easier
@@ -355,7 +365,11 @@ public class Bot extends Rectangle2D.Double {
 		// go through the messages and update the stored info about the other
 		// bots
 
-		for (Message mes : messageBuffer) {
+		int locNum = 0, surFound = 0, surClaim = 0, createPath = 0;
+
+		Message mes;
+		while(! messageBuffer.isEmpty()) {
+			mes = messageBuffer.remove(0);
 
 			s = new Scanner(mes.getText());
 
@@ -363,6 +377,8 @@ public class Bot extends Rectangle2D.Double {
 
 			BotInfo newBotInfo;
 			if (messageType.equals(Message.BOT_LOCATION_MESSAGE)) {
+
+				locNum++;
 
 				newBotInfo = mes.getSender();
 
@@ -372,6 +388,7 @@ public class Bot extends Rectangle2D.Double {
 
 				otherBotInfo.add(newBotInfo);
 			} else if (messageType.equals(Message.FOUND_SURVIVOR_MESSAGE)) {
+				surFound++;
 				// get all the information off the message
 				int finderID = s.nextInt();
 
@@ -405,6 +422,7 @@ public class Bot extends Rectangle2D.Double {
 				// rebroadcast the message if we haven't already
 				broadcastMessage(mes);
 			} else if (messageType.equals(Message.CLAIM_SURVIVOR_MESSAGE)) {
+				surClaim++;
 				// remember to give up and reset mySurvivor if someone else
 				// finds them first
 				// and maybe rebroadcast our claim message so that they get the
@@ -467,8 +485,7 @@ public class Bot extends Rectangle2D.Double {
 					broadcastMessage(mes);
 				}
 			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
-
-				//TODO don't let danger seeking bots add to paths???
+				createPath++;
 
 				if(MESSAGE_BOT_DEBUG) {
 					print("Got path message " + mes);
@@ -478,82 +495,75 @@ public class Bot extends Rectangle2D.Double {
 				SurvivorPath sp = new SurvivorPath((SurvivorPath) mes.getAttachment(0));
 
 				//see how it compares to what path we know of that is best for this survivor
-
 				Message passOnMessage = null;
-				if(sp.isComplete()) {
-					//if it is complete, see if we have a complete path to this survivor already
-					SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(sp.getSur());
+				try {
+					if(sp.isComplete()) {
+						//if it is complete, see if we have a complete path to this survivor already
+						SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(sp.getSur());
 
-					if(knownPathToThisSurvivor != null) {
-						//see if the path we have is the same that we just got
-						if(knownPathToThisSurvivor.equals(sp)) {
-							//we know about this path already, and it is the best we've heard - don't rebroadcast
-						} else {
-							//the new path may be better or worse than the one we have - see which it is
-							if(knownPathToThisSurvivor.getPathLength() > sp.getPathLength()) {
-								//the new one is better is better
-								passOnMessage = Message.constructCreatePathsMessage(this, sp);
-								bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
+						if(knownPathToThisSurvivor != null) {
+							//see if the path we have is the same that we just got
+							if(knownPathToThisSurvivor.equals(sp)) {
+								//we know about this path already, and it is the best we've heard - don't rebroadcast
 							} else {
-								//our's is better
-								passOnMessage = Message.constructCreatePathsMessage(this, knownPathToThisSurvivor);
+								//the new path may be better or worse than the one we have - see which it is
+								if(knownPathToThisSurvivor.getPathLength() > sp.getPathLength()) {
+									//the new one is better is better
+									passOnMessage = mes;
+									bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
+								} else {
+									//our's is better
+									passOnMessage = Message.constructCreatePathsMessage(this, knownPathToThisSurvivor);
+								}
 							}
+						} else {
+							//we have not heard of this path before
+							//add it to our list, and pass on info about it
+							bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
+							passOnMessage = mes;
 						}
 					} else {
-						//we have not heard of this path before
-						//add it to our list, and pass on info about it
-						bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
-						passOnMessage = Message.constructCreatePathsMessage(this, sp);
+						//the path we just got is not complete
+
+						//make our changes to it, and pass it on if we are not a path marker
+						if(botMode == PATH_MARKER) {
+							//in this case, just pass on the incomplete path
+							passOnMessage = mes;
+						} else {
+							//first, make sure we have not already contributed to this path
+							//if we have, we should not do anything more with it
+							if(sp.getPoints().contains(this.getBotInfo())) {
+								continue;
+							}
+
+							//if we have a complete path to this survivor already
+							//and the complete path is shorter than this partial path
+							//then don't do anything more with it
+							//tell neighbors about better, complete path
+							if(bestKnownCompletePaths.containsKey(sp.getSur()) && bestKnownCompletePaths.get(sp.getSur()).getPathLength() < sp.getPathLength()) {
+								passOnMessage = Message.constructCreatePathsMessage(this, bestKnownCompletePaths.get(sp.getSur()));
+								continue;
+							}
+
+							//see if we are in the baseZone, i.e. if it should be complete
+							if(baseZone.contains(this.getCenterLocation())) {
+								sp.setComplete(true);
+							}
+							//add our current location to the path
+							sp.addPoint(this.getBotInfo());
+
+							//broadcast our version of the path
+							passOnMessage = Message.constructCreatePathsMessage(this, sp);
+						}
 					}
-				} else {
-					//the path we just got is not complete
-
-					//make our changes to it, and pass it on if we are not a path marker
-					if(botMode == PATH_MARKER) {
-						//in this case, just pass on the incomplete path
-						passOnMessage = mes;
-					} else {
-						//						//first, make sure we have not already contributed to this path
-						//						//if we have, we should not do anything more with it
-						//						if(sp.getPoints().contains(this.getBotInfo())) {
-						//							continue;
-						//						}
-
-						//if we have a complete path to this survivor already
-						//and the complete path is shorter than this partial path
-						//then don't do anything more with it
-						if(bestKnownCompletePaths.containsKey(sp.getSur()) && bestKnownCompletePaths.get(sp.getSur()).getPathLength() < sp.getPathLength()) {
-							continue;
+				} finally {
+					if(passOnMessage != null) {
+						if(MESSAGE_BOT_DEBUG) {
+							print("Passing on a path : " + passOnMessage);
 						}
-
-						//see if we are in the baseZone, i.e. if it should be complete
-						if(baseZone.contains(this.getCenterLocation())) {
-							sp.setComplete(true);
-						}
-						//add our current location to the path
-						sp.addPoint(this.getBotInfo());
-
-						//broadcast our version of the path
-						passOnMessage = Message.constructCreatePathsMessage(this, sp);
+						broadcastMessage(passOnMessage);
 					}
 				}
-
-				if(passOnMessage != null) {
-					if(MESSAGE_BOT_DEBUG) {
-						print("Passing on a path : " + passOnMessage);
-					}
-					broadcastMessage(passOnMessage);
-				}
-			} else if(messageType.equals(Message.STOP_ADDING_NEW_PATH_MARKERS)) {
-				int senderID = s.nextInt();
-
-				if(senderID == this.getID()) continue;
-
-				int sentTime = s.nextInt();
-
-				//don't pass on this message - only bots near a path need to know not to mark it this timestep
-				//this also lets local need for bots be met without having to get the whole path to work together
-
 			} else {
 				continue; // this else matches up to figuring out what message type we have
 			}
@@ -561,7 +571,12 @@ public class Bot extends Rectangle2D.Double {
 		}
 
 		// once we are done reading, we should clear the buffer
+		//the way we're doing it now (removing each message) should do that, but just make sure.
 		messageBuffer.clear();
+
+		//		if(MESSAGE_BOT_DEBUG) {
+		print("Message totals: loc = "+ locNum + " found = " + surFound + " claim = " + surClaim + " path = " + createPath);
+		//		}
 
 	}
 
@@ -902,11 +917,16 @@ public class Bot extends Rectangle2D.Double {
 			//set the scaling factor based on if we are a dangerous explorer or not
 			double scalingFactor = z.repulsionScalingFactor();
 			if(botMode == DANGEROUS_EXPLORER) {
-				scalingFactor /= DANEROUS_EXPLORER_DANER_REDUCTION_FACTOR;
+				scalingFactor /= DANGEROUS_EXPLORER_DANER_REDUCTION_FACTOR;
 			}
 
 			//calculate the force from this side and add it to the net repulsion from the zone
-			if(this.getCenterLocation().distance(visSegMidpoint) < z.repulsionMinDist()) {
+			double distanceToVisSegMidpoint = this.getCenterLocation().distance(visSegMidpoint);
+			if(Utilities.shouldEqualsZero(distanceToVisSegMidpoint)) {
+				//ignore the force if we're on top of the midpoint - there's nothing we can really calculate in that case
+				thisSideContribution = new Vector(this.getCenterLocation(), this.getCenterLocation());
+			}
+			else if(distanceToVisSegMidpoint < z.repulsionMinDist()) {
 				//distance too small
 				//just have a vector of maximum size pointing away from the midpoint
 				thisSideContribution = new Vector(this.getCenterLocation(), visSegMidpoint, -1.0 * scalingFactor);
@@ -1204,7 +1224,7 @@ public class Bot extends Rectangle2D.Double {
 	private List<BotInfo> getClosetKnownPathNeighbors(final BotInfo toThisBot, final int numNeighbors) {
 		ArrayList<BotInfo> pathNeighbors = getKnownPathMarkers();
 
-		//get the 2 closest neighbors on the path
+		//get the requested number of closest neighbors on the path
 		LinkedList<BotInfo> closetNeighbors = new LinkedList<BotInfo>();
 
 		for(BotInfo curNeighbor : pathNeighbors) {
@@ -1226,6 +1246,8 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
+		print("I have " + pathNeighbors.size() + " path neighbors, and " + closetNeighbors.size() +"  are closest to me out of requested " + numNeighbors);
+		
 		return closetNeighbors;
 
 	}
@@ -1308,22 +1330,6 @@ public class Bot extends Rectangle2D.Double {
 		return neighbors;
 	}
 
-	@Deprecated
-	private double getDistToClosestPathNeighbor() {
-		ArrayList<BotInfo> neighbors = getKnownPathMarkers();
-
-		double closestDist = java.lang.Double.MAX_VALUE;
-		double curDist;
-		for(BotInfo curNeighbor : neighbors) {
-			curDist = this.getCenterLocation().distance(curNeighbor.getCenterLocation());
-			if(curDist < closestDist) {
-				closestDist = curDist;
-			}
-		}
-
-		return closestDist;
-	}
-
 	private double getAvgDistToClosestPathNeighbors(int numNeighbors) {
 		if(botMode != PATH_MARKER) {
 			//we shouldn't be asking this question
@@ -1351,19 +1357,19 @@ public class Bot extends Rectangle2D.Double {
 	public boolean isPathDensityAcceptable() {
 		double avgDistToNeighbors = getAvgDistToClosestPathNeighbors(2);
 		if(avgDistToNeighbors < 0) return false;
-		return (avgDistToNeighbors <= PATH_MARK_IDEAL_DIST * 1.2) && (avgDistToNeighbors >= PATH_MARK_IDEAL_DIST * .8);
+		print("Checking path density acceptablity - dist to 2 closest neighbors = " + avgDistToNeighbors);
+		boolean isDensityAcceptable = (avgDistToNeighbors <= PATH_MARK_IDEAL_DIST * 1.2) && (avgDistToNeighbors >= PATH_MARK_IDEAL_DIST * .8);
+		if(isDensityAcceptable) {
+			print("I HAVE ACCEPTABLE DENSITY");
+		}
+		return isDensityAcceptable;
 	}	
 
 	private void handlePathDensity() {
 		//		//see what the average distance to neighboring bots on path is
 		//		double avgDist = getAvgDistFromPathNeighbors();
 		//see how close the closest neighbor is
-		double closeDist = getDistToClosestPathNeighbor();
-
-		if(closeDist <= PATH_MARK_IDEAL_DIST) {
-			//no need for more bots on this part of the path
-			broadcastMessage(Message.constructStopAddNewPathMarkersMessage(this));
-		}
+		double closeDist = getAvgDistToClosestPathNeighbors(2);
 
 		timestepAvgDistBtwnPathNeighbors += closeDist;
 		timestepNumBotOnPaths++;
@@ -1391,7 +1397,8 @@ public class Bot extends Rectangle2D.Double {
 		}
 	}
 
-	private void reevaluateBotMode() {		
+	private void reevaluateBotMode() {	
+		//FIXME need to make more regular explorers become dangerous explorers
 		//first, adjust the probabilities
 		//if we're some sort of explorer, adjust the probability that we should become a path marker
 		SurvivorPath closestPath = null;
@@ -1535,47 +1542,44 @@ public class Bot extends Rectangle2D.Double {
 					adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 				} else {
 					//there are too many path markers
-					adjustRoleChangeProb(PATH_MARKER, false);
-					adjustRoleChangeProb(EXPLORER, true);
-					adjustRoleChangeProb(DANGEROUS_EXPLORER, true);
+					adjustRoleChangeProb(PATH_MARKER, -.05);
+					adjustRoleChangeProb(EXPLORER, .05);
+					adjustRoleChangeProb(DANGEROUS_EXPLORER, .05);
 				}
 			}
 		}
 
-		//now, based on the probabilites, switch roles
-		//find the probability that is maximized
-		int maxProbIndex;
-		if(botMode == 0) {
-			maxProbIndex = 1;
+		//first, do the probability check for activation
+		if(botMode == WAITING_FOR_ACTIVATION) {
+			if(NUM_GEN.nextDouble() <= roleChangeProbabilites[EXPLORER]) {
+				botMode = EXPLORER;
+			}
+		}
+		//if we have been activated already, see whether or not we should become/stay a path marker
+		//TODO don't let path markers form in base zone?
+		//also don't become a path marker if we have claimed a survivor
+		else if(closestPath != null && mySurvivor == null && NUM_GEN.nextDouble() <= roleChangeProbabilites[PATH_MARKER]) {
+			//we should become /stay a path marker
+			myPathToMark = closestPath;
+			botMode = PATH_MARKER;
 		} else {
-			maxProbIndex = 0;
-		}
-		for(int i = 0; i < roleChangeProbabilites.length; i++) {
-//			if(i == botMode) {
-//				continue;
-//			}
-			if(i == PATH_MARKER && closestPath == null) {
-				continue;
-			}
-			if(roleChangeProbabilites[i] > roleChangeProbabilites[maxProbIndex]) {
-				maxProbIndex = i;
-			}
-		}
-
-//		print(botMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + maxProbIndex);
-
-
-		//see if we are switching to the role that is most probable
-		//don't waste time doing the calculation if our current role is the one we might be switiching to
-		if(maxProbIndex != botMode && NUM_GEN.nextDouble() <= roleChangeProbabilites[maxProbIndex]) {
-			botMode = maxProbIndex;
-			if(botMode == PATH_MARKER) {
-				myPathToMark = new SurvivorPath(closestPath);
+			//we should not be a path marker right now
+			//if we are in a dangerous area, we should become a dangerous explorer
+			if(currentZone instanceof DangerZone) {
+				botMode = DANGEROUS_EXPLORER;
+			} else {
+				//otherwise, we should look at the probabilities of becoming a normal or dangerous explorer
+				//look at the higher probability
+				int higherProbIndex = roleChangeProbabilites[EXPLORER] > roleChangeProbabilites[DANGEROUS_EXPLORER] ? EXPLORER : DANGEROUS_EXPLORER;
+				if(NUM_GEN.nextDouble() <= roleChangeProbabilites[higherProbIndex]) {
+					botMode = higherProbIndex;
+				} else {
+					botMode = higherProbIndex == EXPLORER ? DANGEROUS_EXPLORER : EXPLORER;
+				}
 			}
 		}
-
 	}
-	
+
 	private void print(String message) {
 		if (OVERALL_BOT_DEBUG) {
 			System.out.println(botID + ":\t" + message);
@@ -1588,6 +1592,14 @@ public class Bot extends Rectangle2D.Double {
 		if(botMode != PATH_MARKER) {
 			myPathToMark = null;
 		}
+
+		// now, just some housekeeping
+		// we shouldn't hang onto any of these for more than 1 time step
+		heardShouts.clear();
+		// also don't want to hang on to bot info for too long
+		otherBotInfo.clear();
+		//and don't want to hang onto the list of bots within broadcast
+		botsWithinBroadcast.clear();
 
 		// first, read any messages that have come in, and take care of them
 		readMessages();
@@ -1627,19 +1639,11 @@ public class Bot extends Rectangle2D.Double {
 
 		reevaluateBotMode();
 
-		// now, just some housekeeping
-		// we shouldn't hang onto shouts for too long
-		heardShouts.clear();
-		// also don't want to hang on to bot info for too long
-		otherBotInfo.clear();
-		//and don't want to hang onto the list of bots within broadcast
-		botsWithinBroadcast.clear();
-		
 		alreadyBroadcastedMessages.add(new HashSet<Message>());
 		if(alreadyBroadcastedMessages.size() > NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES) {
 			alreadyBroadcastedMessages.removeLast();
 		}
-			
+
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
