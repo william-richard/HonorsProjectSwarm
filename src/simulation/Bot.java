@@ -92,7 +92,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
 	private final double PATH_MARK_FACTOR = 50;
 
-	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 5;
+	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 3;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -124,11 +124,11 @@ public class Bot extends Rectangle2D.Double {
 	private int botID;
 	// zones it is in
 	private Zone baseZone; // the home base zones.
-	private List<Survivor> knownSurvivors; // keep a list of survivors that have
+	private HashSet<Survivor> knownSurvivors; // keep a list of survivors that have
 	// already been found, so can go
 	// claim them
 	// TODO handle reclaiming survivors in the case of robot death
-	private List<Survivor> claimedSurvivors; // keep a list of survivors that
+	private HashSet<Survivor> claimedSurvivors; // keep a list of survivors that
 	// have been claimed, so that we
 	// don't double up on one survivor
 	private Survivor mySurvivor; // the survivor I have claimed - don't know if
@@ -177,8 +177,8 @@ public class Bot extends Rectangle2D.Double {
 
 		baseZone = homeBase;
 
-		knownSurvivors = new ArrayList<Survivor>();
-		claimedSurvivors = new ArrayList<Survivor>();
+		knownSurvivors = new HashSet<Survivor>();
+		claimedSurvivors = new HashSet<Survivor>();
 
 		boundingBox = _bounds;
 
@@ -272,7 +272,7 @@ public class Bot extends Rectangle2D.Double {
 		return bestKnownCompletePaths;
 	}
 
-	public List<Survivor> getClaimedSurvivors() {
+	public Set<Survivor> getClaimedSurvivors() {
 		return claimedSurvivors;
 	}
 
@@ -412,8 +412,8 @@ public class Bot extends Rectangle2D.Double {
 				// to our records if we don't
 				if (knownSurvivors.contains(foundSurvivor)) {
 					// update it
-					knownSurvivors.set(knownSurvivors.indexOf(foundSurvivor),
-							foundSurvivor);
+					knownSurvivors.remove(foundSurvivor);
+					knownSurvivors.add(foundSurvivor);
 				} else {
 					// add it
 					knownSurvivors.add(foundSurvivor);
@@ -476,8 +476,8 @@ public class Bot extends Rectangle2D.Double {
 				} else {
 					// store/update the survivor that they have found
 					if (claimedSurvivors.contains(claimedSurvivor)) {
-						claimedSurvivors.set(claimedSurvivors
-								.indexOf(claimedSurvivor), claimedSurvivor);
+						claimedSurvivors.remove(claimedSurvivor);
+						claimedSurvivor.add(claimedSurvivor);
 					} else {
 						claimedSurvivors.add(claimedSurvivor);
 					}
@@ -492,12 +492,16 @@ public class Bot extends Rectangle2D.Double {
 				}
 
 				//remove the survivor path attachment
+				//make a copy so that if it is incomplete and need to change it, we won't change it everywhere
 				SurvivorPath sp = new SurvivorPath((SurvivorPath) mes.getAttachment(0));
 
 				//see how it compares to what path we know of that is best for this survivor
 				Message passOnMessage = null;
 				try {
 					if(sp.isComplete()) {
+						//since it is complete, noone will ever change it ever again
+						//we can reference it directly
+						sp = (SurvivorPath) mes.getAttachment(0);
 						//if it is complete, see if we have a complete path to this survivor already
 						SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(sp.getSur());
 
@@ -574,9 +578,9 @@ public class Bot extends Rectangle2D.Double {
 		//the way we're doing it now (removing each message) should do that, but just make sure.
 		messageBuffer.clear();
 
-		//		if(MESSAGE_BOT_DEBUG) {
-		print("Message totals: loc = "+ locNum + " found = " + surFound + " claim = " + surClaim + " path = " + createPath);
-		//		}
+		if(MESSAGE_BOT_DEBUG) {
+			print("Message totals: loc = "+ locNum + " found = " + surFound + " claim = " + surClaim + " path = " + createPath);
+		}
 
 	}
 
@@ -1246,8 +1250,6 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
-		print("I have " + pathNeighbors.size() + " path neighbors, and " + closetNeighbors.size() +"  are closest to me out of requested " + numNeighbors);
-		
 		return closetNeighbors;
 
 	}
@@ -1357,11 +1359,10 @@ public class Bot extends Rectangle2D.Double {
 	public boolean isPathDensityAcceptable() {
 		double avgDistToNeighbors = getAvgDistToClosestPathNeighbors(2);
 		if(avgDistToNeighbors < 0) return false;
-		print("Checking path density acceptablity - dist to 2 closest neighbors = " + avgDistToNeighbors);
 		boolean isDensityAcceptable = (avgDistToNeighbors <= PATH_MARK_IDEAL_DIST * 1.2) && (avgDistToNeighbors >= PATH_MARK_IDEAL_DIST * .8);
-		if(isDensityAcceptable) {
-			print("I HAVE ACCEPTABLE DENSITY");
-		}
+//		if(isDensityAcceptable) {
+//			print("I HAVE ACCEPTABLE DENSITY");
+//		}
 		return isDensityAcceptable;
 	}	
 
@@ -1528,8 +1529,8 @@ public class Bot extends Rectangle2D.Double {
 			//if the average is negative, than we don't have any neighbors
 			//in that case, reduce the chance that we become an explorer
 			if(avgNeiDist < 0) {
-				adjustRoleChangeProb(EXPLORER, false);
-				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
+				adjustRoleChangeProb(EXPLORER, -.2);
+				adjustRoleChangeProb(DANGEROUS_EXPLORER, -.2);
 				adjustRoleChangeProb(PATH_MARKER, .2);
 			} else {
 				//we have at least 1 neighboring path marker

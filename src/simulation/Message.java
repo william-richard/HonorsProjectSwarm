@@ -128,7 +128,7 @@ public class Message {
 
 		ArrayList<Object> attachement = new ArrayList<Object>();
 		//copy it with the constructor to make sure there aren't any pointer issues
-		attachement.add(new SurvivorPath(pathToUse));
+		attachement.add(pathToUse);
 
 		return new Message(sender.getBotInfo(), CREATE_PATH_MESSAGE, sender.getID() + " " + World.getCurrentTimestep(), attachement);
 	}
