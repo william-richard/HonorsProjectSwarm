@@ -94,7 +94,7 @@ public class World extends JFrame implements WindowListener {
 
 	public ListIterator<Bot> allBotSnapshot;
 	public ListIterator<Survivor> allSurvivorSnapshot;
-//	public Dijkstras dijkstrasSnapshot;
+	//	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
 
@@ -224,14 +224,14 @@ public class World extends JFrame implements WindowListener {
 			//put it into the real length hash
 			realPathLengths.put(sur, realLength);
 		}
-		
+
 		//use the real lengths in these percentages
 		double pathPercentagesSum = 0.0;
 		for(Survivor sur : bestCompletePaths.keySet()) {
 			SurvivorPath botPath = bestCompletePaths.get(sur);
 			Double realLength = realPathLengths.get(sur);
 			double optimalLength = distancesToAllPoints.getDistanceTo(botPath.getSur().getCenterLocation());
-			System.out.println("Bots think path has length " + botPath.getPathLength() + " real bot path length = " + realLength + " optimal path has length " + optimalLength);	
+			//			System.out.println("Bots think path has length " + botPath.getPathLength() + " real bot path length = " + realLength + " optimal path has length " + optimalLength);	
 			pathPercentagesSum += (realLength.doubleValue() / optimalLength);
 		}
 		//average the percentages
@@ -252,7 +252,7 @@ public class World extends JFrame implements WindowListener {
 				numPathMarkers++;
 			}
 		}
-		
+
 		System.out.println("coverage sum = " + coverageMetricSum + "\tnum path markers = " + numPathMarkers);
 		//return the average value
 		//TODO need to still scale this such that it goes from 1 to about 1/10 of empirically found path quality values
@@ -429,7 +429,7 @@ public class World extends JFrame implements WindowListener {
 	public void setDrawBotRadii(boolean setValue) {
 		drawBotRadii = setValue;
 	}
-	
+
 	private boolean keepGoing = false;
 
 	public boolean isGoing() {
@@ -568,7 +568,7 @@ public class World extends JFrame implements WindowListener {
 		//get a snapshot of the bots and survivors
 		allBotSnapshot = allBots.listIterator();
 		allSurvivorSnapshot = allSurvivors.listIterator();
-//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
+		//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
 		g2d.setFont(ZONE_LABEL_FONT);
@@ -616,7 +616,7 @@ public class World extends JFrame implements WindowListener {
 				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
 			}			
 		}
-		
+
 		//paint all the survivor paths
 		g2d.setColor(SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
@@ -717,7 +717,7 @@ public class World extends JFrame implements WindowListener {
 			//			}
 			//			debugRepulsionVectors.clear();
 		}
-		
+
 		System.out.println("Done with repaint");
 	}
 

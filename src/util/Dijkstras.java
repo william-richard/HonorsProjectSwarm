@@ -17,9 +17,7 @@ import zones.Zone;
 
 public class Dijkstras {
 
-	/*TODO Bots are still finding better paths than Dijkstra's, even with zone edges being the basis of calculation. Need to reevaluate
-	 *could this possibly be caused by incorrect calculation of path length because condidions change?
-	 *could also be caused by bots incorrectly calculating path length because they are making a path that is actually more dangerous than they realize - passing a line over a dangerous area that neither bot is in
+	/*FIXME Bots & real path length calculation are still finding better paths than Dijkstra's, even with zone edges being the basis of calculation. Need to reevaluate
 	 */
 
 	private HashMap<Integer, List<FibonacciHeapNode<DPixel>>> nodesByZone;

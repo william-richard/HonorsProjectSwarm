@@ -1535,9 +1535,8 @@ public class Bot extends Rectangle2D.Double {
 				adjustRoleChangeProb(PATH_MARKER, .2);
 			} else {
 				//we have at least 1 neighboring path marker
-				//depending on if the averge distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
-				//TODO add a buffer region where everything is just right?
-				if(avgNeiDist > PATH_MARK_IDEAL_DIST) {
+				//depending on if the average distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
+				if(isPathDensityAcceptable() || avgNeiDist > PATH_MARK_IDEAL_DIST) {
 					//we want to stay a path marker
 					adjustRoleChangeProb(PATH_MARKER, true);
 					adjustRoleChangeProb(EXPLORER, false);

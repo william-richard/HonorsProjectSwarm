@@ -84,7 +84,7 @@ public class SurvivorPath {
 		}
 		justThePoints.add(endPoint);
 
-		System.out.println("There are " + justThePoints.size() + " points in the path");
+//		System.out.println("There are " + justThePoints.size() + " points in the path");
 		prevPoint = justThePoints.get(0);
 		for(int i = 1; i < justThePoints.size(); i++) {
 			curPoint = justThePoints.get(i);
@@ -93,7 +93,7 @@ public class SurvivorPath {
 			LineSegment sectionLine = new LineSegment(curPoint, prevPoint);
 			//figure out which zones it intersects
 			List<? extends Shape> zoneIntersections = Utilities.findSegIntersectionInList(sectionLine, World.allZones.values());
-			System.out.println("Section intersects " + zoneIntersections.size() + " zones");
+//			System.out.println("Section intersects " + zoneIntersections.size() + " zones");
 			if(zoneIntersections.size() == 0) {
 				//this section is completely within a zone
 				Zone encapsulatingZone = World.findZone(sectionLine.getP1());
