@@ -1505,7 +1505,7 @@ public class Bot extends Rectangle2D.Double {
 					}
 					//if there are more normals that dangerouses, we should up our prob of becoming a dangerous explorer
 					if(normalCount > dangerCount) {
-						adjustRoleChangeProb(DANGEROUS_EXPLORER, .25);
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, .4);
 						adjustRoleChangeProb(EXPLORER, false);
 					} else {
 						//there are more dangerous than normal
