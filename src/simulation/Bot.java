@@ -1517,7 +1517,7 @@ public class Bot extends Rectangle2D.Double {
 					//we can't see a dangerous zone
 					//lower the probability that we'll become a dangerous explorer
 					adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
-					adjustRoleChangeProb(EXPLORER, true);
+					adjustRoleChangeProb(EXPLORER, .025);
 				}
 			}
 		}
