@@ -282,6 +282,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	}
 
 	public static void main(String[] args) {
+		System.out.println("******\nPlease make sure I have lots of memory by adding the flag '-Xmx10G' to the java command! Thanks!\n*****");
 		SwingUtilities.invokeLater(new Runnable() {
 
 			@Override

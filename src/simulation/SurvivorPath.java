@@ -1,10 +1,13 @@
 package simulation;
+import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import util.Utilities;
 import util.shapes.LineSegment;
+import zones.Zone;
 
 
 public class SurvivorPath {
@@ -38,9 +41,9 @@ public class SurvivorPath {
 		} else {
 			pathLength = _pathLength;
 		}
-		
+
 	}
-	
+
 	public SurvivorPath(SurvivorPath _original) {
 		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.getPathLength(), _original.isComplete());
 	}
@@ -56,18 +59,95 @@ public class SurvivorPath {
 				double sectionLength = curWaypoint.getCenterLocation().distance(prevWaypoint.getCenterLocation());
 				//get the maximum multiplier - assume worst case
 				double multiplier = curWaypoint.getZoneMultiplier() > prevWaypoint.getZoneMultiplier() ? curWaypoint.getZoneMultiplier() : prevWaypoint.getZoneMultiplier();
-				
+
 				pathLength += sectionLength * multiplier;
-				
+
 				prevWaypoint = curWaypoint;
 			}
 		}
 		//add the distance from the last point to the end point
 		pathLength += prevWaypoint.getZoneMultiplier() * prevWaypoint.getCenterLocation().distance(endPoint);
-		
+
 		//round to 5 decimal places
 		pathLength = Double.parseDouble(df.format(pathLength));
 	}
+
+	public double getRealPathLength() {
+		//TODO DEBUG ME!!! GETTING ANSWERS THAT ARE WAY TOO HIGH
+		double realLength = 0.0;
+		//add the distances from the points between bots
+		Point2D curPoint, prevPoint;
+		//make a list of our waypoints - don't care if they are the endpoint of the path or waypoints
+		List<Point2D> justThePoints = new ArrayList<Point2D>(pathWaypoints.size() + 1);
+		for(BotInfo waypts : pathWaypoints) {
+			justThePoints.add(waypts.getCenterLocation());
+		}
+		justThePoints.add(endPoint);
+
+		System.out.println("There are " + justThePoints.size() + " points in the path");
+		prevPoint = justThePoints.get(0);
+		for(int i = 1; i < justThePoints.size(); i++) {
+			curPoint = justThePoints.get(i);
+
+			//create the line connecting the points
+			LineSegment sectionLine = new LineSegment(curPoint, prevPoint);
+			//figure out which zones it intersects
+			List<? extends Shape> zoneIntersections = Utilities.findSegIntersectionInList(sectionLine, World.allZones.values());
+			System.out.println("Section intersects " + zoneIntersections.size() + " zones");
+			if(zoneIntersections.size() == 0) {
+				//this section is completely within a zone
+				Zone encapsulatingZone = World.findZone(sectionLine.getP1());
+				//add the correctly weighted length
+				realLength += sectionLine.getLength() * encapsulatingZone.getPathWeightPerPixel();					
+			} else {
+				//for each zone this line intersects, find the segment that is inside that zone
+				//and add that segment's weighted length to the total length
+				for(Shape s : zoneIntersections) {
+					if(s instanceof Zone) {
+						Zone intersectingZone = (Zone) s;
+						//get the intersection points that the line has with the zone
+						//there should be a max of 2
+						List<Point2D> intersectionPoints = new ArrayList<Point2D>(2);
+						for(LineSegment side : intersectingZone.getSides()) {
+							if(side.segmentsIntersect(sectionLine)) {
+								intersectionPoints.add(side.intersectionPoint(sectionLine));
+							}
+						}
+						//we know there will be at least 1, and a max of 2
+						if(intersectionPoints.size() == 1) {
+							//this section goes from one end to the edge of this zone.
+							//figure out which endpoint is in this zone
+							Point2D inZonePoint = intersectingZone.contains(sectionLine.getP1()) ? sectionLine.getP1() : sectionLine.getP2();
+							//double check whichever point we got is inside the zone
+							if(! intersectingZone.contains(inZonePoint)) {
+								System.out.println("Said this point should be inside a zone, but it is not");
+								System.out.println("Need to reevaluate logic here");
+								System.exit(0);
+							}
+							//make a line for this part of the line
+							LineSegment part = new LineSegment(inZonePoint, intersectionPoints.get(0));
+							//add the weighted length of the part to the total
+							realLength += part.getLength() * intersectingZone.getPathWeightPerPixel();
+						} else {
+							//there are exactly 2 points
+							if(intersectionPoints.size() != 2) {
+								System.out.println("Weird situation - got 3 intersection points. NON CONVEXLY SHAPED ZONE!!!!");
+								System.exit(0);
+							}
+							//need to make a segment from each intersection point to the other
+							//and add it's weighed length to the total
+							LineSegment part = new LineSegment(intersectionPoints.get(0), intersectionPoints.get(1));
+							realLength += part.getLength() * intersectingZone.getPathWeightPerPixel();
+						}
+					}
+				}
+			}
+			prevPoint = curPoint;
+		}
+
+		return Double.parseDouble(df.format(realLength));
+	}
+
 
 	public double getPathLength() {
 		return pathLength;
@@ -101,27 +181,27 @@ public class SurvivorPath {
 	/**
 	 */
 	public void setNowComplete() {
-			this.complete = true;
+		this.complete = true;
 	}
 
 	public void addPoint(BotInfo pointToAdd) {
 		if(this.isComplete()) {
 			throw new IllegalAccessError("This path is complete - you cannot change it");
 		}
-//		//first, adjust the path length down, removing the distance from the previous last waypoint to the endpoint
-//		BotInfo previousLast = pathWaypoints.get(pathWaypoints.size() - 1);
-//		pathLength -= previousLast.getCenterLocation().distance(endPoint);
-		
+		//		//first, adjust the path length down, removing the distance from the previous last waypoint to the endpoint
+		//		BotInfo previousLast = pathWaypoints.get(pathWaypoints.size() - 1);
+		//		pathLength -= previousLast.getCenterLocation().distance(endPoint);
+
 		//add the new point to the path
 		pathWaypoints.add(pointToAdd);
 		recalculatePathLength();
 
-//		//add the distance from the previous last point to the new point, and from the new point to the end point
-//		pathLength += previousLast.getCenterLocation().distance(pointToAdd.getCenterLocation());
-//		pathLength += pointToAdd.getCenterLocation().distance(endPoint);
-//		
-//		//round it
-//		pathLength = Double.parseDouble(df.format(pathLength));
+		//		//add the distance from the previous last point to the new point, and from the new point to the end point
+		//		pathLength += previousLast.getCenterLocation().distance(pointToAdd.getCenterLocation());
+		//		pathLength += pointToAdd.getCenterLocation().distance(endPoint);
+		//		
+		//		//round it
+		//		pathLength = Double.parseDouble(df.format(pathLength));
 	}
 
 	public double ptPathDist(Point2D pt) {

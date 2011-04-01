@@ -214,10 +214,25 @@ public class World extends JFrame implements WindowListener {
 
 		//now we should have all the best paths known by any bot to each survivor
 		//get the length of each of these paths, and compare them to the optimal lengths computed by Dijkstra's
+		//TODO DON'T TRUST BOTS' CALCULATION - THEY ARE possibly wrong, causing scores better than 1
+		HashMap<Survivor, Double> realPathLengths = new HashMap<Survivor, Double>(bestCompletePaths.size());
+		for(Survivor sur : bestCompletePaths.keySet()) {
+			//get the path that the bots thing is best
+			SurvivorPath botsBest = bestCompletePaths.get(sur);
+			//calculate it's real length
+			Double realLength = new Double(botsBest.getRealPathLength());
+			//put it into the real length hash
+			realPathLengths.put(sur, realLength);
+		}
+		
+		//use the real lengths in these percentages
 		double pathPercentagesSum = 0.0;
 		for(Survivor sur : bestCompletePaths.keySet()) {
 			SurvivorPath botPath = bestCompletePaths.get(sur);
-			pathPercentagesSum += (botPath.getPathLength() / distancesToAllPoints.getDistanceTo(botPath.getSur().getCenterLocation()));
+			Double realLength = realPathLengths.get(sur);
+			double optimalLength = distancesToAllPoints.getDistanceTo(botPath.getSur().getCenterLocation());
+			System.out.println("Bots think path has length " + botPath.getPathLength() + " real bot path length = " + realLength + " optimal path has length " + optimalLength);	
+			pathPercentagesSum += (realLength.doubleValue() / optimalLength);
 		}
 		//average the percentages
 		double avgPercent = pathPercentagesSum / bestCompletePaths.size();
@@ -473,7 +488,7 @@ public class World extends JFrame implements WindowListener {
 
 			//do all the bots
 			//print out percent checkpoints
-			double lastPercentCheckpoint = 0.0;
+			int lastPercentCheckpoint = 0;
 
 			Bot.timestepCohesionMagnitudeTotal = 0.0;
 			Bot.timestepSeperationMagnitudeTotal = 0.0;
@@ -489,9 +504,9 @@ public class World extends JFrame implements WindowListener {
 
 			for(Bot b : allBots) {
 				b.doOneTimestep();
-				if( (b.getID() * 100.0 / allBots.size()) > (lastPercentCheckpoint + 10)) {
+				if( (b.getID() * 100.0 / allBots.size()) > (lastPercentCheckpoint + 5)) {
 					//need to do another checkpoint
-					lastPercentCheckpoint += 10;
+					lastPercentCheckpoint += 5;
 					System.out.print(lastPercentCheckpoint + "% ");
 				}
 			}
