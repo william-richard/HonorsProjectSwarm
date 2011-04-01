@@ -123,7 +123,6 @@ public class LineSegment extends Line2D {
 		return Utilities.equalsWithin(getY1(), getY2(), Utilities.SMALL_EPSILON);
 	}
 
-
 	public boolean pointInLineSegment(Point2D p) {
 		if(INTERSECTION_DEBUG) {
 			System.out.println("Computing if " + p + " is on this line segment: " + this);
@@ -134,7 +133,7 @@ public class LineSegment extends Line2D {
 			System.out.println(this.getBounds2D());
 			System.out.println("Bounds contains p: " + this.getBounds2D().contains(p));
 		}
-		return Utilities.equalsWithin(ptLineDist(p), 0.0, Utilities.SMALL_EPSILON) && this.getBounds2D().contains(p);
+		return Utilities.shouldEqualsZero(ptLineDist(p)) && this.getBounds2D().contains(p);
 	}
 
 	public boolean pointInLineSegment(double x, double y) {
@@ -165,7 +164,7 @@ public class LineSegment extends Line2D {
 			} else {
 				//just we are vertical
 				//find the point on the other line that matches our x value
-				double intersectionY = other.getSlope() * this.getX1() + other.getYInercept();
+				double intersectionY = other.getYValue(this.getX1());
 				return new Point2D.Double(this.getX1(), intersectionY);
 			}
 		}
@@ -187,7 +186,7 @@ public class LineSegment extends Line2D {
 				//find the corresponding x value for the intersection point
 				//if y = mx + b
 				// then x = (y-b)/m
-				double intersectionX = (this.getY1() - other.getYInercept()) / other.getSlope();
+				double intersectionX = other.getXValue(this.getY1());
 				return new Point2D.Double(intersectionX, this.getY1());
 			}
 		}
@@ -198,17 +197,17 @@ public class LineSegment extends Line2D {
 		if(other.isVerctical()) {
 			//we are not horizontal or vertical, but other is vertical
 			//use other's x value to find the intersection point
-			double intersectionY = this.getSlope() * other.getX1() + this.getYInercept();
+			double intersectionY = this.getYValue(other.getX1());
 			return new Point2D.Double(other.getX1(), intersectionY);
 		}
 		if(other.isHorizontal()) {
 			//other is horizontal
 			//use it's y value for the intersection point
-			double intersctionX = (other.getY1() - this.getYInercept()) / this.getSlope();
+			double intersctionX = this.getXValue(this.getY1());
 			return new Point2D.Double(intersctionX, other.getY1());
 		}
 
-		/*if m1 is slop of this line, m2 is the slope of the other line
+		/*if m1 is slope of this line, m2 is the slope of the other line
 		 * b1 is the y intersept of this line and b2 is the y intersept of the other line
 		 * the intersection's point should have the coordinates
 		 * x = (b2-b1) / (m1-m2)
@@ -222,7 +221,10 @@ public class LineSegment extends Line2D {
 		double intersectionX = (b2-b1)/(m1-m2);
 		double intersectionY = m1 * intersectionX + b1;
 
-		return new Point2D.Double(intersectionX, intersectionY);
+		Point2D.Double intersectionPoint = new Point2D.Double(intersectionX, intersectionY);
+		
+		return intersectionPoint;
+		
 	}
 	
 	public Point2D intersectionPoint(Line2D line) {
@@ -244,7 +246,7 @@ public class LineSegment extends Line2D {
 			}
 		}
 
-		return this.pointInLineSegment(intersectionPoint(other));		
+		return this.pointInLineSegment(intersectionPoint) && other.pointInLineSegment(intersectionPoint);
 	}
 
 	public boolean segmentsIntersect(Line2D other) {
