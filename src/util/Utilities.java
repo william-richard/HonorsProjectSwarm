@@ -79,19 +79,24 @@ public class Utilities {
 
 		return intersectingShapes;
 	}
-
-	public static List<? extends Shape> findLineIntersectionInList(Line2D line, List<? extends Shape> shapeList){
+	
+	public static List<? extends Shape> findSegIntersectionInList(LineSegment line, Collection<? extends Shape> shapeList) {
 		ArrayList<Shape> resultList = new ArrayList<Shape>();
-
+		
 		for(Shape s : shapeList) {
-			if(lineIntersectsShape(line, s)) {
-				resultList.add(s);
+			//get all of this shape's sides
+			List<LineSegment> shapeSides = Utilities.getSides(s);
+			for(LineSegment curSide : shapeSides) {
+				if(curSide.segmentsIntersect(line)) {
+					resultList.add(s);
+					break;
+				}
 			}
 		}
-
+		
 		return resultList;
 	}
-
+	
 	/*can figure out if the edges of these 2 intersect if
 	 * 1) Their intersection (defined mathematically as the area shared by both of the shapes) is non empty.  If this is the case, they are not touching at all.
 	 * 2) they intersection is not equal to the total area of either of the shapes.  In this case, one is completely within the other.
@@ -137,31 +142,6 @@ public class Utilities {
 
 		return false;
 	}
-
-
-	//	public static Polygon giveArealessShapeArea(Shape s) {
-	//		//get all the verticies of the shape
-	//		List<Point2D> shapeVerticies = getVerticies(s);
-	//		
-	//		//now, make a polygon with those verticies
-	//		Polygon sWithArea = new Polygon();
-	//		Point2D curPoint;
-	//		for(int i = 0; i < shapeVerticies.size(); i++) {
-	//			curPoint = shapeVerticies.get(i);
-	//			//Polygon only takes ints, so this is a VERY rough estimate
-	//			sWithArea.addPoint((int)curPoint.getX(), (int)curPoint.getY());
-	//		}
-	//		
-	//		//now, go through again and add the sames points again, but offset by a bit
-	//		//this way, we'll get the polygon to have some area
-	//		for(int i = shapeVerticies.size()-1; i >= 0; i--) {
-	//			curPoint = shapeVerticies.get(i);
-	//			sWithArea.addPoint((int)curPoint.getX() + 1, (int) curPoint.getY() + 1);
-	//		}
-	//		
-	//		return sWithArea;
-	//	}
-
 
 	/*
 	 * ASSUMING THAT ALL PASSED SHAPES ARE CONTIGUOUS AND DO NOT HAVE CURVES
@@ -304,77 +284,6 @@ public class Utilities {
 	public static double getAngleFromZero(Point2D pivot, Point2D anglePoint) {
 		Vector v1 = Vector.getHorizontalUnitVector(pivot);
 		return getAngleBetween(v1.getP2(), anglePoint, pivot);
-	}
-
-	public static List<LineSegment> getDiscontinuitySegments(Circle2D base, Shape outsider) {
-		//first, get the sides of the outsider
-		List<LineSegment> outsiderSides = Utilities.getSides(outsider);
-
-		//		System.out.println("Outsider has " + outsiderSides.size() + " sides");
-
-		List<LineSegment> results = new ArrayList<LineSegment>(); 
-
-		//take a look at each segment
-		for(LineSegment curSide : outsiderSides) {
-			//get any intersection segments this side has with the circle
-			//and add them to the result points
-			LineSegment newSegment = base.getLineIntersectionSegment(curSide);
-
-			if(newSegment != null) {
-				results.add(newSegment);
-			}
-
-			//			System.out.println("Full line is " + Utilities.lineToString(curSide));
-			//			System.out.println("Part we can see " + Utilities.lineToString(newSegment));			
-		}
-
-		return results;
-	}
-
-
-	@Deprecated
-	public static List<Point2D> getDiscontinuityPoints(Shape base, Shape outsider) {
-		//first, get the intersection of the two shapes
-		Area baseArea = new Area(base);
-		Area outsiderArea = new Area(outsider);
-
-		Area intersectionArea = (Area) outsiderArea.clone();
-		intersectionArea.intersect(baseArea);
-
-		//get the vertices of the intersection area
-		List<Point> intersectionVerticies = getVerticies(intersectionArea);
-
-		//now, try to find the combination of points that maximizes the angle between them from the center of the base
-		Point2D baseCenterPoint = new Point2D.Double(base.getBounds2D().getCenterX(), base.getBounds2D().getCenterY());
-
-		List<Point2D> discontinuityPoints = new ArrayList<Point2D>();
-		double maxAngleBetween = 0.0;
-
-		for(int i = 0; i < intersectionVerticies.size(); i++ ) {
-			Point2D outsidePoint = intersectionVerticies.get(i);
-			for(int j = i; j < intersectionVerticies.size(); j++) {
-				Point2D insidePoint = intersectionVerticies.get(j);
-
-				double curAngleBetween = Math.abs(getAngleBetween(outsidePoint, insidePoint, baseCenterPoint));
-
-				if(curAngleBetween > maxAngleBetween) {
-					maxAngleBetween = curAngleBetween;
-					if(discontinuityPoints.size() == 0) {
-						//need to fill the list the first time through
-						discontinuityPoints.add(outsidePoint);
-						discontinuityPoints.add(insidePoint);
-					} else if (discontinuityPoints.size() > 2){
-						System.out.println("MORE THAN 2 DISCONTINUITY POINTS FOR ONE SHAPE! THIS IS IMPOSSIBLE!!!");
-						System.exit(0);
-					} else {
-						discontinuityPoints.set(0, outsidePoint);
-						discontinuityPoints.set(1, insidePoint);
-					}
-				}
-			}
-		}
-
-		return discontinuityPoints;
 	}
 
 	public static boolean isHorizontal(Line2D l) {
