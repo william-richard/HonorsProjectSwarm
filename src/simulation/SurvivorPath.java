@@ -171,6 +171,11 @@ public class SurvivorPath {
 		return endPoint;
 	}
 
+	public LineSegment getSurEndSegment() {
+		return new LineSegment(pathWaypoints.get(0).getCenterLocation(), endPoint);
+	}
+	
+	
 	/**
 	 * @return the complete
 	 */

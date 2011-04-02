@@ -45,6 +45,8 @@ public class Bot extends Rectangle2D.Double {
 	public static final double DEFAULT_FOUND_RANGE = DEFAULT_VISIBILITY_RADIUS;
 	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
 
+	public static final double IGNORE_PARTIAL_PATH_DISTANCE = DEFAULT_BROADCAST_RADIUS * 2;
+	
 	private final static Random NUM_GEN = new Random();
 
 	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
@@ -486,6 +488,9 @@ public class Bot extends Rectangle2D.Double {
 				}
 			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
 				createPath++;
+				
+				//TODO ignore partrtail paths if I am too far away from startpoint-endpoint line
+				
 
 				if(MESSAGE_BOT_DEBUG) {
 					print("Got path message " + mes);
@@ -529,6 +534,15 @@ public class Bot extends Rectangle2D.Double {
 					} else {
 						//the path we just got is not complete
 
+						//if we are too far from the line defined by the survivor location and the end point, ignore this path
+						LineSegment surEndSeg = sp.getSurEndSegment();
+						if(surEndSeg.ptSegDist(this.getCenterLocation()) > IGNORE_PARTIAL_PATH_DISTANCE) {
+							//we should ignore this partial path
+							continue;
+						}
+						
+						
+						
 						//make our changes to it, and pass it on if we are not a path marker
 						if(botMode == PATH_MARKER) {
 							//in this case, just pass on the incomplete path
