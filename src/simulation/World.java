@@ -388,18 +388,6 @@ public class World extends JFrame implements WindowListener {
 		}		
 	}
 
-
-
-
-
-
-
-
-
-
-
-
-
 	/**
 	 * @return the currentTimestep
 	 */
@@ -428,6 +416,7 @@ public class World extends JFrame implements WindowListener {
 
 	public void setDrawBotRadii(boolean setValue) {
 		drawBotRadii = setValue;
+		repaint();
 	}
 
 	private boolean keepGoing = false;
