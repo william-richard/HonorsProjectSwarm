@@ -73,7 +73,6 @@ public class SurvivorPath {
 	}
 
 	public double getRealPathLength() {
-		//TODO DEBUG ME!!! GETTING ANSWERS THAT ARE WAY TOO HIGH
 		double realLength = 0.0;
 		//add the distances from the points between bots
 		Point2D curPoint, prevPoint;

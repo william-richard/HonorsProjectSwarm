@@ -291,7 +291,7 @@ public class World extends JFrame implements WindowListener {
 			dataWriter.newLine();
 			dataWriter.close();
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			System.out.println("IOException writing a datapoint");
 			e.printStackTrace();
 		}
 	}
