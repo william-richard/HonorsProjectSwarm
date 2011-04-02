@@ -13,7 +13,7 @@ import zones.Zone;
 public class SurvivorPath {
 
 	//TODO remove "point" terminology from this class
-
+	
 	private static final long serialVersionUID = 269945074800423928L;
 	private static final DecimalFormat df = new DecimalFormat("#.#####");
 

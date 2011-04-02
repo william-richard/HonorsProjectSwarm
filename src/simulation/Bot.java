@@ -1422,7 +1422,7 @@ public class Bot extends Rectangle2D.Double {
 			//firstly, don't switch to being a path marker if we're in a base zone
 			if(currentZone instanceof BaseZone) {
 				adjustRoleChangeProb(PATH_MARKER, false);
-				adjustRoleChangeProb(EXPLORER, true);
+				adjustRoleChangeProb(EXPLORER, .05);
 				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 			} else {
 				//see if we are near a path, and thus if we should be exploring the possibility of switching to being a path marker
@@ -1445,7 +1445,7 @@ public class Bot extends Rectangle2D.Double {
 					if(knownPathMarkers.size() == 0) {
 						adjustRoleChangeProb(PATH_MARKER, true);
 						adjustRoleChangeProb(EXPLORER, false);
-						adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, -.05);
 					} else {
 						//find the average distance between closest path marker neighbors
 						double distanceBtwnPathNeighborSum = 0.0;
@@ -1518,14 +1518,14 @@ public class Bot extends Rectangle2D.Double {
 						}
 					}
 					//if there are more normals that dangerouses, we should up our prob of becoming a dangerous explorer
-					if(normalCount > dangerCount) {
+					if(normalCount >= dangerCount) {
 						adjustRoleChangeProb(DANGEROUS_EXPLORER, .4);
 						adjustRoleChangeProb(EXPLORER, false);
 					} else {
 						//there are more dangerous than normal
 						//lower the chance than we become dangerous
-						adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
-						adjustRoleChangeProb(EXPLORER, true);
+						adjustRoleChangeProb(DANGEROUS_EXPLORER, -.05);
+						adjustRoleChangeProb(EXPLORER, .05);
 					}
 				} else {
 					//we can't see a dangerous zone
