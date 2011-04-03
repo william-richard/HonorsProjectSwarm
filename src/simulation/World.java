@@ -255,6 +255,7 @@ public class World extends JFrame implements WindowListener {
 		System.out.println("coverage sum = " + coverageMetricSum + "\tnum path markers = " + numPathMarkers);
 		//calculate the average value
 		double pathCoverage = ((double) coverageMetricSum) / numPathMarkers;
+		//FIXME make the bad value high and the good value low?
 		//scale it so that it goes from 1 to 1/10 of path quality vaules
 		//as a first approximation, setting this to be from 1 to 2
 		//as it goes from 0 to 1 currently, we just need to add 1

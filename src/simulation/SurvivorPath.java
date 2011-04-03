@@ -15,7 +15,7 @@ public class SurvivorPath {
 	//TODO remove "point" terminology from this class
 	
 	private static final long serialVersionUID = 269945074800423928L;
-	private static final DecimalFormat df = new DecimalFormat("#.#####");
+	private static final DecimalFormat df = new DecimalFormat("#.###");
 
 	private double pathLength;
 	private Survivor sur;
@@ -278,8 +278,7 @@ public class SurvivorPath {
 				return false;
 		} else if (!endPoint.equals(other.endPoint))
 			return false;
-		if (Double.doubleToLongBits(pathLength) != Double
-				.doubleToLongBits(other.pathLength))
+		if (! Utilities.shouldBeEqual(pathLength, other.pathLength))
 			return false;
 		if (pathWaypoints == null) {
 			if (other.pathWaypoints != null)

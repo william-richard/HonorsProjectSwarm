@@ -17,8 +17,7 @@ import zones.Zone;
 
 public class Utilities {
 
-	public final static double SMALL_EPSILON = .001;
-
+	public final static double SMALL_EPSILON = .00001;
 
 	//finds all shapes in the shapeList that intersect the base shape
 	public static List<? extends Shape> findAreaIntersectionsInList(Shape base, Collection<? extends Shape> shapeList) {		
@@ -303,6 +302,10 @@ public class Utilities {
 
 	public static boolean shouldEqualsZero(double d) {
 		return equalsWithin(d, 0.0, SMALL_EPSILON);
+	}
+	
+	public static boolean shouldBeEqual(double d1, double d2) {
+		return equalsWithin(d1, d2, SMALL_EPSILON);
 	}
 
 	public static Point2D getIntersectionPoint(Line2D l1, Line2D l2) {

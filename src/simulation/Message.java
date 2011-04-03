@@ -1,6 +1,8 @@
 package simulation;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Set;
 
 public class Message {
 
@@ -124,12 +126,18 @@ public class Message {
 				CLAIM_SURVIVOR_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + senderSurvivior.getCenterX() + " " + senderSurvivior.getCenterY() + " " + sender.getMySurvivorClaimTime() + "\n");
 	}
 
-	public static Message constructCreatePathsMessage(Bot sender, SurvivorPath pathToUse) {
+	public static Message constructCreatePathsMessage(Bot sender, Set<SurvivorPath> pathSet) {
 
 		ArrayList<Object> attachement = new ArrayList<Object>();
 		//copy it with the constructor to make sure there aren't any pointer issues
-		attachement.add(pathToUse);
+		attachement.add(pathSet);
 
 		return new Message(sender.getBotInfo(), CREATE_PATH_MESSAGE, sender.getID() + " " + World.getCurrentTimestep(), attachement);
+	}
+	
+	public static Message constructCreatePathsMessage(Bot sender, SurvivorPath pathToUse) {
+		Set<SurvivorPath> pathList = new HashSet<SurvivorPath>();
+		pathList.add(pathToUse);
+		return Message.constructCreatePathsMessage(sender, pathList);
 	}
 }

@@ -15,6 +15,7 @@ import java.util.ListIterator;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.Set;
+import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import util.Utilities;
@@ -46,7 +47,7 @@ public class Bot extends Rectangle2D.Double {
 	public static final double DEFAULT_MAX_VELOCITY = 4; //4 px = 8 m/s
 
 	public static final double IGNORE_PARTIAL_PATH_DISTANCE = DEFAULT_BROADCAST_RADIUS * 2;
-	
+
 	private final static Random NUM_GEN = new Random();
 
 	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
@@ -79,7 +80,7 @@ public class Bot extends Rectangle2D.Double {
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
 	private final static double DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH = 1.0;
-	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 25;
+	private final static int NUM_TIMESTEPS_BTWN_PATH_CREATION = 60;
 
 	private final static double DANGEROUS_EXPLORER_DANER_REDUCTION_FACTOR = 3.0;
 
@@ -369,6 +370,28 @@ public class Bot extends Rectangle2D.Double {
 
 		int locNum = 0, surFound = 0, surClaim = 0, createPath = 0;
 
+		//instead of dealing with path messages as they come in, deal with them all at once at the end
+		//keep track of what paths we have been told about in a list
+		ConcurrentSkipListSet<SurvivorPath> allPathsToldAbout = new ConcurrentSkipListSet<SurvivorPath>(new Comparator<SurvivorPath>() {
+			@Override
+			public int compare(SurvivorPath sp1, SurvivorPath sp2) {
+				//if one path is complete and the other is not, the complete path is less
+				//if they are both complete or both partial, the they are complared based on length
+				if( (sp1.isComplete() && sp2.isComplete()) || (!sp1.isComplete() && !sp2.isComplete()) ) {
+					//compare based on length
+					return sp1.getPathLength() < sp2.getPathLength() ? -1 : (sp1.getPathLength() > sp2.getPathLength() ? 1 : 0);
+				} else {
+					//one is complete and the other is not
+					//the complete one wins
+					if(sp1.isComplete()) {
+						return -1;
+					} else {
+						return 1;
+					}
+				}
+			}
+		});
+
 		Message mes;
 		while(! messageBuffer.isEmpty()) {
 			mes = messageBuffer.remove(0);
@@ -493,93 +516,9 @@ public class Bot extends Rectangle2D.Double {
 					print("Got path message " + mes);
 				}
 
-				//remove the survivor path attachment
-				//make a copy so that if it is incomplete and need to change it, we won't change it everywhere
-				SurvivorPath sp = new SurvivorPath((SurvivorPath) mes.getAttachment(0));
+				//get the set of paths off of the message, and add them all to our list to evaluate this timestep
+				allPathsToldAbout.addAll((Set<? extends SurvivorPath>) mes.getAttachment(0));
 
-				//see how it compares to what path we know of that is best for this survivor
-				Message passOnMessage = null;
-				try {
-					if(sp.isComplete()) {
-						//since it is complete, noone will ever change it ever again
-						//we can reference it directly
-						sp = (SurvivorPath) mes.getAttachment(0);
-						//if it is complete, see if we have a complete path to this survivor already
-						SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(sp.getSur());
-
-						if(knownPathToThisSurvivor != null) {
-							//see if the path we have is the same that we just got
-							if(knownPathToThisSurvivor.equals(sp)) {
-								//we know about this path already, and it is the best we've heard - don't rebroadcast
-							} else {
-								//the new path may be better or worse than the one we have - see which it is
-								if(knownPathToThisSurvivor.getPathLength() > sp.getPathLength()) {
-									//the new one is better is better
-									passOnMessage = mes;
-									bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
-								} else {
-									//our's is better
-									passOnMessage = Message.constructCreatePathsMessage(this, knownPathToThisSurvivor);
-								}
-							}
-						} else {
-							//we have not heard of this path before
-							//add it to our list, and pass on info about it
-							bestKnownCompletePaths.put(sp.getSur(), new SurvivorPath(sp));
-							passOnMessage = mes;
-						}
-					} else {
-						//the path we just got is not complete
-
-						//if we are too far from the line defined by the survivor location and the end point, ignore this path
-						LineSegment surEndSeg = sp.getSurEndSegment();
-						if(surEndSeg.ptSegDist(this.getCenterLocation()) > IGNORE_PARTIAL_PATH_DISTANCE) {
-							//we should ignore this partial path
-							continue;
-						}
-						
-						
-						
-						//make our changes to it, and pass it on if we are not a path marker
-						if(botMode == PATH_MARKER) {
-							//in this case, just pass on the incomplete path
-							passOnMessage = mes;
-						} else {
-							//first, make sure we have not already contributed to this path
-							//if we have, we should not do anything more with it
-							if(sp.getPoints().contains(this.getBotInfo())) {
-								continue;
-							}
-
-							//if we have a complete path to this survivor already
-							//and the complete path is shorter than this partial path
-							//then don't do anything more with it
-							//tell neighbors about better, complete path
-							if(bestKnownCompletePaths.containsKey(sp.getSur()) && bestKnownCompletePaths.get(sp.getSur()).getPathLength() < sp.getPathLength()) {
-								passOnMessage = Message.constructCreatePathsMessage(this, bestKnownCompletePaths.get(sp.getSur()));
-								continue;
-							}
-
-							//add our current location to the path
-							sp.addPoint(this.getBotInfo());
-							
-							//see if we are in the baseZone, i.e. if it should be complete
-							if(baseZone.contains(this.getCenterLocation())) {
-								sp.setNowComplete();
-							}
-
-							//broadcast our version of the path
-							passOnMessage = Message.constructCreatePathsMessage(this, sp);
-						}
-					}
-				} finally {
-					if(passOnMessage != null) {
-						if(MESSAGE_BOT_DEBUG) {
-							print("Passing on a path : " + passOnMessage);
-						}
-						broadcastMessage(passOnMessage);
-					}
-				}
 			} else {
 				continue; // this else matches up to figuring out what message type we have
 			}
@@ -589,6 +528,106 @@ public class Bot extends Rectangle2D.Double {
 		// once we are done reading, we should clear the buffer
 		//the way we're doing it now (removing each message) should do that, but just make sure.
 		messageBuffer.clear();
+
+
+		//now we can go through and process all the paths we got this timestep
+		Set<SurvivorPath> pathsToPassOn = new HashSet<SurvivorPath>();
+		
+		int numPathToldAbout = allPathsToldAbout.size();
+		if(numPathToldAbout > 0) {
+			print("Starting to evaluate " + numPathToldAbout + " paths");
+		}
+
+		//go through each path of the ones we have been told about in order
+		SurvivorPath curPath;
+		while( (curPath = allPathsToldAbout.pollFirst()) != null) {
+			//see how it compares to what path we know of that is best for this survivor
+			if(curPath.isComplete()) {
+				//since it is complete, no one will ever change it ever again
+				//we can reference it directly, i.e. we don't have to make a copy of it before we pass it on or store it
+
+				//we may also assume that we will process better complete paths first, since allPathsToldAbout is sorted
+				//thus, we should only be passing on the best complete path to a survivor we were either told about this timestep or we knew before this timestep
+				//in other words, we should never ever pass on 2 paths to the same survivor
+
+				//if it is complete, see if we have a complete path to this survivor already
+				SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(curPath.getSur());
+
+				if(knownPathToThisSurvivor != null) {
+					//see if the path we have is the same that we just got
+					if(knownPathToThisSurvivor.equals(curPath)) {
+						//we know about this path already, and it is the best we've heard - don't rebroadcast
+					} else {
+						//the new path may be better or worse than the one we have - see which it is
+						if(knownPathToThisSurvivor.getPathLength() > curPath.getPathLength()) {
+							//the new one is better is better
+							pathsToPassOn.add(curPath);
+							bestKnownCompletePaths.put(curPath.getSur(), curPath);
+						} else {
+							//our's is better
+							//tell our neighbors about it
+							pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
+						}
+					}
+				} else {
+					//we have not heard of this path before
+					//add it to our list, and pass on info about it
+					//since it is complete, we dont' need to copy it
+					bestKnownCompletePaths.put(curPath.getSur(), curPath);
+					pathsToPassOn.add(curPath);
+				}
+			} else {
+				//the path we just got is not complete
+				//***make sure we pass on copies of the current path
+				curPath = new SurvivorPath(curPath);
+
+				//TODO put this back in?
+				//if we are too far from the line defined by the survivor location and the end point, ignore this path
+				LineSegment surEndSeg = curPath.getSurEndSegment();
+				if(surEndSeg.ptSegDist(this.getCenterLocation()) > IGNORE_PARTIAL_PATH_DISTANCE) {
+					//we should ignore this partial path
+					continue;
+				}
+
+				//make our changes to it, and pass it on if we are not a path marker
+				if(botMode == PATH_MARKER) {
+					//in this case, just pass on the incomplete path
+					pathsToPassOn.add(curPath);
+				} else {
+					//first, make sure we have not already contributed to this path
+					//if we have, we should not do anything more with it
+					if(curPath.getPoints().contains(this.getBotInfo())) {
+						continue;
+					}
+
+					//if we have a complete path to this survivor already
+					//and the complete path is shorter than this partial path
+					//then don't do anything more with it
+					//tell neighbors about better, complete path
+					if(bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getPathLength() < curPath.getPathLength()) {
+						pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
+						continue;
+					}
+
+					//make a copy of the current path, so we don't 
+					//add our current location to the path
+					curPath.addPoint(this.getBotInfo());
+
+					//see if we are in the baseZone, i.e. if it should be complete
+					if(baseZone.contains(this.getCenterLocation())) {
+						curPath.setNowComplete();
+					}
+
+					//broadcast our version of the path
+					pathsToPassOn.add(curPath);
+				}
+			}
+		}
+
+		//if we have any paths to pass on, pass them on
+		if(pathsToPassOn.size() > 0) {
+			broadcastMessage(Message.constructCreatePathsMessage(this, pathsToPassOn));
+		}
 
 		if(MESSAGE_BOT_DEBUG) {
 			print("Message totals: loc = "+ locNum + " found = " + surFound + " claim = " + surClaim + " path = " + createPath);
@@ -1372,9 +1411,9 @@ public class Bot extends Rectangle2D.Double {
 		double avgDistToNeighbors = getAvgDistToClosestPathNeighbors(2);
 		if(avgDistToNeighbors < 0) return false;
 		boolean isDensityAcceptable = (avgDistToNeighbors <= PATH_MARK_IDEAL_DIST * 1.2) && (avgDistToNeighbors >= PATH_MARK_IDEAL_DIST * .8);
-//		if(isDensityAcceptable) {
-//			print("I HAVE ACCEPTABLE DENSITY");
-//		}
+		//		if(isDensityAcceptable) {
+		//			print("I HAVE ACCEPTABLE DENSITY");
+		//		}
 		return isDensityAcceptable;
 	}	
 
