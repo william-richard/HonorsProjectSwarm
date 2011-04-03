@@ -532,7 +532,7 @@ public class Bot extends Rectangle2D.Double {
 
 		//now we can go through and process all the paths we got this timestep
 		Set<SurvivorPath> pathsToPassOn = new HashSet<SurvivorPath>();
-		
+
 		int numPathToldAbout = allPathsToldAbout.size();
 		if(numPathToldAbout > 0) {
 			print("Starting to evaluate " + numPathToldAbout + " paths");
@@ -616,6 +616,20 @@ public class Bot extends Rectangle2D.Double {
 					//see if we are in the baseZone, i.e. if it should be complete
 					if(baseZone.contains(this.getCenterLocation())) {
 						curPath.setNowComplete();
+						//see how it compares to the complete path we have stored for this survivor - if it is worse, don't pass it on
+						//if it is better, store it and pass it on
+						if(bestKnownCompletePaths.containsKey(curPath.getSur())) {
+							//we have a path to this survivor
+							SurvivorPath previouslyKnownPath = bestKnownCompletePaths.get(curPath.getSur());
+							if(previouslyKnownPath.getPathLength() < curPath.getPathLength()) {
+								//the path we had is better
+								//don't pass on the new complete path
+								continue;
+							} else {
+								//the new path is better - store it
+								bestKnownCompletePaths.put(curPath.getSur(), curPath);
+							}
+						}
 					}
 
 					//broadcast our version of the path
