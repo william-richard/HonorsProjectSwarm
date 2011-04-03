@@ -122,7 +122,7 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	private LinkedList<HashSet<Message>> alreadyBroadcastedMessages; //TODO make this keep only the messages sent in the last x timesteps
+	private LinkedList<HashSet<Message>> alreadyBroadcastedMessages;
 	private int botID;
 	// zones it is in
 	private Zone baseZone; // the home base zones.
@@ -487,10 +487,7 @@ public class Bot extends Rectangle2D.Double {
 					broadcastMessage(mes);
 				}
 			} else if(messageType.equals(Message.CREATE_PATH_MESSAGE)) {
-				createPath++;
-				
-				//TODO ignore partrtail paths if I am too far away from startpoint-endpoint line
-				
+				createPath++;				
 
 				if(MESSAGE_BOT_DEBUG) {
 					print("Got path message " + mes);

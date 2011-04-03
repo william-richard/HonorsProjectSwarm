@@ -214,7 +214,6 @@ public class World extends JFrame implements WindowListener {
 
 		//now we should have all the best paths known by any bot to each survivor
 		//get the length of each of these paths, and compare them to the optimal lengths computed by Dijkstra's
-		//TODO DON'T TRUST BOTS' CALCULATION - THEY ARE possibly wrong, causing scores better than 1
 		HashMap<Survivor, Double> realPathLengths = new HashMap<Survivor, Double>(bestCompletePaths.size());
 		for(Survivor sur : bestCompletePaths.keySet()) {
 			//get the path that the bots thing is best
@@ -340,7 +339,6 @@ public class World extends JFrame implements WindowListener {
 		for(int i = 1; i < ZONE_COMPLEXITY; i++) {
 			do {
 				//make a random point
-				//TODO don't allow new points if they are too close to BASE_ZONE_LOC
 				curPoint = new Point((int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxX()-BOUNDING_BOX.getMinX())) + BOUNDING_BOX.getMinX()),
 						(int) (RANDOM_GENERATOR.nextInt((int) (BOUNDING_BOX.getMaxY()-BOUNDING_BOX.getMinY())) + BOUNDING_BOX.getMinY()));
 			} while(allPointsToAdd.contains(curPoint) || curPoint.distance(BASE_ZONE_LOC) < BASE_ZONE_BUFFER);
