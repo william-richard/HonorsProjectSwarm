@@ -1438,9 +1438,9 @@ public class Bot extends Rectangle2D.Double {
 		double avgDistToNeighbors = getAvgDistToClosestPathNeighbors(2);
 		if(avgDistToNeighbors < 0) return false;
 		boolean isDensityAcceptable = (avgDistToNeighbors <= PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST) && (avgDistToNeighbors >= PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST);
-		if(isDensityAcceptable) {
-			print("I HAVE ACCEPTABLE DENSITY");
-		}
+//		if(isDensityAcceptable) {
+//			print("I HAVE ACCEPTABLE DENSITY");
+//		}
 		return isDensityAcceptable;
 	}	
 	
@@ -1530,17 +1530,13 @@ public class Bot extends Rectangle2D.Double {
 						}
 
 						double avgDistBtwnPathNeighbors = distanceBtwnPathNeighborSum / knownPathMarkers.size();
-
-						print("Calculated avg distance btwn path markesr = " + avgDistBtwnPathNeighbors);
 						
 						if(avgDistBtwnPathNeighbors > PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST) {
-							print("Should become a path maker");
 							//they need more path makers
 							adjustRoleChangeProb(PATH_MARKER, .2);
 							adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 							adjustRoleChangeProb(EXPLORER, false);
 						} else if (avgDistBtwnPathNeighbors < PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST) {
-							print("No path markers needed");
 							//they don't need as many path makers
 							adjustRoleChangeProb(PATH_MARKER, false);
 						}
@@ -1620,13 +1616,11 @@ public class Bot extends Rectangle2D.Double {
 				//we have at least 1 neighboring path marker
 				//depending on if the average distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
 				if(avgNeiDist > PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST) {
-					print("Desity acceptable or too low");
 					//we want to stay a path marker
 					adjustRoleChangeProb(PATH_MARKER, true);
 					adjustRoleChangeProb(EXPLORER, false);
 					adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 				} else {
-					print("Density too high");
 					//there are too many path markers
 					adjustRoleChangeProb(PATH_MARKER, -.05);
 					adjustRoleChangeProb(EXPLORER, .05);
@@ -1679,7 +1673,7 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
-		print(oldMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + botMode);
+//		print(oldMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + botMode);
 	}
 
 	private void print(String message) {
