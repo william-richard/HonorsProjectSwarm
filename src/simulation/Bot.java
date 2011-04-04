@@ -582,59 +582,61 @@ public class Bot extends Rectangle2D.Double {
 				curPath = new SurvivorPath(curPath);
 
 				//TODO put this back in?
-				//if we are too far from the line defined by the survivor location and the end point, ignore this path
-				LineSegment surEndSeg = curPath.getSurEndSegment();
-				if(surEndSeg.ptSegDist(this.getCenterLocation()) > IGNORE_PARTIAL_PATH_DISTANCE) {
-					//we should ignore this partial path
+				//				//if we are too far from the line defined by the survivor location and the end point, ignore this path
+				//				LineSegment surEndSeg = curPath.getSurEndSegment();
+				//				if(surEndSeg.ptSegDist(this.getCenterLocation()) > IGNORE_PARTIAL_PATH_DISTANCE) {
+				//					//we should ignore this partial path
+				//					continue;
+				//				}
+
+				//if we have a complete path to this survivor already
+				//and the complete path is shorter than this partial path
+				//then don't do anything more with it
+				//tell neighbors about better, complete path
+				if(bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getPathLength() < curPath.getPathLength()) {
+					pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
 					continue;
 				}
 
 				//make our changes to it, and pass it on if we are not a path marker
-				if(botMode == PATH_MARKER) {
-					//in this case, just pass on the incomplete path
-					pathsToPassOn.add(curPath);
-				} else {
-					//first, make sure we have not already contributed to this path
-					//if we have, we should not do anything more with it
-					if(curPath.getPoints().contains(this.getBotInfo())) {
-						continue;
-					}
+				//				if(botMode == PATH_MARKER) {
+				//					//in this case, just pass on the incomplete path
+				//					pathsToPassOn.add(curPath);
+				//					continue;
+				//				} 
 
-					//if we have a complete path to this survivor already
-					//and the complete path is shorter than this partial path
-					//then don't do anything more with it
-					//tell neighbors about better, complete path
-					if(bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getPathLength() < curPath.getPathLength()) {
-						pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
-						continue;
-					}
+				//make sure we have not already contributed to this path
+				//if we have, we should not do anything more with it
+				if(curPath.getPoints().contains(this.getBotInfo())) {
+					continue;
+				}
 
-					//make a copy of the current path, so we don't 
-					//add our current location to the path
-					curPath.addPoint(this.getBotInfo());
+				//make a copy of the current path, so we don't 
+				//add our current location to the path
+				curPath.addPoint(this.getBotInfo());
 
-					//see if we are in the baseZone, i.e. if it should be complete
-					if(baseZone.contains(this.getCenterLocation())) {
-						curPath.setNowComplete();
-						//see how it compares to the complete path we have stored for this survivor - if it is worse, don't pass it on
-						//if it is better, store it and pass it on
-						if(bestKnownCompletePaths.containsKey(curPath.getSur())) {
-							//we have a path to this survivor
-							SurvivorPath previouslyKnownPath = bestKnownCompletePaths.get(curPath.getSur());
-							if(previouslyKnownPath.getPathLength() < curPath.getPathLength()) {
-								//the path we had is better
-								//don't pass on the new complete path
-								continue;
-							} else {
-								//the new path is better - store it
-								bestKnownCompletePaths.put(curPath.getSur(), curPath);
-							}
+				//see if we are in the baseZone, i.e. if it should be complete
+				if(baseZone.contains(this.getCenterLocation())) {
+					curPath.setNowComplete();
+					//see how it compares to the complete path we have stored for this survivor - if it is worse, don't pass it on
+					//if it is better, store it and pass it on
+					if(bestKnownCompletePaths.containsKey(curPath.getSur())) {
+						//we have a path to this survivor
+						SurvivorPath previouslyKnownPath = bestKnownCompletePaths.get(curPath.getSur());
+						if(previouslyKnownPath.getPathLength() < curPath.getPathLength()) {
+							//the path we had is better
+							//don't pass on the new complete path
+							continue;
+						} else {
+							//the new path is better - store it
+							bestKnownCompletePaths.put(curPath.getSur(), curPath);
 						}
 					}
-
-					//broadcast our version of the path
-					pathsToPassOn.add(curPath);
 				}
+
+				//broadcast our version of the path
+				pathsToPassOn.add(curPath);
+
 			}
 		}
 
@@ -1210,6 +1212,7 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
+		//FIXME bots are reclaiming survivors away from already claimed survivors
 		// we now know what survivors we have found
 		// evaluate each of them in turn
 		for (Survivor s : foundSurvivors) {
@@ -1573,9 +1576,11 @@ public class Bot extends Rectangle2D.Double {
 						adjustRoleChangeProb(EXPLORER, false);
 					} else {
 						//there are more dangerous than normal
-						//lower the chance than we become dangerous
-						adjustRoleChangeProb(DANGEROUS_EXPLORER, -.05);
-						adjustRoleChangeProb(EXPLORER, .05);
+						//don't do anything
+
+						//						//lower the chance than we become dangerous
+						//						adjustRoleChangeProb(DANGEROUS_EXPLORER, -.05);
+						//						adjustRoleChangeProb(EXPLORER, .05);
 					}
 				} else {
 					//we can't see a dangerous zone
