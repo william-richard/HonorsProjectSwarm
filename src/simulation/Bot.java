@@ -72,10 +72,11 @@ public class Bot extends Rectangle2D.Double {
 	public static int timestepNumBotOnPaths;
 
 	//order the role values in the order of importance, so that the more important roles win ties
-	public final static int PATH_MARKER = 						0;	
+	public final static int WAITING_FOR_ACTIVATION = 			0;
 	public final static int EXPLORER = 							1;
 	public final static int DANGEROUS_EXPLORER = 				2;
-	public final static int WAITING_FOR_ACTIVATION = 			3;
+	public final static int PATH_MARKER = 						3;	
+
 
 	private final static double TURNED_ON_THIS_TIMESTEP_PROB = .02;
 
@@ -533,9 +534,11 @@ public class Bot extends Rectangle2D.Double {
 		//now we can go through and process all the paths we got this timestep
 		Set<SurvivorPath> pathsToPassOn = new HashSet<SurvivorPath>();
 
-		int numPathToldAbout = allPathsToldAbout.size();
-		if(numPathToldAbout > 0) {
-			print("Starting to evaluate " + numPathToldAbout + " paths");
+		if(MESSAGE_BOT_DEBUG) {
+			int numPathToldAbout = allPathsToldAbout.size();
+			if(numPathToldAbout > 0) {
+				print("Starting to evaluate " + numPathToldAbout + " paths");
+			}
 		}
 
 		//go through each path of the ones we have been told about in order
@@ -1457,12 +1460,13 @@ public class Bot extends Rectangle2D.Double {
 			throw new IndexOutOfBoundsException();
 		}
 
+		//want to make it go from 0 (inclusive) to 1 (exclusive) b/c that's what Random.nextDouble does
 		roleChangeProbabilites[index] += incrementAmt;
 		if(roleChangeProbabilites[index] < 0.0) {
 			roleChangeProbabilites[index] = 0.0;
 		}
-		if(roleChangeProbabilites[index] > 1.0) {
-			roleChangeProbabilites[index] = 1.0;
+		if(roleChangeProbabilites[index] >= 1.0) {
+			roleChangeProbabilites[index] = .99999;
 		}
 	}
 
@@ -1471,6 +1475,17 @@ public class Bot extends Rectangle2D.Double {
 		//first, adjust the probabilities
 		//if we're some sort of explorer, adjust the probability that we should become a path marker
 		SurvivorPath closestPath = null;
+		//see if we are near a path, and thus if we should be exploring the possibility of switching to being a path marker
+		double minPathDistance = java.lang.Double.MAX_VALUE;
+
+		for(SurvivorPath potentialPathToMark : bestKnownCompletePaths.values()) {
+			double distToCurPath = potentialPathToMark.ptPathDist(this.getCenterLocation());
+			if(distToCurPath < minPathDistance) {
+				minPathDistance = distToCurPath;
+				closestPath = potentialPathToMark;
+			}
+		}
+
 		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 			//firstly, don't switch to being a path marker if we're in a base zone
 			if(currentZone instanceof BaseZone) {
@@ -1478,17 +1493,6 @@ public class Bot extends Rectangle2D.Double {
 				adjustRoleChangeProb(EXPLORER, .05);
 				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 			} else {
-				//see if we are near a path, and thus if we should be exploring the possibility of switching to being a path marker
-				double minPathDistance = java.lang.Double.MAX_VALUE;
-
-				for(SurvivorPath potentialPathToMark : bestKnownCompletePaths.values()) {
-					double distToCurPath = potentialPathToMark.ptPathDist(this.getCenterLocation());
-					if(distToCurPath < minPathDistance) {
-						minPathDistance = distToCurPath;
-						closestPath = potentialPathToMark;
-					}
-				}
-
 				//see if we are close enough to this path
 				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST) {
 					//see how the path coverage is
@@ -1535,6 +1539,7 @@ public class Bot extends Rectangle2D.Double {
 				}
 			}
 		}
+		
 		//if we're a normal explorer, adjust the probability that we become a dangerous explorer
 		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 			if(currentZone instanceof DangerZone) {
@@ -1619,6 +1624,8 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
+		int oldMode = botMode;
+
 		//first, do the probability check for activation
 		if(botMode == WAITING_FOR_ACTIVATION) {
 			if(NUM_GEN.nextDouble() <= roleChangeProbabilites[EXPLORER]) {
@@ -1631,6 +1638,14 @@ public class Bot extends Rectangle2D.Double {
 		else if(closestPath != null && mySurvivor == null && NUM_GEN.nextDouble() <= roleChangeProbabilites[PATH_MARKER]) {
 			//we should become /stay a path marker
 			myPathToMark = closestPath;
+			//			if(botMode != PATH_MARKER) {
+			//				//we are switching to becoming a path marker
+			//				//lower the chance that we will then oscillate back to being some sort of EXPLORER
+			//				adjustRoleChangeProb(EXPLORER, -.5);
+			//				adjustRoleChangeProb(DANGEROUS_EXPLORER, -.5);
+			//				//also raise the chance that we will become a path marker, so we at least stay one for a bit
+			//				adjustRoleChangeProb(PATH_MARKER, .5);
+			//			}
 			botMode = PATH_MARKER;
 		} else {
 			//we should not be a path marker right now
@@ -1641,6 +1656,10 @@ public class Bot extends Rectangle2D.Double {
 				//otherwise, we should look at the probabilities of becoming a normal or dangerous explorer
 				//look at the higher probability
 				int higherProbIndex = roleChangeProbabilites[EXPLORER] > roleChangeProbabilites[DANGEROUS_EXPLORER] ? EXPLORER : DANGEROUS_EXPLORER;
+				//if we have just changed to being a Dangerous explorer, lower the chance we will switch back to being a normal explorer
+				if(botMode == EXPLORER && higherProbIndex == DANGEROUS_EXPLORER) {
+					adjustRoleChangeProb(EXPLORER, -.5);
+				}
 				if(NUM_GEN.nextDouble() <= roleChangeProbabilites[higherProbIndex]) {
 					botMode = higherProbIndex;
 				} else {
@@ -1648,6 +1667,8 @@ public class Bot extends Rectangle2D.Double {
 				}
 			}
 		}
+
+		print(oldMode + "\t" + Arrays.toString(roleChangeProbabilites) + "\t" + botMode);
 	}
 
 	private void print(String message) {
