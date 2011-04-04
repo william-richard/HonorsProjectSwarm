@@ -66,6 +66,8 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private final String timeBetweenTimestepsString = "Time between timesteps (seconds) :";
 	private final String drawBotRadiiString = "Draw bot radii: ";	
 	
+	//TODO add a field that highlights a certain bot num
+	
 	public SimulationController() {
 		super("Simulation Controller");
 
