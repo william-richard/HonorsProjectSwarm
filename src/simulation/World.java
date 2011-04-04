@@ -247,7 +247,8 @@ public class World extends JFrame implements WindowListener {
 		int numPathMarkers = 0;
 		for(Bot b : allBots) {
 			if(b.getBotMode() == Bot.PATH_MARKER) {
-				coverageMetricSum += b.isPathDensityAcceptable() ? 1 : 0;
+				//bad is high, good is low
+				coverageMetricSum += b.isPathDensityAcceptable() ? 0 : 1;
 				numPathMarkers++;
 			}
 		}
@@ -255,10 +256,10 @@ public class World extends JFrame implements WindowListener {
 		System.out.println("coverage sum = " + coverageMetricSum + "\tnum path markers = " + numPathMarkers);
 		//calculate the average value
 		double pathCoverage = ((double) coverageMetricSum) / numPathMarkers;
-		//FIXME make the bad value high and the good value low?
 		//scale it so that it goes from 1 to 1/10 of path quality vaules
-		//as a first approximation, setting this to be from 1 to 2
-		//as it goes from 0 to 1 currently, we just need to add 1
+		//as a first approximation, setting this to be from 1 to 1.5
+		//as it goes from 0 to 1 currently, we just need to multiply by .5 and add 1
+		pathCoverage *= .5;
 		pathCoverage += 1.0;
 		if(Double.isInfinite(pathCoverage) || Double.isNaN(pathCoverage)) {
 			return 0.0;
@@ -600,12 +601,20 @@ public class World extends JFrame implements WindowListener {
 		for(Survivor curSur : allSurvivors) {
 			//get the DPixel for this survivor
 			DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
-			//draw the first line
+			//draw the first line and it's endpoints
 			g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
+			//make a rectangle for each endpoint
+			double ptWidth = 4, ptHeight = 4;
+			Rectangle2D endpt = new Rectangle2D.Double(curSur.getCenterX() - (ptWidth/2), curSur.getCenterY() - (ptHeight/2), ptWidth, ptHeight);
+			g2d.fill(endpt);
 			while(curSurPix.getPrevious() != null) {
+				//draw subsequent lines and the endpoint
+				//need only draw 1 endpoint, because we'll draw the other endpoint in the next iteration
 				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
+				endpt.setRect(curSurPix.getX() - (ptWidth / 2), curSurPix.getY() - (ptHeight/2), ptWidth, ptHeight);
+				g2d.fill(endpt);
 				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
-			}			
+			}
 		}
 
 		//paint all the survivor paths
