@@ -138,17 +138,22 @@ public class Dijkstras {
 			if(sourcePix == null) {
 				//need to make it and add it for the first time
 				sourcePix = new DPixel(source);
-				//add all the neighbors of the basezone to that pixel
+//				//add all the neighbors of the basezone to that pixel
+//				Zone sourceZone = World.findZone(source);
+//				List<Zone> sourceNeighbors = sourceZone.getNeighbors();
+//				for(Zone neighbor : sourceNeighbors) {
+//					sourcePix.addParentZone(new Integer(neighbor.getID()));
+//				}
+				//add the zone that contains the source as the only parent zone of that pixel
 				Zone sourceZone = World.findZone(source);
-				List<Zone> sourceNeighbors = sourceZone.getNeighbors();
-				for(Zone neighbor : sourceNeighbors) {
-					sourcePix.addParentZone(new Integer(neighbor.getID()));
-				}
+				sourcePix.addParentZone(new Integer(sourceZone.getID()));
 
 				pixels.add(sourcePix);
-				//add it to the nodes and the heap
+				//add it to the nodes list and the heap
 				FibonacciHeapNode<DPixel> newNode = new FibonacciHeapNode<DPixel>(sourcePix);
 				nodes.add(newNode);
+				//don't add it to the nodes organized by zone, so we don't have paths going through it
+				//insert it into the heap with distance 0, because it is the source
 				heap.insert(newNode, 0.0);		
 			}
 			
