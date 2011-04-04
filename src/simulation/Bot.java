@@ -96,6 +96,9 @@ public class Bot extends Rectangle2D.Double {
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
 	private final double PATH_MARK_FACTOR = 50;
 
+	private final double PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * 1.2;
+	private final double PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * .8;
+	
 	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 3;
 
 	private boolean OVERALL_BOT_DEBUG = true;
@@ -1303,6 +1306,10 @@ public class Bot extends Rectangle2D.Double {
 		LinkedList<BotInfo> closetNeighbors = new LinkedList<BotInfo>();
 
 		for(BotInfo curNeighbor : pathNeighbors) {
+			if(curNeighbor.equals(toThisBot)) {
+				continue;
+			}
+			
 			closetNeighbors.add(curNeighbor);
 
 			if(closetNeighbors.size() > numNeighbors) {
@@ -1430,13 +1437,13 @@ public class Bot extends Rectangle2D.Double {
 	public boolean isPathDensityAcceptable() {
 		double avgDistToNeighbors = getAvgDistToClosestPathNeighbors(2);
 		if(avgDistToNeighbors < 0) return false;
-		boolean isDensityAcceptable = (avgDistToNeighbors <= PATH_MARK_IDEAL_DIST * 1.2) && (avgDistToNeighbors >= PATH_MARK_IDEAL_DIST * .8);
-		//		if(isDensityAcceptable) {
-		//			print("I HAVE ACCEPTABLE DENSITY");
-		//		}
+		boolean isDensityAcceptable = (avgDistToNeighbors <= PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST) && (avgDistToNeighbors >= PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST);
+		if(isDensityAcceptable) {
+			print("I HAVE ACCEPTABLE DENSITY");
+		}
 		return isDensityAcceptable;
 	}	
-
+	
 	private void handlePathDensity() {
 		//		//see what the average distance to neighboring bots on path is
 		//		double avgDist = getAvgDistFromPathNeighbors();
@@ -1490,8 +1497,6 @@ public class Bot extends Rectangle2D.Double {
 			//firstly, don't switch to being a path marker if we're in a base zone
 			if(currentZone instanceof BaseZone) {
 				adjustRoleChangeProb(PATH_MARKER, false);
-				adjustRoleChangeProb(EXPLORER, .05);
-				adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 			} else {
 				//see if we are close enough to this path
 				if(minPathDistance < SHOULD_MARK_PATH_THRESHOLD_DIST) {
@@ -1526,12 +1531,16 @@ public class Bot extends Rectangle2D.Double {
 
 						double avgDistBtwnPathNeighbors = distanceBtwnPathNeighborSum / knownPathMarkers.size();
 
-						if(avgDistBtwnPathNeighbors > PATH_MARK_IDEAL_DIST) {
+						print("Calculated avg distance btwn path markesr = " + avgDistBtwnPathNeighbors);
+						
+						if(avgDistBtwnPathNeighbors > PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST) {
+							print("Should become a path maker");
 							//they need more path makers
 							adjustRoleChangeProb(PATH_MARKER, .2);
 							adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 							adjustRoleChangeProb(EXPLORER, false);
-						} else {
+						} else if (avgDistBtwnPathNeighbors < PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST) {
+							print("No path markers needed");
 							//they don't need as many path makers
 							adjustRoleChangeProb(PATH_MARKER, false);
 						}
@@ -1539,7 +1548,7 @@ public class Bot extends Rectangle2D.Double {
 				}
 			}
 		}
-		
+
 		//if we're a normal explorer, adjust the probability that we become a dangerous explorer
 		if(botMode == EXPLORER || botMode == DANGEROUS_EXPLORER) {
 			if(currentZone instanceof DangerZone) {
@@ -1610,12 +1619,14 @@ public class Bot extends Rectangle2D.Double {
 			} else {
 				//we have at least 1 neighboring path marker
 				//depending on if the average distance is greater than or less than the ideal distance, we want to increase or decrease or chance of becoming an explorer
-				if(isPathDensityAcceptable() || avgNeiDist > PATH_MARK_IDEAL_DIST) {
+				if(avgNeiDist > PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST) {
+					print("Desity acceptable or too low");
 					//we want to stay a path marker
 					adjustRoleChangeProb(PATH_MARKER, true);
 					adjustRoleChangeProb(EXPLORER, false);
 					adjustRoleChangeProb(DANGEROUS_EXPLORER, false);
 				} else {
+					print("Density too high");
 					//there are too many path markers
 					adjustRoleChangeProb(PATH_MARKER, -.05);
 					adjustRoleChangeProb(EXPLORER, .05);
