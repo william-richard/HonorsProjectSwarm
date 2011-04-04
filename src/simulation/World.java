@@ -120,6 +120,8 @@ public class World extends JFrame implements WindowListener {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
+		
+		//FIXME Add ability to save a specific zone layout
 
 		//initialize the zones
 		allZones = new Hashtable<Integer, Zone>();
