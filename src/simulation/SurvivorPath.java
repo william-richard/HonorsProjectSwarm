@@ -192,6 +192,14 @@ public class SurvivorPath {
 		if(this.isComplete()) {
 			throw new IllegalAccessError("This path is complete - you cannot change it");
 		}
+		
+		//make sure the point we are adding isn't the same as the previous point added
+		BotInfo lastPointAdded = pathWaypoints.get(pathWaypoints.size()-1);
+		if(Utilities.shouldBeEqual(pointToAdd.getCenterX(), lastPointAdded.getCenterX()) &&
+				Utilities.shouldBeEqual(pointToAdd.getCenterY(), lastPointAdded.getCenterY())) {
+			//don't add the point
+			return;
+		}
 		//		//first, adjust the path length down, removing the distance from the previous last waypoint to the endpoint
 		//		BotInfo previousLast = pathWaypoints.get(pathWaypoints.size() - 1);
 		//		pathLength -= previousLast.getCenterLocation().distance(endPoint);
