@@ -589,14 +589,6 @@ public class World extends JFrame implements WindowListener {
 			g2d.draw(shoutIterator.next());
 		}
 
-		//draw all the survivors
-		g2d.setColor(SURVIVOR_COLOR);
-		while(allSurvivorSnapshot.hasNext()) {
-			Survivor curSur = allSurvivorSnapshot.next();
-
-			g2d.fill(curSur);
-		}
-
 		//draw optimal paths to all survivors
 		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
@@ -647,6 +639,14 @@ public class World extends JFrame implements WindowListener {
 
 		g2d.setStroke(new BasicStroke());
 
+		//draw all the survivors
+		g2d.setColor(SURVIVOR_COLOR);
+		while(allSurvivorSnapshot.hasNext()) {
+			Survivor curSur = allSurvivorSnapshot.next();
+
+			g2d.fill(curSur);
+		}
+		
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {
