@@ -1,6 +1,7 @@
 package simulation;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.Point2D.Double;
 
 import zones.Zone;
 
@@ -13,6 +14,7 @@ public class Survivor extends Rectangle2D.Double {
 	 **************************************************************************/
 	private final int DIMENSION = 6; //survivors are squares really, so they only need 1 dimension.
 	private final double SHOUT_PROB = .75; //The probability that survivors will shout
+	private final Point2D CENTER_LOCATION;
 
 	/***************************************************************************
 	 * VARIABLES
@@ -36,6 +38,10 @@ public class Survivor extends Rectangle2D.Double {
 		//store the damage of this survivor
 		damage = _damage;
 
+		//recreating the center location is taking up a lot of space
+		//calculate once and store
+		CENTER_LOCATION = new Point2D.Double(this.getCenterX(), this.getCenterY());
+		
 		//store the zones that we're in
 		currentZone = World.findZone(getCenterLocation());
 	}
@@ -47,7 +53,7 @@ public class Survivor extends Rectangle2D.Double {
 		return damage;
 	}
 	public Point2D getCenterLocation() {
-		return new Point2D.Double(getCenterX(), getCenterY());
+		return CENTER_LOCATION;
 	}
 
 
