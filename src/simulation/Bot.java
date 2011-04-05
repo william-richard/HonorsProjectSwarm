@@ -257,6 +257,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public BotInfo getBotInfo() {
+		//TODO maybe find a way to create this once per timestep to save memory
 		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode, currentZone.getPathWeightPerPixel());
 	}
 
