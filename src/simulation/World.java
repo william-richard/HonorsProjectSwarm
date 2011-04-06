@@ -122,7 +122,7 @@ public class World extends JFrame implements WindowListener {
 		this(40, 2, 5000, false);
 	}
 
-	//FIXME Add ability to save a specific zone layout
+	//FIXME Also need to save survivors
 	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii, File zoneDir) {
 		super("Swarm Simualtion");
 

@@ -1479,7 +1479,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	private void reevaluateBotMode() {	
-		//FIXME need to make more regular explorers become dangerous explorers
+		//FIXME Path markers are not doing very well still
 		//first, adjust the probabilities
 		//if we're some sort of explorer, adjust the probability that we should become a path marker
 		SurvivorPath closestPath = null;
