@@ -15,8 +15,14 @@ import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileFilter;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -84,7 +90,7 @@ public class World extends JFrame implements WindowListener {
 
 
 	private static final String DATA_FILENAME = "data.txt";
-	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM.dd.yy-HH;mm;ss");
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM,dd,yy-HH;mm;ss");
 	private static final DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#.####");
 
 	/** VARIABLES */
@@ -116,29 +122,101 @@ public class World extends JFrame implements WindowListener {
 		this(40, 2, 5000, false);
 	}
 
+	//FIXME Add ability to save a specific zone layout
+	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii, File zoneDir) {
+		super("Swarm Simualtion");
+
+		//check that the Zone file has the correct extension
+		if(! zoneDir.isDirectory()) {
+			throw new IllegalArgumentException("Passed File is not a directory");
+		}
+		//TODO check for zone files?
+
+		setupFrame();
+		initZones(zoneDir);
+		//TODO lots of repetition here - not so good, but unavoidable because zones need to be made before anything else
+		initBots(numBots);
+		initSurvivors(numSurvivors);
+		initMisc(_timeBetweenTimesteps, _drawBotRadii);
+
+	}
+
 	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii) {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
-		
-		//FIXME Add ability to save a specific zone layout
 
+		initZones();
+		initBots(numBots);
+		initSurvivors(numSurvivors);
+		initMisc(_timeBetweenTimesteps, _drawBotRadii);
+	}
+
+	private void setupFrame() {
+		setSize(FRAME_WIDTH, FRAME_HEIGHT);
+		setResizable(false);
+		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		setBackground(BACKGROUND_COLOR);
+	}
+
+	private void initZones(File zoneDir) {
+		allZones = new Hashtable<Integer, Zone>();
+		//for each file in the directory, if it has the correct extension, create a zone and add it to our Table
+		File[] zoneFileList = zoneDir.listFiles(new FileFilter() {	
+			@Override
+			public boolean accept(File pathname) {
+				return Zone.zoneFileExtensionFilter.accept(pathname);
+			}
+		});
+
+		for(File curZoneFile : zoneFileList) {
+			//deserealize the file, and add it to our table
+			ObjectInputStream zoneIn;
+			try {
+				zoneIn = new ObjectInputStream(new FileInputStream(curZoneFile));
+				//based on the file name, set the type
+				//look from the end of the file - the ID char should be the char before the . before the extension
+				char zoneTypeChar = curZoneFile.getName().charAt(curZoneFile.getName().length() - Zone.zoneFileExtensionFilter.getExtensions()[0].length() - 2);
+				Class<? extends Zone> zoneClass = Zone.decodeZoneTypeChar(zoneTypeChar);
+				Zone z = zoneClass.cast(zoneIn.readObject());
+				if(z instanceof BaseZone) {
+					homeBase = (BaseZone) z;
+				}
+				allZones.put(new Integer(z.getID()), z);
+				zoneIn.close();
+			} catch (FileNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
+
+	}
+
+	//init zones randomly
+	private void initZones() {
 		//initialize the zones
 		allZones = new Hashtable<Integer, Zone>();
 
 		//set them up using the Voronoi Algorithm
 		voronoiZones();
-		//		checkZoneSanity();
+	}
 
+	private void initBots(int numBots) {
 		//initialize the bots
 		allBots = new ArrayList<Bot>();
 
-		Rectangle2D startingZoneBoundingBox = homeBase.getBounds2D();
-
 		for(int i = 0; i < numBots; i++) {
-			allBots.add(new Bot(this, startingZoneBoundingBox.getCenterX(), startingZoneBoundingBox.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
+			allBots.add(new Bot(this, homeBase.getCenterX(), homeBase.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
 		}
+	}
 
+	private void initSurvivors(int numSurvivors) {
 		//initialize the survivors
 		allSurvivors = new ArrayList<Survivor>();
 		Survivor curSurvivor;
@@ -153,6 +231,11 @@ public class World extends JFrame implements WindowListener {
 			allSurvivors.add(curSurvivor);
 		}
 
+		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
+		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
+	}
+
+	private void initMisc(long _timeBetweenTimesteps, boolean _drawBotRadii) {
 		debugShapesToDraw = new ArrayList<Shape>();
 		debugSeperationVectors = new ArrayList<Shape>();
 		debugRepulsionVectors = new ArrayList<Shape>();
@@ -160,32 +243,37 @@ public class World extends JFrame implements WindowListener {
 		currentTimestep = 0;
 		setTimeBetweenTimesteps(_timeBetweenTimesteps);
 		setDrawBotRadii(_drawBotRadii);
-
-		//		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);
-		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
-		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
-	}
-
-	private void setupFrame() {
-		setSize(FRAME_WIDTH, FRAME_HEIGHT);
-		setResizable(false);
-		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
-		setBackground(BACKGROUND_COLOR);
 	}
 
 	private void setupFiles() {
+		System.out.println("Setting up files");
+		//FIXME have this point to <num sur>/<num bots>/<start time & date>/ - maybe add zone info hash somewhere
 		//make the directory for this run
-		dataDirectory = "data/" + DATE_FORMAT.format(firstStartTime) + "/";
-		new File(dataDirectory).mkdir();
+		dataDirectory = "data/" + allSurvivors.size() + "/" + allBots.size() + "/" + DATE_FORMAT.format(firstStartTime) + "/";
+		new File(dataDirectory).mkdirs();
 		//create the information about number of bots, survivors etc
 		try {
+			//write an info file about the number of bots and survivors, to start
 			BufferedWriter infoWriter = new BufferedWriter(new FileWriter(dataDirectory + "info.txt"));
 			infoWriter.write("bots = " + allBots.size());
 			infoWriter.newLine();
 			infoWriter.write("sur = " + allSurvivors.size());
 			infoWriter.newLine();
-			//TODO eventually, put map info here too?
 			infoWriter.close();
+
+			//write a folder with a file for each zone - serialize them
+			String zoneDirString = dataDirectory + "/zones/";
+			File zoneDirectoryFile = new File(zoneDirString);
+			zoneDirectoryFile.mkdir();
+			//write about each of the zones
+			//they should all be searializable
+			for(Integer curKey : allZones.keySet()) {
+				Zone curZone = allZones.get(curKey);
+				System.out.println("Writing zone " + curZone);
+				ObjectOutputStream zoneOut = new ObjectOutputStream(new FileOutputStream(zoneDirString + curKey + "_" + curZone.getZoneTypeChar() + "." + Zone.zoneFileExtensionFilter.getExtensions()[0]));
+				zoneOut.writeObject(curZone);
+				zoneOut.close();
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -647,7 +735,7 @@ public class World extends JFrame implements WindowListener {
 
 			g2d.fill(curSur);
 		}
-		
+
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
 		while(allBotSnapshot.hasNext()) {

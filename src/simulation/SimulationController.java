@@ -8,11 +8,13 @@ import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.io.File;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JFileChooser;
 import javax.swing.JFormattedTextField;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -36,7 +38,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private JButton runSimulationButton;;
 	private JButton stopSimulationButton;
 	private JButton resetSimulationButton;
-	
+
 	//check boxes to set values
 	private JCheckBox drawBotRadiiCheckBox;
 
@@ -65,15 +67,15 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private final String numSurvivorsString = "Number of Survivors: ";
 	private final String timeBetweenTimestepsString = "Time between timesteps (seconds) :";
 	private final String drawBotRadiiString = "Draw bot radii: ";	
-	
+
 	//TODO add a field that highlights a certain bot num
-	
+
 	public SimulationController() {
 		super("Simulation Controller");
 
 		// set up the window
 		setResizable(false);
-		
+
 		setFocusable(true);
 
 		setUpLables();
@@ -138,13 +140,13 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private void setUpButtons() {
 		runSimulationButton = new JButton(runSimulationString);
 		runSimulationButton.addActionListener(this);
-		
+
 		stopSimulationButton = new JButton(stopSimulationString);
 		stopSimulationButton.addActionListener(this);
 
 		resetSimulationButton = new JButton(resetSimulationString);
 		resetSimulationButton.addActionListener(this);
-		
+
 		drawBotRadiiCheckBox = new JCheckBox();
 		drawBotRadiiCheckBox.setSelected(DRAW_BOT_RADII_INIT_VALUE);
 		drawBotRadiiCheckBox.addItemListener(this);
@@ -161,7 +163,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		panel.add(timeBetweenTimestepsLabel);
 		panel.add(timeBetweenTimestepsField);
-		
+
 		panel.add(drawBotRadiiLabel);
 		panel.add(drawBotRadiiCheckBox);
 
@@ -217,7 +219,18 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 			world.dispose();
 		}
 
-		world = new World(numBots, numSurvivors, (long)(timeBetweenTimestepsInSeconds*1000), drawBotRadiiCheckBox.isSelected());
+		//choose the zone directory location, or press cancel if want to create randomly
+		JFileChooser zoneDirChooser = new JFileChooser();
+		zoneDirChooser.setCurrentDirectory(new File("."));
+		zoneDirChooser.setDialogTitle("Choose a zone directory, or cancel for random creation");
+		zoneDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		zoneDirChooser.setAcceptAllFileFilterUsed(false);
+
+		if(zoneDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+			world = new World(numBots, numSurvivors, (long)(timeBetweenTimestepsInSeconds * 1000), drawBotRadiiCheckBox.isSelected(), zoneDirChooser.getSelectedFile());
+		} else {
+			world = new World(numBots, numSurvivors, (long)(timeBetweenTimestepsInSeconds*1000), drawBotRadiiCheckBox.isSelected());
+		}
 		world.setDrawBotRadii(drawBotRadiiCheckBox.isSelected());
 		//		world.pack();
 		world.setLocation(this.getX(), this.getY() + this.getHeight());
@@ -265,7 +278,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	@Override
 	public void itemStateChanged(ItemEvent e) {
 		Object source = e.getItemSelectable();
-		
+
 		if(world!= null && source == drawBotRadiiCheckBox) {
 			world.setDrawBotRadii(e.getStateChange() == ItemEvent.SELECTED);
 		}
@@ -276,10 +289,10 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		simulationController.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
 		simulationController.pack();
-		
+
 		simulationController.runSimulationButton.requestFocusInWindow();
 		simulationController.setLocation(800, 20);
-		
+
 		simulationController.setVisible(true);
 	}
 

@@ -92,8 +92,4 @@ public class DangerZone extends Zone {
 	public double getPathWeightPerPixel() {
 		return 3;
 	}
-	
-	
-	
-	
 }

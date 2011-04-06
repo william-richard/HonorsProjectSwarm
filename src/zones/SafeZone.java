@@ -93,5 +93,4 @@ public class SafeZone extends Zone {
 	public double getPathWeightPerPixel() {
 		return 1;
 	}
-
 }

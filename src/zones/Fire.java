@@ -59,7 +59,4 @@ public class Fire extends DangerZone {
 	public double getPathWeightPerPixel() {
 		return 5;
 	}
-
-	
-	
 }

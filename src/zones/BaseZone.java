@@ -84,5 +84,5 @@ public class BaseZone extends SafeZone {
 	@Override
 	public Color getColor() {
 		return BaseZoneColor;
-	}	
+	}
 }

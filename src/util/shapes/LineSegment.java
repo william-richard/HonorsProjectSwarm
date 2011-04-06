@@ -4,12 +4,13 @@ import java.awt.Point;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
 import util.Utilities;
 
-public class LineSegment extends Line2D {
+public class LineSegment extends Line2D implements Serializable {
 
 	private Point2D p1;
 	private Point2D p2;

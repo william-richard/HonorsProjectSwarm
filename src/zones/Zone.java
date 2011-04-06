@@ -4,12 +4,16 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.geom.Point2D;
+import java.io.FileFilter;
+import java.io.FilenameFilter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
 import simulation.Shout;
@@ -23,20 +27,21 @@ public abstract class Zone extends Polygon {
 
 	private static final long serialVersionUID = -3828823916299213104L;
 
-	
+	public static final FileNameExtensionFilter zoneFileExtensionFilter = new FileNameExtensionFilter("Zone setup file", "zones");
+
 	//REMEMBER to change BOTH constructors, especially the one that clones a Zone
 	protected int zoneID;
 	protected int[] neighbors;
 	public Point2D center;
 
 	protected List<LineSegment> sides;
-	
+
 	private final int TOP_EDGE = 0;
 	private final int BOTTOM_EDGE = 1;
 	private final int LEFT_EDGE = 2;
 	private final int RIGHT_EDGE = 3;
-	
-	public final static double CHANGE_PROBABILITY = .002;
+
+	public final static double CHANGE_PROBABILITY = .002;	
 
 	public Zone(List<GraphEdge> _graphSides, int _zoneID, final Point2D _center, BoundingBox bbox) {
 		super();
@@ -46,19 +51,19 @@ public abstract class Zone extends Polygon {
 
 		//store the 'center'
 		center = new Point2D.Double(_center.getX(), _center.getY());
-		
+
 		ArrayList<Point> verticies = new ArrayList<Point>();
 		for(GraphEdge curSide : _graphSides) {
 
 			Point p1 = new Point((int)curSide.x1, (int)curSide.y1);
 			Point p2 = new Point((int)curSide.x2, (int)curSide.y2);
-			
+
 			if(Utilities.shouldEqualsZero(p1.distance(p2))) {
 				//weird artifact - handle it
 				continue;
 			}
-			
-			
+
+
 			if(!verticies.contains(p1)) {
 				verticies.add(p1);
 			}
@@ -66,7 +71,7 @@ public abstract class Zone extends Polygon {
 				verticies.add(p2);
 			}
 		}
-		
+
 		//see if we need to add corners of the bounding box
 		boolean[] requiredEdges = new boolean[4];
 		Arrays.fill(requiredEdges, false);
@@ -178,7 +183,7 @@ public abstract class Zone extends Polygon {
 						}
 					}
 				}
-				
+
 				if(o2.getY() == _center.getY()) {
 					if(o2.getX() > _center.getX()) {
 						//o2 < EVERYTHING
@@ -193,8 +198,8 @@ public abstract class Zone extends Polygon {
 						}
 					}
 				}
-				
-				
+
+
 				if(o1.getY() < _center.getY() && o2.getY() > _center.getY()) {
 					//points above the center go first
 					//so o1 < o2
@@ -204,7 +209,7 @@ public abstract class Zone extends Polygon {
 					//o2 < o1
 					return 1;
 				}
-				
+
 				//they are both above or below
 				if(o1.getY() < _center.getY()) {
 					//they are above
@@ -227,14 +232,14 @@ public abstract class Zone extends Polygon {
 			this.addPoint(p.x, p.y);
 		}
 
-		
+
 		//now, store the neighbors
 		neighbors = new int[_graphSides.size()];
 		for(int i = 0; i < _graphSides.size(); i++) {
 			GraphEdge curEdge = _graphSides.get(i);
 			neighbors[i] = (curEdge.site1 == zoneID ? curEdge.site2 : curEdge.site1);
 		}
-		
+
 		//now, store the sides of this Zone as LineSegments
 		sides = Utilities.getSides(this, true);
 	}
@@ -296,26 +301,26 @@ public abstract class Zone extends Polygon {
 	public List<LineSegment> getSides() {
 		return sides;
 	}
-	
+
 	public static Zone changeZoneBasedOnNeighbors(Zone z) {
-		
+
 		//don't change it if it's a base zone
 		if(z instanceof BaseZone) {
 			return z;
 		}
-		
+
 		List<Zone> neighobrs = z.getNeighbors();
-		
+
 		//choose a neighbor randomly
 		int neighborChoice = World.RANDOM_GENERATOR.nextInt(neighobrs.size());
-		
+
 		Zone decidingNeighbor = neighobrs.get(neighborChoice);
-		
+
 		//change to that neighbor's type
 		if(decidingNeighbor instanceof DummyZone) {
 			//choose one randomly
 			int randomChoice = World.RANDOM_GENERATOR.nextInt(3);
-			
+
 			final int SAFE = 0;
 			final int DANGER = 1;
 			final int FIRE = 2;
@@ -330,11 +335,11 @@ public abstract class Zone extends Polygon {
 				return new SafeZone(z);
 			}
 		} 
-		
+
 		if(decidingNeighbor instanceof BaseZone) {
 			return new SafeZone(z);
 		}
-		
+
 		try {
 			return decidingNeighbor.getClass().getConstructor(Zone.class).newInstance(z);
 		} catch (IllegalArgumentException e) {
@@ -350,7 +355,7 @@ public abstract class Zone extends Polygon {
 		} catch (NoSuchMethodException e) {
 			e.printStackTrace();
 		}
-		
+
 		//shouldn't get here, but just in case
 		return z;
 	}	
@@ -364,9 +369,43 @@ public abstract class Zone extends Polygon {
 		result += "\tcent = " + center;
 		return result;
 	}
-	
-	
-	
+
+	public static Class<? extends Zone> decodeZoneTypeChar(char zType) {
+		switch(zType) {
+			case 'b':
+				return BaseZone.class;
+			case 's':
+				return SafeZone.class;
+			case 'd':
+				return DangerZone.class;
+			case 'f':
+				return Fire.class;
+			default:
+				return Zone.class;
+		}
+
+	}
+
+
+	public char getZoneTypeChar() {
+		if(this instanceof SafeZone) {
+			if(this instanceof BaseZone) {
+				return 'b';
+			}
+			return 's';
+		}
+		if(this instanceof DangerZone) {
+			if(this instanceof Fire) {
+				return 'f';
+			}
+			return 'd';
+		}
+		return 'z';
+	}
+
+
+
+
 	public abstract Shout getShout(Survivor shouter);
 	public abstract double getBroadcastRange();
 	public abstract double getVisiblityRange();
@@ -380,8 +419,8 @@ public abstract class Zone extends Polygon {
 	public abstract double repulsionScalingFactor();
 
 	public abstract boolean isObstacle();
-	
+
 	public abstract double getPathWeightPerPixel();
 
-	public abstract Color getColor();
+	public abstract Color getColor();	
 }
