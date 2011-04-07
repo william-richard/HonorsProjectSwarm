@@ -35,18 +35,17 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private static final boolean DRAW_BOT_RADII_INIT_VALUE = false;
 	private static final boolean CHOOSE_ZONE_DIR_INIT_VALUE = false;
 	private static final boolean CHOOSE_SUR_DIR_INIT_VALUE = false;
-	private static final boolean RUN_TESTS_INIT_VALUE = false;
 
 	// buttons to control the simulation
 	private JButton runSimulationButton;;
 	private JButton stopSimulationButton;
 	private JButton resetSimulationButton;
+	private JButton runTestsButton;
 
 	//check boxes to set values
 	private JCheckBox drawBotRadiiCheckBox;
 	private JCheckBox chooseZoneDirCheckBox;
 	private JCheckBox chooseSurDirCheckBox;
-	private JCheckBox runTestsCheckBox;
 
 	// feilds for variable entry
 	private JFormattedTextField numBotsField;
@@ -65,7 +64,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private JLabel drawBotRadiiLabel;
 	private JLabel chooseZoneDirLabel;
 	private JLabel chooseSurDirLabel;
-	private JLabel runTestsLabel;
 
 	// Label strings
 	private final String runSimulationString = "Run";
@@ -113,7 +111,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		drawBotRadiiLabel = new JLabel(drawBotRadiiString);
 		chooseSurDirLabel = new JLabel(chooseSurDirString);
 		chooseZoneDirLabel = new JLabel(chooseZoneDirString);
-		runTestsLabel = new JLabel(runTestsString);
 	}
 
 	private void setUpFormats() {
@@ -162,6 +159,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		resetSimulationButton = new JButton(resetSimulationString);
 		resetSimulationButton.addActionListener(this);
 
+		runTestsButton = new JButton(runTestsString);
+		runTestsButton.addActionListener(this);
+
 		drawBotRadiiCheckBox = new JCheckBox();
 		drawBotRadiiCheckBox.setSelected(DRAW_BOT_RADII_INIT_VALUE);
 		drawBotRadiiCheckBox.addItemListener(this);
@@ -173,10 +173,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		chooseZoneDirCheckBox = new JCheckBox();
 		chooseZoneDirCheckBox.setSelected(CHOOSE_ZONE_DIR_INIT_VALUE);
 		chooseZoneDirCheckBox.addItemListener(this);
-
-		runTestsCheckBox = new JCheckBox();
-		runTestsCheckBox.setSelected(RUN_TESTS_INIT_VALUE);
-		runTestsCheckBox.addItemListener(this);
 	}
 
 
@@ -200,9 +196,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		panel.add(drawBotRadiiLabel);
 		panel.add(drawBotRadiiCheckBox);
 
-		panel.add(runTestsLabel);
-		panel.add(runTestsCheckBox);
-
 		return panel;
 	}
 
@@ -210,6 +203,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		JPanel panel = new JPanel(new GridLayout(1, 0));
 		panel.add(resetSimulationButton);
 		panel.add(stopSimulationButton);
+		panel.add(runTestsButton);
 		panel.add(runSimulationButton);
 
 		return panel;
@@ -249,17 +243,14 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		}
 	}
 
-	private void makeTheWorld() {
+	private void makeTheWorld(File zoneDir, File surDir) {
 		if(world != null) {
 			world.stopSimulation();
 			world.dispose();
 		}
 
-		File zoneDir = null;
-		File surDir = null;
-
 		//if they want to, choose a zone directory or survivor directory
-		if(chooseZoneDirCheckBox.isSelected()) {
+		if(zoneDir == null && chooseZoneDirCheckBox.isSelected()) {
 			//choose the zone directory location, or press cancel if want to create randomly
 			JFileChooser zoneDirChooser = new JFileChooser();
 			zoneDirChooser.setCurrentDirectory(new File("."));
@@ -271,19 +262,19 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 				zoneDir = zoneDirChooser.getSelectedFile();
 			} 
 		}
-		
-		if(chooseSurDirCheckBox.isSelected()) {
+
+		if(surDir == null && chooseSurDirCheckBox.isSelected()) {
 			JFileChooser surDirChooser = new JFileChooser();
 			surDirChooser.setCurrentDirectory(new File("."));
 			surDirChooser.setDialogTitle("Choose a survivor directory, or cancel to place them randomly");
 			surDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 			surDirChooser.setAcceptAllFileFilterUsed(false);
-			
+
 			if(surDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				surDir = surDirChooser.getSelectedFile();
 			}
 		}
-		
+
 		if(zoneDir != null) {
 			if(surDir != null) {
 				world = new World(numBots, surDir, (long)timeBetweenTimestepsInSeconds*1000, drawBotRadiiCheckBox.isSelected(), zoneDir);
@@ -297,7 +288,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 				world = new World(numBots, numSurvivors, (long)timeBetweenTimestepsInSeconds*1000, drawBotRadiiCheckBox.isSelected());
 			}
 		}
-		
+
 		world.setDrawBotRadii(drawBotRadiiCheckBox.isSelected());
 		//		world.pack();
 		world.setLocation(this.getX(), this.getY() + this.getHeight());
@@ -314,7 +305,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 				@Override
 				public void run() {
 					if(world == null) {
-						makeTheWorld();
+						makeTheWorld(null, null);
 					}
 
 					if(! world.isGoing()) {
@@ -338,7 +329,41 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		}
 
 		if(source == resetSimulationButton) {
-			makeTheWorld();
+			makeTheWorld(null, null);
+		}
+
+		if(source == runTestsButton) {
+			//first test - see how long it takes to run lots of bots
+			//ask for a specific zone and survivor combination
+			File zoneDir = null, surDir = null;
+			JFileChooser zoneDirChooser = new JFileChooser();
+			zoneDirChooser.setCurrentDirectory(new File("."));
+			zoneDirChooser.setDialogTitle("Choose a zone directory, or cancel for random creation");
+			zoneDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			zoneDirChooser.setAcceptAllFileFilterUsed(false);
+
+			if(zoneDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				zoneDir = zoneDirChooser.getSelectedFile();
+			} 
+
+			JFileChooser surDirChooser = new JFileChooser();
+			surDirChooser.setCurrentDirectory(new File("."));
+			surDirChooser.setDialogTitle("Choose a survivor directory, or cancel to place them randomly");
+			surDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+			surDirChooser.setAcceptAllFileFilterUsed(false);
+
+			if(surDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				surDir = surDirChooser.getSelectedFile();
+			}
+			for(numBots = 1000; numBots > 200; numBots -= 200) {
+				//run each test 5 times, so that we get a good range of numbers
+				for(int i = 0; i < 5; i++) {
+					makeTheWorld(zoneDir, surDir);
+					//go for 1000 timesteps - should be enough time to settle down
+					world.go(1000);
+					//this will make UI unresponsive but who cares - just stop from Eclipse
+				}
+			}
 		}
 	}
 

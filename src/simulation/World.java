@@ -448,7 +448,7 @@ public class World extends JFrame implements WindowListener {
 			double pathQuality = calcAvgPathQuality();
 			double pathCoverage = calcPathCoverageMetric();
 			double overallMetric = calcOverallMetric(perSurFound, pathQuality, pathCoverage);
-			dataWriter.write(World.getCurrentTimestep() + "\t" + DOUBLE_FORMAT.format(perSurFound) + '\t' + DOUBLE_FORMAT.format(pathQuality) + '\t' + DOUBLE_FORMAT.format(pathCoverage) + '\t' + DOUBLE_FORMAT.format(overallMetric));
+			dataWriter.write(World.getCurrentTimestep() + "\t" + System.currentTimeMillis() + "\t" + DOUBLE_FORMAT.format(perSurFound) + '\t' + DOUBLE_FORMAT.format(pathQuality) + '\t' + DOUBLE_FORMAT.format(pathCoverage) + '\t' + DOUBLE_FORMAT.format(overallMetric));
 			dataWriter.newLine();
 			dataWriter.close();
 		} catch (IOException e) {
@@ -588,7 +588,13 @@ public class World extends JFrame implements WindowListener {
 		return keepGoing;
 	}
 
-	public synchronized void go() {		
+	public synchronized void go() {
+		//a bit of a hack, but it will work
+		this.go(-1);
+	}
+	
+	
+	public synchronized void go(int numTimestepsToRun) {		
 		repaint();
 
 		keepGoing = true;
@@ -601,7 +607,13 @@ public class World extends JFrame implements WindowListener {
 		}
 
 		//then, start with timesteps
-		for(; keepGoing; currentTimestep++) {			
+		int endTimestep;
+		if(numTimestepsToRun < 0) {
+			endTimestep = Integer.MAX_VALUE;
+		} else {
+			endTimestep = currentTimestep + numTimestepsToRun;
+		}
+		for(; keepGoing && currentTimestep <= endTimestep; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
 
