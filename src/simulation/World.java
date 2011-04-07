@@ -246,13 +246,10 @@ public class World extends JFrame implements WindowListener {
 			do {
 				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
 				//make sure we don't have survivors in the base zone and we don't duplicate survivors
-			} while( homeBase.contains(curSurvivor.getCenterLocation()) && allSurvivors.contains(curSurvivor));
+			} while(homeBase.contains(curSurvivor.getCenterLocation()) && allSurvivors.contains(curSurvivor));
 
 			allSurvivors.add(curSurvivor);
 		}
-
-		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
-		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 	}
 
 	private void initSurvivors(File surDir) {
@@ -294,7 +291,10 @@ public class World extends JFrame implements WindowListener {
 		}
 	}
 
-	private void initMisc(long _timeBetweenTimesteps, boolean _drawBotRadii) {
+	private void initMisc(long _timeBetweenTimesteps, boolean _drawBotRadii) {		
+		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
+		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
+		
 		debugShapesToDraw = new ArrayList<Shape>();
 		debugSeperationVectors = new ArrayList<Shape>();
 		debugRepulsionVectors = new ArrayList<Shape>();
@@ -328,13 +328,21 @@ public class World extends JFrame implements WindowListener {
 			//they should all be searializable
 			for(Integer curKey : allZones.keySet()) {
 				Zone curZone = allZones.get(curKey);
-				System.out.println("Writing zone " + curZone);
 				ObjectOutputStream zoneOut = new ObjectOutputStream(new FileOutputStream(zoneDirString + curKey + "_" + curZone.getZoneTypeChar() + "." + Zone.zoneFileExtensionFilter.getExtensions()[0]));
 				zoneOut.writeObject(curZone);
 				zoneOut.close();
 			}
 			
 			//write a folder with a file for each survivor - serialize them too
+			String surDirString = dataDirectory + "/survivors/";
+			File surDirFile = new File(surDirString);
+			surDirFile.mkdir();
+			for(int i = 0; i < allSurvivors.size(); i++) {
+				Survivor curSur = allSurvivors.get(i);
+				ObjectOutputStream surOut = new ObjectOutputStream(new FileOutputStream(surDirString + i + "." + Survivor.survivorFileExtensionFilter.getExtensions()[0]));
+				surOut.writeObject(curSur);
+				surOut.close();
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
