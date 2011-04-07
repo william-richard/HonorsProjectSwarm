@@ -4,8 +4,6 @@ import java.awt.Color;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.geom.Point2D;
-import java.io.FileFilter;
-import java.io.FilenameFilter;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -27,7 +25,7 @@ public abstract class Zone extends Polygon {
 
 	private static final long serialVersionUID = -3828823916299213104L;
 
-	public static final FileNameExtensionFilter zoneFileExtensionFilter = new FileNameExtensionFilter("Zone setup file", "zones");
+	public static final FileNameExtensionFilter zoneFileExtensionFilter = new FileNameExtensionFilter("Zone setup file", "zone");
 
 	//REMEMBER to change BOTH constructors, especially the one that clones a Zone
 	protected int zoneID;

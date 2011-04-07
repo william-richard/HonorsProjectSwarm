@@ -1,12 +1,16 @@
 package simulation;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.awt.geom.Point2D.Double;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.Serializable;
+
+import javax.swing.filechooser.FileNameExtensionFilter;
 
 import zones.Zone;
 
 
-public class Survivor extends Rectangle2D.Double {
+public class Survivor extends Rectangle2D.Double implements Serializable {
 
 	private static final long serialVersionUID = -7790215006799035571L;
 	/***************************************************************************
@@ -15,12 +19,14 @@ public class Survivor extends Rectangle2D.Double {
 	private final int DIMENSION = 6; //survivors are squares really, so they only need 1 dimension.
 	private final double SHOUT_PROB = .75; //The probability that survivors will shout
 	private final Point2D CENTER_LOCATION;
+	
+	public static final FileNameExtensionFilter survivorFileExtensionFilter = new FileNameExtensionFilter("Serialized survivor file", "sur");
 
 	/***************************************************************************
 	 * VARIABLES
 	 **************************************************************************/
 	private double damage; //damage is a percentage of how hurt the survivor is, with 1.0 being dead and 0.0 being totally healthy.
-	private Zone currentZone;
+	transient private Zone currentZone;
 
 
 	/***************************************************************************
@@ -117,4 +123,19 @@ public class Survivor extends Rectangle2D.Double {
 		//don't need to update what zones we're in because we can't move
 		//this fact may change later
 	}
+	
+	private void readObject(ObjectInputStream in) throws IOException {
+		try {
+			in.defaultReadObject();
+		} catch (ClassNotFoundException e) {
+			System.out.println("Cannot find class while reading Survivor Object");
+			e.printStackTrace();
+		}
+		
+		//set up the zone correctly
+		World.findZone(this.getCenterLocation());
+	}
+	
+	
+	
 }

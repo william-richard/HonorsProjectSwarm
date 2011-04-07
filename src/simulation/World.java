@@ -122,15 +122,19 @@ public class World extends JFrame implements WindowListener {
 		this(40, 2, 5000, false);
 	}
 
-	//FIXME Also need to save survivors
+	public World(int numBots, File surDir, long _timeBetweenTimesteps, boolean _drawBotRadii) {
+		super("Swarm Simulation");
+		
+		setupFrame();
+		initZones();
+		initBots(numBots);
+		initSurvivors(surDir);
+		initMisc(_timeBetweenTimesteps, _drawBotRadii);
+		
+	}	
+	
 	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii, File zoneDir) {
 		super("Swarm Simualtion");
-
-		//check that the Zone file has the correct extension
-		if(! zoneDir.isDirectory()) {
-			throw new IllegalArgumentException("Passed File is not a directory");
-		}
-		//TODO check for zone files?
 
 		setupFrame();
 		initZones(zoneDir);
@@ -139,6 +143,16 @@ public class World extends JFrame implements WindowListener {
 		initSurvivors(numSurvivors);
 		initMisc(_timeBetweenTimesteps, _drawBotRadii);
 
+	}
+	
+	public World(int numBots, File surDir, long _timeBetweenTimesteps, boolean _drawBotRadii, File zoneDir) {
+		super("Swarm Simulation");
+		
+		setupFrame();
+		initZones(zoneDir);
+		initBots(numBots);
+		initSurvivors(surDir);
+		initMisc(_timeBetweenTimesteps, _drawBotRadii);
 	}
 
 	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii) {
@@ -160,6 +174,12 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private void initZones(File zoneDir) {
+		
+		//check that the Zone directory actually is a directory
+		if(! zoneDir.isDirectory()) {
+			throw new IllegalArgumentException("Passed File is not a directory");
+		}
+
 		allZones = new Hashtable<Integer, Zone>();
 		//for each file in the directory, if it has the correct extension, create a zone and add it to our Table
 		File[] zoneFileList = zoneDir.listFiles(new FileFilter() {	
@@ -185,13 +205,13 @@ public class World extends JFrame implements WindowListener {
 				allZones.put(new Integer(z.getID()), z);
 				zoneIn.close();
 			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
+				System.out.println("Cannot find zone file");
 				e.printStackTrace();
 			} catch (IOException e) {
-				// TODO Auto-generated catch block
+				System.out.println("IOException while deserializing zone");
 				e.printStackTrace();
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
+				System.out.println("Cannot find Zone class when deserializing Zone");
 				e.printStackTrace();
 			}
 		}
@@ -235,6 +255,45 @@ public class World extends JFrame implements WindowListener {
 		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 	}
 
+	private void initSurvivors(File surDir) {
+		
+		//check that the Survivor directory actually is a directory
+		if(! surDir.isDirectory()) {
+			throw new IllegalArgumentException("Passed File is not a directory");
+		}
+
+		allSurvivors = new ArrayList<Survivor>();
+		//for each file in the directory with the correct extension, create a survivor and add it to the list
+		File[] survivorFileList = surDir.listFiles(new FileFilter() {
+
+			@Override
+			public boolean accept(File pathname) {
+				return Survivor.survivorFileExtensionFilter.accept(pathname);
+			}
+
+		});
+
+		for(File curSurFile : survivorFileList) {
+			//deserealize the file and add it to the list
+			ObjectInputStream surIn;
+			try {
+				surIn = new ObjectInputStream(new FileInputStream(curSurFile));
+				Survivor s = (Survivor) surIn.readObject();
+				allSurvivors.add(s);
+				surIn.close();
+			} catch (FileNotFoundException e) {
+				System.out.println("Cannot find survivor file");
+				e.printStackTrace();
+			} catch (IOException e) {
+				System.out.println("IOException trying to read survivor from file");
+				e.printStackTrace();
+			} catch (ClassNotFoundException e) {
+				System.out.println("Cannot find Survivor class when deserializing Survivor from file");
+				e.printStackTrace();
+			}
+		}
+	}
+
 	private void initMisc(long _timeBetweenTimesteps, boolean _drawBotRadii) {
 		debugShapesToDraw = new ArrayList<Shape>();
 		debugSeperationVectors = new ArrayList<Shape>();
@@ -274,6 +333,8 @@ public class World extends JFrame implements WindowListener {
 				zoneOut.writeObject(curZone);
 				zoneOut.close();
 			}
+			
+			//write a folder with a file for each survivor - serialize them too
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
