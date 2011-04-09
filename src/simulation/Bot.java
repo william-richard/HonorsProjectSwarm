@@ -94,7 +94,7 @@ public class Bot extends Rectangle2D.Double {
 	private final double PATH_MARK_MIN_DIST = PATH_MARK_IDEAL_DIST * 0.5;
 	private final double PATH_MARK_MAX_DIST = PATH_MARK_IDEAL_DIST * 1.5;
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
-	private final double PATH_MARK_FACTOR = 50;
+	private final double PATH_MARK_FACTOR = DEFAULT_MAX_VELOCITY;
 
 	private final double PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * 1.2;
 	private final double PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * .8;
@@ -106,6 +106,7 @@ public class Bot extends Rectangle2D.Double {
 	private boolean LOOK_BOT_DEBUG = false;
 	private boolean MESSAGE_BOT_DEBUG = false;
 	private boolean MOVE_BOT_DEBUG = false;
+	private boolean TIMESTEP_BOT_DEBUG = false;
 
 	/***************************************************************************
 	 * VARIABLES
@@ -1698,14 +1699,14 @@ public class Bot extends Rectangle2D.Double {
 		botsWithinBroadcast.clear();
 
 		// first, read any messages that have come in, and take care of them
-		if(OVERALL_BOT_DEBUG) {
+		if(TIMESTEP_BOT_DEBUG) {
 			print("Starting to read messages");
 		}
 		readMessages();
 
 		switch (botMode) {
 			case (WAITING_FOR_ACTIVATION):
-				if(OVERALL_BOT_DEBUG) {
+				if(TIMESTEP_BOT_DEBUG) {
 					print("I am waiting for activation");
 				}
 			//don't do anything in this loop - the transition a different mode
@@ -1714,14 +1715,14 @@ public class Bot extends Rectangle2D.Double {
 			break;
 			case (EXPLORER) :
 			case (DANGEROUS_EXPLORER) :
-				if(OVERALL_BOT_DEBUG) {
+				if(TIMESTEP_BOT_DEBUG) {
 					print("I am exploring - starting to move");
 				}
 			// now try to move, based on the move rules.
 			exploreMove();
 			// if we have not already claimed a survivor, find out if we can see any survivors
 			// TODO if they have heard a survivor, check it out for a few steps
-			if(OVERALL_BOT_DEBUG) {
+			if(TIMESTEP_BOT_DEBUG) {
 				print("Starting to do survivor stuff");
 			}
 			if (mySurvivor == null) {
@@ -1732,7 +1733,7 @@ public class Bot extends Rectangle2D.Double {
 			}
 			break;
 			case(PATH_MARKER) :
-				if(OVERALL_BOT_DEBUG) {
+				if(TIMESTEP_BOT_DEBUG) {
 					print("I am path marker - starting to move");
 				}
 			//move toward/on the path
@@ -1747,12 +1748,12 @@ public class Bot extends Rectangle2D.Double {
 				break;
 		}
 
-		if(OVERALL_BOT_DEBUG) {
+		if(TIMESTEP_BOT_DEBUG) {
 			print("Starting to reevaluate mode");
 		}
 		reevaluateBotMode();
 
-		if(OVERALL_BOT_DEBUG) {
+		if(TIMESTEP_BOT_DEBUG) {
 			print("Deleting old messages");
 		}
 		alreadyBroadcastedMessages.add(new HashSet<Message>());
@@ -1762,7 +1763,7 @@ public class Bot extends Rectangle2D.Double {
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
-			if(OVERALL_BOT_DEBUG) {
+			if(TIMESTEP_BOT_DEBUG) {
 				print("Updating zone info");
 			}
 			updateZoneInfo();
