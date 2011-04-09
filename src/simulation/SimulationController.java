@@ -355,11 +355,12 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 			if(surDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				surDir = surDirChooser.getSelectedFile();
 			}
-			for(numBots = 1000; numBots > 200; numBots -= 200) {
+			for(numBots = 100; numBots <= 800; numBots += 100) {
 				//run each test 5 times, so that we get a good range of numbers
 				for(int i = 0; i < 5; i++) {
 					makeTheWorld(zoneDir, surDir);
 					//go for 1000 timesteps - should be enough time to settle down
+					//FIXME can't see what's going on
 					world.go(1000);
 					//this will make UI unresponsive but who cares - just stop from Eclipse
 				}
