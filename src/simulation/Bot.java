@@ -1698,38 +1698,48 @@ public class Bot extends Rectangle2D.Double {
 		botsWithinBroadcast.clear();
 
 		// first, read any messages that have come in, and take care of them
-		print("Starting to read messages");
+		if(OVERALL_BOT_DEBUG) {
+			print("Starting to read messages");
+		}
 		readMessages();
 
 		switch (botMode) {
 			case (WAITING_FOR_ACTIVATION):
-				print("I am waiting for activation");
+				if(OVERALL_BOT_DEBUG) {
+					print("I am waiting for activation");
+				}
 			//don't do anything in this loop - the transition a different mode
 			//will take place in the "reevaluateBotMode()" method
 
 			break;
 			case (EXPLORER) :
 			case (DANGEROUS_EXPLORER) :
-				print("I am exploring - starting to move");
-				// now try to move, based on the move rules.
-				exploreMove();
-				// if we have not already claimed a survivor, find out if we can see any survivors
-				// TODO if they have heard a survivor, check it out for a few steps
-				print("Starting to do survivor stuff");
-				if (mySurvivor == null) {
-					findAndAssesSurvivor();
-				} else {
-					//if we are close enough to them, we should start creating a path to the survivor
-					handlePathToMySurvivor();
+				if(OVERALL_BOT_DEBUG) {
+					print("I am exploring - starting to move");
 				}
+			// now try to move, based on the move rules.
+			exploreMove();
+			// if we have not already claimed a survivor, find out if we can see any survivors
+			// TODO if they have heard a survivor, check it out for a few steps
+			if(OVERALL_BOT_DEBUG) {
+				print("Starting to do survivor stuff");
+			}
+			if (mySurvivor == null) {
+				findAndAssesSurvivor();
+			} else {
+				//if we are close enough to them, we should start creating a path to the survivor
+				handlePathToMySurvivor();
+			}
 			break;
 			case(PATH_MARKER) :
-				print("I am path marker - starting to move");
-				//move toward/on the path
-				pathMarkMove();
+				if(OVERALL_BOT_DEBUG) {
+					print("I am path marker - starting to move");
+				}
+			//move toward/on the path
+			pathMarkMove();
 
-				//check path density, and stop more bots from approaching if need be
-//				handlePathDensity();
+			//check path density, and stop more bots from approaching if need be
+			//				handlePathDensity();
 
 			break;
 			default :
@@ -1737,10 +1747,14 @@ public class Bot extends Rectangle2D.Double {
 				break;
 		}
 
-		print("Starting to reevaluate mode");
+		if(OVERALL_BOT_DEBUG) {
+			print("Starting to reevaluate mode");
+		}
 		reevaluateBotMode();
 
-		print("Deleting old messages");
+		if(OVERALL_BOT_DEBUG) {
+			print("Deleting old messages");
+		}
 		alreadyBroadcastedMessages.add(new HashSet<Message>());
 		if(alreadyBroadcastedMessages.size() > NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES) {
 			alreadyBroadcastedMessages.removeLast();
@@ -1748,7 +1762,9 @@ public class Bot extends Rectangle2D.Double {
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
-			print("Updating zone info");
+			if(OVERALL_BOT_DEBUG) {
+				print("Updating zone info");
+			}
 			updateZoneInfo();
 		}
 		if (MOVE_BOT_DEBUG) {
