@@ -306,7 +306,6 @@ public class World extends JFrame implements WindowListener {
 
 	private void setupFiles() {
 		System.out.println("Setting up files");
-		//FIXME have this point to <num sur>/<num bots>/<start time & date>/ - maybe add zone info hash somewhere
 		//make the directory for this run
 		dataDirectory = "data/" + allSurvivors.size() + "/" + allBots.size() + "/" + DATE_FORMAT.format(firstStartTime) + "/";
 		new File(dataDirectory).mkdirs();
@@ -439,7 +438,6 @@ public class World extends JFrame implements WindowListener {
 
 
 	private void writeADatapoint() {
-		//TODO also record "real time" duration - store the average calculation time so we have an idea of how long each timestep would last in the real world
 		try {
 			BufferedWriter dataWriter = new BufferedWriter(new FileWriter(dataDirectory + DATA_FILENAME, true));
 			//write:
@@ -616,6 +614,7 @@ public class World extends JFrame implements WindowListener {
 		for(; keepGoing && currentTimestep <= endTimestep; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
+			System.out.println("Starting at " + new Date());
 
 			timestepStartTime = System.currentTimeMillis();
 
@@ -637,12 +636,13 @@ public class World extends JFrame implements WindowListener {
 					}
 				}	
 			}
+			
 			if(aZoneChanged) {
 				//recalculate optimal paths to all points, so we know optimal paths to survivors
 				distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 			}
 
-
+			System.out.println("Done with zones");
 
 			//do all the survivors
 			for(Survivor s : allSurvivors) {
@@ -688,24 +688,23 @@ public class World extends JFrame implements WindowListener {
 
 			writeADatapoint();
 
+			System.gc();
+			
 			//repaint the scenario
 			repaint(timeBetweenTimesteps);
 
 			timestepStopTime = System.currentTimeMillis();
 			timestepDuration = timestepStopTime - timestepStartTime;
 
-			//			try {
-			//				wait(timeBetweenTimesteps, 1);
-			//			} catch (InterruptedException e) {}
 			if(timestepDuration < timeBetweenTimesteps) {
 				//we need to wait longer
 				try {
 					wait(timeBetweenTimesteps - timestepDuration);
 				} catch (InterruptedException e) {}
 			} else {
-				//wai just a bit so that the simulation has time to repaint
+				//wait just a bit so that the simulation has time to repaint
 				try {
-					wait(0, 1);
+					wait(0, 10);
 				} catch (InterruptedException e)  {}
 			}
 		}
