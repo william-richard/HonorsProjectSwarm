@@ -1056,13 +1056,18 @@ public class Bot extends Rectangle2D.Double {
 		if (MOVE_BOT_DEBUG)
 			print("Moving along vector '" + v + "'");
 
-		// don't hit the walls of the bounding box
-		if (Utilities.edgeIntersects(this.boundingBox, currentZone
-				.getVisibilityArea(getCenterLocation()))) {
-			// this means we can "see" the edge of the bounding box
-			// try to move such that we don't hit it
-			v = boundingBox.getPathThatStaysInside(v);
-		}
+		//		// don't hit the walls of the bounding box
+		//		if (Utilities.edgeIntersects(this.boundingBox, currentZone
+		//				.getVisibilityArea(getCenterLocation()))) {
+		//			// this means we can "see" the edge of the bounding box
+		//			// try to move such that we don't hit it
+
+
+
+		//Make sure we stay inside the bounding box
+		//if we are not near the edge, this will not change the vector
+		v = boundingBox.getPathThatStaysInside(v);
+		//		}
 
 		// again, make sure our movement vector is legal
 		v = verifyMovementVector(v);
