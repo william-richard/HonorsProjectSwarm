@@ -40,7 +40,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private JButton runSimulationButton;;
 	private JButton stopSimulationButton;
 	private JButton resetSimulationButton;
-	private JButton runTestsButton;
 
 	//check boxes to set values
 	private JCheckBox drawBotRadiiCheckBox;
@@ -159,9 +158,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		resetSimulationButton = new JButton(resetSimulationString);
 		resetSimulationButton.addActionListener(this);
 
-		runTestsButton = new JButton(runTestsString);
-		runTestsButton.addActionListener(this);
-
 		drawBotRadiiCheckBox = new JCheckBox();
 		drawBotRadiiCheckBox.setSelected(DRAW_BOT_RADII_INIT_VALUE);
 		drawBotRadiiCheckBox.addItemListener(this);
@@ -203,7 +199,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		JPanel panel = new JPanel(new GridLayout(1, 0));
 		panel.add(resetSimulationButton);
 		panel.add(stopSimulationButton);
-		panel.add(runTestsButton);
 		panel.add(runSimulationButton);
 
 		return panel;
@@ -277,19 +272,20 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		if(zoneDir != null) {
 			if(surDir != null) {
-				world = new World(numBots, surDir, (long)timeBetweenTimestepsInSeconds*1000, drawBotRadiiCheckBox.isSelected(), zoneDir);
+				world = new World(numBots, surDir, zoneDir);
 			} else {
-				world = new World(numBots, numSurvivors, (long)timeBetweenTimestepsInSeconds*1000, drawBotRadiiCheckBox.isSelected(), zoneDir);
+				world = new World(numBots, numSurvivors, zoneDir);
 			}
 		} else {
 			if(surDir != null) {
-				world = new World(numBots, surDir, (long)timeBetweenTimestepsInSeconds*1000, drawBotRadiiCheckBox.isSelected());
+				world = new World(numBots, surDir);
 			} else {
-				world = new World(numBots, numSurvivors, (long)timeBetweenTimestepsInSeconds*1000, drawBotRadiiCheckBox.isSelected());
+				world = new World(numBots, numSurvivors);
 			}
 		}
 
 		world.setDrawBotRadii(drawBotRadiiCheckBox.isSelected());
+		world.setTimeBetweenTimesteps((long) timeBetweenTimestepsInSeconds * 1000);
 		//		world.pack();
 		world.setLocation(this.getX(), this.getY() + this.getHeight());
 		world.setVisible(true);
@@ -331,44 +327,6 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		if(source == resetSimulationButton) {
 			makeTheWorld(null, null);
 		}
-
-		if(source == runTestsButton) {
-			//first test - see how long it takes to run lots of bots
-			//ask for a specific zone and survivor combination
-			File zoneDir = null, surDir = null;
-			JFileChooser zoneDirChooser = new JFileChooser();
-			zoneDirChooser.setCurrentDirectory(new File("."));
-			zoneDirChooser.setDialogTitle("Choose a zone directory, or cancel for random creation");
-			zoneDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			zoneDirChooser.setAcceptAllFileFilterUsed(false);
-
-			if(zoneDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-				zoneDir = zoneDirChooser.getSelectedFile();
-			} 
-
-			JFileChooser surDirChooser = new JFileChooser();
-			surDirChooser.setCurrentDirectory(new File("."));
-			surDirChooser.setDialogTitle("Choose a survivor directory, or cancel to place them randomly");
-			surDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-			surDirChooser.setAcceptAllFileFilterUsed(false);
-
-			if(surDirChooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-				surDir = surDirChooser.getSelectedFile();
-			}
-			for(numBots = 100; numBots <= 800; numBots += 100) {
-				//run each test 5 times, so that we get a good range of numbers
-				for(int i = 0; i < 5; i++) {
-					makeTheWorld(zoneDir, surDir);
-					//go for 1000 timesteps - should be enough time to settle down
-					//FIXME can't see what's going on
-					world.go(1000);
-					//this will make UI unresponsive but who cares - just stop from Eclipse
-					System.gc();
-				}
-			}
-		}
-		
-		System.gc();
 	}
 
 	@Override

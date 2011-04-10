@@ -21,8 +21,8 @@ public class Dijkstras {
 	 */
 
 	private HashMap<Integer, List<FibonacciHeapNode<DPixel>>> nodesByZone;
-	private List<DPixel> pixels;
-	private List<FibonacciHeapNode<DPixel>> nodes;
+	private ArrayList<DPixel> pixels;
+	private ArrayList<FibonacciHeapNode<DPixel>> nodes;
 	private int minX, maxX, minY, maxY;
 
 	public ReentrantReadWriteLock rwl = new ReentrantReadWriteLock(true);
@@ -114,7 +114,7 @@ public class Dijkstras {
 		try {
 			System.out.println("Staring dijkstras from "  + source);
 			FibonacciHeap<DPixel> heap = new FibonacciHeap<DPixel>();
-			nodes.clear();
+			nodes = new ArrayList<FibonacciHeapNode<DPixel>>();
 			nodesByZone = new HashMap<Integer, List<FibonacciHeapNode<DPixel>>>();
 			//reset the nodes
 			//and add them to our Queue

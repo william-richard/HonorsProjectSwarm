@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
+import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
@@ -119,21 +120,20 @@ public class World extends JFrame implements WindowListener {
 	private String dataDirectory;
 
 	public World() {
-		this(40, 2, 5000, false);
+		this(40, 2);
 	}
 
-	public World(int numBots, File surDir, long _timeBetweenTimesteps, boolean _drawBotRadii) {
+	public World(int numBots, File surDir) {
 		super("Swarm Simulation");
-		
+
 		setupFrame();
 		initZones();
 		initBots(numBots);
 		initSurvivors(surDir);
-		initMisc(_timeBetweenTimesteps, _drawBotRadii);
-		
+		initMisc();
 	}	
-	
-	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii, File zoneDir) {
+
+	public World(int numBots, int numSurvivors, File zoneDir) {
 		super("Swarm Simualtion");
 
 		setupFrame();
@@ -141,21 +141,21 @@ public class World extends JFrame implements WindowListener {
 		//TODO lots of repetition here - not so good, but unavoidable because zones need to be made before anything else
 		initBots(numBots);
 		initSurvivors(numSurvivors);
-		initMisc(_timeBetweenTimesteps, _drawBotRadii);
+		initMisc();
 
 	}
-	
-	public World(int numBots, File surDir, long _timeBetweenTimesteps, boolean _drawBotRadii, File zoneDir) {
+
+	public World(int numBots, File surDir, File zoneDir) {
 		super("Swarm Simulation");
-		
+
 		setupFrame();
 		initZones(zoneDir);
 		initBots(numBots);
 		initSurvivors(surDir);
-		initMisc(_timeBetweenTimesteps, _drawBotRadii);
+		initMisc();
 	}
 
-	public World(int numBots, int numSurvivors, long _timeBetweenTimesteps, boolean _drawBotRadii) {
+	public World(int numBots, int numSurvivors) {
 		super("Swarm Simulation");
 		//start with the frame.
 		setupFrame();
@@ -163,7 +163,7 @@ public class World extends JFrame implements WindowListener {
 		initZones();
 		initBots(numBots);
 		initSurvivors(numSurvivors);
-		initMisc(_timeBetweenTimesteps, _drawBotRadii);
+		initMisc();
 	}
 
 	private void setupFrame() {
@@ -174,7 +174,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private void initZones(File zoneDir) {
-		
+
 		//check that the Zone directory actually is a directory
 		if(! zoneDir.isDirectory()) {
 			throw new IllegalArgumentException("Passed File is not a directory");
@@ -253,7 +253,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private void initSurvivors(File surDir) {
-		
+
 		//check that the Survivor directory actually is a directory
 		if(! surDir.isDirectory()) {
 			throw new IllegalArgumentException("Passed File is not a directory");
@@ -291,17 +291,15 @@ public class World extends JFrame implements WindowListener {
 		}
 	}
 
-	private void initMisc(long _timeBetweenTimesteps, boolean _drawBotRadii) {		
+	private void initMisc() {		
 		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
 		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
-		
+
 		debugShapesToDraw = new ArrayList<Shape>();
 		debugSeperationVectors = new ArrayList<Shape>();
 		debugRepulsionVectors = new ArrayList<Shape>();
 
 		currentTimestep = 0;
-		setTimeBetweenTimesteps(_timeBetweenTimesteps);
-		setDrawBotRadii(_drawBotRadii);
 	}
 
 	private void setupFiles() {
@@ -331,7 +329,7 @@ public class World extends JFrame implements WindowListener {
 				zoneOut.writeObject(curZone);
 				zoneOut.close();
 			}
-			
+
 			//write a folder with a file for each survivor - serialize them too
 			String surDirString = dataDirectory + "/survivors/";
 			File surDirFile = new File(surDirString);
@@ -590,8 +588,8 @@ public class World extends JFrame implements WindowListener {
 		//a bit of a hack, but it will work
 		this.go(-1);
 	}
-	
-	
+
+
 	public synchronized void go(int numTimestepsToRun) {		
 		repaint();
 
@@ -636,7 +634,7 @@ public class World extends JFrame implements WindowListener {
 					}
 				}	
 			}
-			
+
 			if(aZoneChanged) {
 				//recalculate optimal paths to all points, so we know optimal paths to survivors
 				distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
@@ -677,18 +675,16 @@ public class World extends JFrame implements WindowListener {
 			System.out.println("");
 			System.out.println("Done with bots");
 
-//			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
-//			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
-//			System.out.println("Average distance between bots = " + (Bot.timestepAverageDistanceApartTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
-//			System.out.println("Average zone repulsion vector mag (for bots near zones) = " + (Bot.timestepZoneRepulsionMagnitudeTotal / Bot.timestepBotsRepelledByZones));
-//			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
-//			System.out.println("");
-//			System.out.println("Avg dist btwn bots on paths = " + (Bot.timestepAvgDistBtwnPathNeighbors / Bot.timestepNumBotOnPaths));
-//			System.out.println(Bot.timestepNumBotOnPaths + " bots marking paths");
+			//			System.out.println("Average seperation vector mag = " + (Bot.timestepSeperationMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
+			//			System.out.println("Average cohesion vector mag = " + (Bot.timestepCohesionMagnitudeTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
+			//			System.out.println("Average distance between bots = " + (Bot.timestepAverageDistanceApartTotal / Bot.timestepCountOfBotsAffectedBySepOrCohesion));
+			//			System.out.println("Average zone repulsion vector mag (for bots near zones) = " + (Bot.timestepZoneRepulsionMagnitudeTotal / Bot.timestepBotsRepelledByZones));
+			//			System.out.println("Average visible side segment length =  " + (Bot.timestepVisibleZoneSideTotal / Bot.timestepNumVisibleZoneSides));
+			//			System.out.println("");
+			//			System.out.println("Avg dist btwn bots on paths = " + (Bot.timestepAvgDistBtwnPathNeighbors / Bot.timestepNumBotOnPaths));
+			//			System.out.println(Bot.timestepNumBotOnPaths + " bots marking paths");
 
 			writeADatapoint();
-
-			System.gc();
 			
 			//repaint the scenario
 			repaint(timeBetweenTimesteps);
@@ -954,4 +950,58 @@ public class World extends JFrame implements WindowListener {
 	@Override
 	public void windowOpened(WindowEvent e) {}
 
+	public static void main(String[] args) {
+		//ask for a specific zone and survivor combination
+		File zoneDir = null, surDir = null;
+		JFileChooser zoneDirChooser = new JFileChooser();
+		zoneDirChooser.setCurrentDirectory(new File("."));
+		zoneDirChooser.setDialogTitle("Choose a zone directory, or cancel for random creation");
+		zoneDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		zoneDirChooser.setAcceptAllFileFilterUsed(false);
+
+		if(zoneDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+			zoneDir = zoneDirChooser.getSelectedFile();
+		} 
+
+		JFileChooser surDirChooser = new JFileChooser();
+		surDirChooser.setCurrentDirectory(new File("."));
+		surDirChooser.setDialogTitle("Choose a survivor directory, or cancel to place them randomly");
+		surDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+		surDirChooser.setAcceptAllFileFilterUsed(false);
+
+		if(surDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+			surDir = surDirChooser.getSelectedFile();
+		}
+
+		World world;
+
+		int numSur = 5;
+		for(int numBots = 100; numBots <= 800; numBots += 100) {
+			//run each test 5 times, so that we get a good range of numbers
+			for(int i = 0; i < 5; i++) {
+				if(zoneDir != null) {
+					if(surDir != null) {
+						world = new World(numBots, surDir, zoneDir);
+					} else {
+						world = new World(numBots, numSur, zoneDir);
+					}
+				} else {
+					if(surDir != null) {
+						world = new World(numBots, surDir);
+					} else {
+						world = new World(numBots, numSur);
+					}
+				}
+				//TODO add a set location?
+				//world.setLocation(200, 200);
+				world.setVisible(true);
+				//do a gc to clean up?
+				System.gc();
+				//go for 1000 timesteps - should be enough time to settle down
+				//FIXME can't see what's going on
+				world.go(500);
+				world.dispose();
+			}
+		}
+	}
 }
