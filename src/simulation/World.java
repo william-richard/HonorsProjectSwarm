@@ -905,7 +905,6 @@ public class World extends JFrame implements WindowListener {
 		//from some weird reason, the Veronoi algorithm will sometimes leave out a few pixels
 		//if we get here, that's happened
 		//basically, do the voronoi for it - try to find which zone's point is closest to this point
-		//TODO MAYBE? Have zones store these extra points so we only have to do this once? Probably will only do this a handful of times anyway..... maybe not worth it
 		double minimumDistance = Double.MAX_VALUE;
 		Zone closestZone = null;
 		for(Zone z : allZones.values()) {

@@ -96,10 +96,10 @@ public class Bot extends Rectangle2D.Double {
 	private final double PATH_MARK_CURVE_SHAPE = 2.5;
 	private final double PATH_MARK_FACTOR = DEFAULT_MAX_VELOCITY;
 
-	private final double PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * 1.2;
-	private final double PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * .8;
+	private final double PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * 1.5;
+	private final double PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * .5;
 
-	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 3;
+	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 5;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;

@@ -363,9 +363,12 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 					//FIXME can't see what's going on
 					world.go(1000);
 					//this will make UI unresponsive but who cares - just stop from Eclipse
+					System.gc();
 				}
 			}
 		}
+		
+		System.gc();
 	}
 
 	@Override
