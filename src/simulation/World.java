@@ -999,7 +999,7 @@ public class World extends JFrame implements WindowListener {
 				System.gc();
 				//go for 1000 timesteps - should be enough time to settle down
 				//FIXME can't see what's going on
-				world.go(500);
+				world.go(1000);
 				world.dispose();
 			}
 		}
