@@ -87,7 +87,6 @@ public class Bot extends Rectangle2D.Double {
 
 	private final static double SHOULD_MARK_PATH_THRESHOLD_DIST = DEFAULT_BROADCAST_RADIUS / 3.0;
 	private final static double ON_PATH_THRESHOLD_DISTANCE = Bot.DIMENSION;
-	private static final double HIGH_DENSITY_PATH_MARKER_SWICH_MODE_PROB = .1;
 
 	private final double PATH_MARK_IDEAL_DIST = 10;
 
@@ -98,8 +97,6 @@ public class Bot extends Rectangle2D.Double {
 
 	private final double PATH_MARK_MAX_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * 1.5;
 	private final double PATH_MARK_MIN_ACCEPTABLE_IDEAL_DIST = PATH_MARK_IDEAL_DIST * .5;
-
-	private final int NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES = 5;
 
 	private boolean OVERALL_BOT_DEBUG = true;
 	private boolean LISTEN_BOT_DEBUG = false;
@@ -128,7 +125,7 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	private LinkedList<HashSet<Message>> alreadyBroadcastedMessages;
+	private List<Message> alreadyBroadcastedMessages;
 	private int botID;
 	// zones it is in
 	private Zone baseZone; // the home base zones.
@@ -154,7 +151,7 @@ public class Bot extends Rectangle2D.Double {
 
 	//organized by mode number - the prob to changing to that role is stored in the idex that that role has
 	private double[] roleChangeProbabilites;
-	
+
 	private BotInfo myBotInfo;
 
 	/***************************************************************************
@@ -179,7 +176,7 @@ public class Bot extends Rectangle2D.Double {
 
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
-		alreadyBroadcastedMessages = new LinkedList<HashSet<Message>>();
+		alreadyBroadcastedMessages = new ArrayList<Message>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -327,15 +324,16 @@ public class Bot extends Rectangle2D.Double {
 	 **************************************************************************/
 	public void recieveMessage(Message message) {
 		//don't add this message to our buffer if it is one we have already sent
-		boolean alreadyBroadcasted = false;
-		for(HashSet<Message> mesList : alreadyBroadcastedMessages) {
-			if(mesList.contains(message)) {
-				alreadyBroadcasted = true;
-			}
+		//		boolean alreadyBroadcasted = false;
+		//		for(HashSet<Message> mesList : alreadyBroadcastedMessages) {
+		//			if(mesList.contains(message)) {
+		//				alreadyBroadcasted = true;
+		//			}
+		//		}
+		if(alreadyBroadcastedMessages.contains(message)) {
+			return;
 		}
-		if(! alreadyBroadcasted) {
-			messageBuffer.add(message);
-		}
+		messageBuffer.add(message);
 	}
 
 	@SuppressWarnings("unchecked")
@@ -343,18 +341,21 @@ public class Bot extends Rectangle2D.Double {
 
 		//really firstly, make sure we haven't broadcasted this message before
 		//if we have broadcastetd it before, don't do it again
-		boolean alreadyBroadcasted = false;
-		for(HashSet<Message> set : alreadyBroadcastedMessages) {
-			if(set.contains(mes)) {
-				alreadyBroadcasted = true;
-			}
-		}
-		if(alreadyBroadcasted) {
+		//		boolean alreadyBroadcasted = false;
+		//		for(HashSet<Message> set : alreadyBroadcastedMessages) {
+		//			if(set.contains(mes)) {
+		//				alreadyBroadcasted = true;
+		//			}
+		//		}
+		//		if(alreadyBroadcasted) {
+		//			return;
+		//		}
+		if(alreadyBroadcastedMessages.contains(mes)) {
 			return;
 		}
 
 		//make sure we record that we are broadcasting this message
-		alreadyBroadcastedMessages.get(0).add(mes);
+		alreadyBroadcastedMessages.add(mes);
 
 		// first, get our broadcast range
 		Shape broadcastRange = getBroadcastArea();
@@ -825,7 +826,7 @@ public class Bot extends Rectangle2D.Double {
 			if(Utilities.shouldEqualsZero(botSeperationVector.getMagnitude())) {
 				botSeperationVector = botSeperationVector.rescale(0.0);
 			} else {
-//				World.debugSeperationVectors.add(botSeperationVector.rescaleRatio(10.0));
+				//				World.debugSeperationVectors.add(botSeperationVector.rescaleRatio(10.0));
 			}
 
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
@@ -851,7 +852,7 @@ public class Bot extends Rectangle2D.Double {
 			if(Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
 				zoneRepulsionVector = zoneRepulsionVector.rescale(0.0);
 			} else {
-//				World.debugRepulsionVectors.add(zoneRepulsionVector.rescaleRatio(10.0));
+				//				World.debugRepulsionVectors.add(zoneRepulsionVector.rescaleRatio(10.0));
 			}			
 
 			//			print("Num neighbors = " + otherBotInfo.size() + "\tsep = " + botSeperationVector.getMagnitude() + "\tzone = " + zoneRepulsionVector.getMagnitude());
@@ -994,7 +995,7 @@ public class Bot extends Rectangle2D.Double {
 				continue;
 			}
 
-//			World.debugShapesToDraw.add(visibleSegment);
+			//			World.debugShapesToDraw.add(visibleSegment);
 
 			timestepVisibleZoneSideTotal += visibleSegment.getLength();
 			timestepNumVisibleZoneSides++;
@@ -1709,11 +1710,11 @@ public class Bot extends Rectangle2D.Double {
 		// also don't want to hang on to bot info for too long
 		otherBotInfo.clear();
 		//and don't want to hang onto the list of bots within broadcast
-		botsWithinBroadcast.clear();
+		botsWithinBroadcast = new ArrayList<Bot>();
 
 		myBotInfo = null;
-		
-		
+
+
 		// first, read any messages that have come in, and take care of them
 		if(TIMESTEP_BOT_DEBUG) {
 			print("Starting to read messages");
@@ -1772,10 +1773,9 @@ public class Bot extends Rectangle2D.Double {
 		if(TIMESTEP_BOT_DEBUG) {
 			print("Deleting old messages");
 		}
-		alreadyBroadcastedMessages.add(new HashSet<Message>());
-		if(alreadyBroadcastedMessages.size() > NUM_TIMESTEPS_TO_STORE_BROADCASTED_MESSAGES) {
-			alreadyBroadcastedMessages.removeLast();
-		}
+
+		alreadyBroadcastedMessages.clear();
+
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
