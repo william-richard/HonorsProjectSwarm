@@ -15,6 +15,8 @@ public class SurvivorPath {
 	//TODO remove "point" terminology from this class
 	//FIXME have a way for path markers to update path conditions, recalculating length
 	
+	//FIXME We are leaking SurvivorPaths
+	
 	private static final long serialVersionUID = 269945074800423928L;
 	private static final DecimalFormat df = new DecimalFormat("#.###");
 

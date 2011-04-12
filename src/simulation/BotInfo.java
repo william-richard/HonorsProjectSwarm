@@ -2,6 +2,8 @@ package simulation;
 import java.awt.geom.Point2D;
 import java.util.Scanner;
 
+import util.Utilities;
+
 
 public class BotInfo {
 
@@ -155,6 +157,21 @@ public class BotInfo {
 		BotInfo other = (BotInfo) obj;
 		if (botNum != other.botNum)
 			return false;
+		return true;
+	}
+	
+	public boolean deepEquals(BotInfo other) {
+		if(this == null || other == null)
+			return false;
+		if(this.botNum != other.botNum)
+			return false;
+		if(! this.location.equals(other.location))
+			return false;
+		if(this.mode != other.mode) 
+			return false;
+		if(! Utilities.shouldBeEqual(this.zoneMultiplier, other.zoneMultiplier)) 
+			return false;
+		
 		return true;
 	}
 

@@ -105,9 +105,9 @@ public class World extends JFrame implements WindowListener {
 
 	private BaseZone homeBase;
 
-	public static List<Shape> debugShapesToDraw;
-	public static List<Shape> debugSeperationVectors;
-	public static List<Shape> debugRepulsionVectors;
+	//	public static List<Shape> debugShapesToDraw;
+	//	public static List<Shape> debugSeperationVectors;
+	//	public static List<Shape> debugRepulsionVectors;
 
 	private static int currentTimestep; //keep track of what time it is
 	private long timeBetweenTimesteps; //store the time in milliseconds
@@ -295,9 +295,9 @@ public class World extends JFrame implements WindowListener {
 		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
 		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 
-		debugShapesToDraw = new ArrayList<Shape>();
-		debugSeperationVectors = new ArrayList<Shape>();
-		debugRepulsionVectors = new ArrayList<Shape>();
+		//		debugShapesToDraw = new ArrayList<Shape>();
+		//		debugSeperationVectors = new ArrayList<Shape>();
+		//		debugRepulsionVectors = new ArrayList<Shape>();
 
 		currentTimestep = 0;
 	}
@@ -685,7 +685,7 @@ public class World extends JFrame implements WindowListener {
 			//			System.out.println(Bot.timestepNumBotOnPaths + " bots marking paths");
 
 			writeADatapoint();
-			
+
 			//repaint the scenario
 			repaint(timeBetweenTimesteps);
 
@@ -863,27 +863,29 @@ public class World extends JFrame implements WindowListener {
 		}
 
 
-		if(WORLD_DEBUG) {
-			//draw the shapes in the debug arraylist
-			g2d.setColor(Color.cyan);
-			g2d.setStroke(new BasicStroke(1));
-			for(Shape s : debugShapesToDraw) {
-				g2d.draw(s);
-			}
-			debugShapesToDraw.clear();
+		//		if(WORLD_DEBUG) {
+		//			//draw the shapes in the debug arraylist
+		//			g2d.setColor(Color.cyan);
+		//			g2d.setStroke(new BasicStroke(1));
+		//			for(Shape s : debugShapesToDraw) {
+		//				g2d.draw(s);
+		//			}
+		//
+		//			//			g2d.setColor(Color.red);
+		//			//			for(Shape s : debugSeperationVectors) {
+		//			//				g2d.draw(s);
+		//			//			}
+		//			//			debugSeperationVectors.clear();
+		//			//			
+		//			//			g2d.setColor(Color.blue);
+		//			//			for(Shape s : debugRepulsionVectors) {
+		//			//				g2d.draw(s);
+		//			//			}
+		//			//			debugRepulsionVectors.clear();
+		//		}
 
-			//			g2d.setColor(Color.red);
-			//			for(Shape s : debugSeperationVectors) {
-			//				g2d.draw(s);
-			//			}
-			//			debugSeperationVectors.clear();
-			//			
-			//			g2d.setColor(Color.blue);
-			//			for(Shape s : debugRepulsionVectors) {
-			//				g2d.draw(s);
-			//			}
-			//			debugRepulsionVectors.clear();
-		}
+		//		debugShapesToDraw.clear();
+
 
 		System.out.println("Done with repaint");
 	}

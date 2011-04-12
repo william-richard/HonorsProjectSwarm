@@ -154,6 +154,8 @@ public class Bot extends Rectangle2D.Double {
 
 	//organized by mode number - the prob to changing to that role is stored in the idex that that role has
 	private double[] roleChangeProbabilites;
+	
+	private BotInfo myBotInfo;
 
 	/***************************************************************************
 	 * CONSTRUCTORS
@@ -258,8 +260,14 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	public BotInfo getBotInfo() {
-		//TODO maybe find a way to create this once per timestep to save memory
-		return new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode, currentZone.getPathWeightPerPixel());
+		BotInfo curBotInfo = new BotInfo(this.getID(), this.getCenterX(), this.getCenterY(), botMode, currentZone.getPathWeightPerPixel());
+		if(myBotInfo == null) {
+			myBotInfo = curBotInfo;
+		}
+		if(! myBotInfo.deepEquals(curBotInfo)) {
+			myBotInfo = curBotInfo;
+		}
+		return myBotInfo;
 	}
 
 
@@ -817,7 +825,7 @@ public class Bot extends Rectangle2D.Double {
 			if(Utilities.shouldEqualsZero(botSeperationVector.getMagnitude())) {
 				botSeperationVector = botSeperationVector.rescale(0.0);
 			} else {
-				World.debugSeperationVectors.add(botSeperationVector.rescaleRatio(10.0));
+//				World.debugSeperationVectors.add(botSeperationVector.rescaleRatio(10.0));
 			}
 
 			//also, make a cohesion vector, that points toward the average location of the neighboring bots
@@ -843,7 +851,7 @@ public class Bot extends Rectangle2D.Double {
 			if(Utilities.shouldEqualsZero(zoneRepulsionVector.getMagnitude())) {
 				zoneRepulsionVector = zoneRepulsionVector.rescale(0.0);
 			} else {
-				World.debugRepulsionVectors.add(zoneRepulsionVector.rescaleRatio(10.0));
+//				World.debugRepulsionVectors.add(zoneRepulsionVector.rescaleRatio(10.0));
 			}			
 
 			//			print("Num neighbors = " + otherBotInfo.size() + "\tsep = " + botSeperationVector.getMagnitude() + "\tzone = " + zoneRepulsionVector.getMagnitude());
@@ -986,7 +994,7 @@ public class Bot extends Rectangle2D.Double {
 				continue;
 			}
 
-			World.debugShapesToDraw.add(visibleSegment);
+//			World.debugShapesToDraw.add(visibleSegment);
 
 			timestepVisibleZoneSideTotal += visibleSegment.getLength();
 			timestepNumVisibleZoneSides++;
@@ -1703,6 +1711,9 @@ public class Bot extends Rectangle2D.Double {
 		//and don't want to hang onto the list of bots within broadcast
 		botsWithinBroadcast.clear();
 
+		myBotInfo = null;
+		
+		
 		// first, read any messages that have come in, and take care of them
 		if(TIMESTEP_BOT_DEBUG) {
 			print("Starting to read messages");
