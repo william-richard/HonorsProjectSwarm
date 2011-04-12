@@ -181,7 +181,7 @@ public class Utilities {
 		}
 
 		//get s's PathIterator
-		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .01);
+		FlatteningPathIterator fpi = new FlatteningPathIterator(s.getPathIterator(null), .1);
 
 		//now, go through the iterator and extract the sides
 		double[] curCoords = new double[6];

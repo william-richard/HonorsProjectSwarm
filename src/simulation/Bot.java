@@ -375,7 +375,7 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	private void readMessages() {
-		//FIXME Still gets clogged up when making new paths or just after path creation?
+		//TODO Thread this?
 		// go through all the messages
 
 		// make a scanner to make going through the messages a bit easier
@@ -387,6 +387,8 @@ public class Bot extends Rectangle2D.Double {
 
 		//instead of dealing with path messages as they come in, deal with them all at once at the end
 		//keep track of what paths we have been told about in a list
+		
+		//TODO if we can store these organized first by survivor, then sorted, we can process each survivor's paths in a seperate thread
 		ConcurrentSkipListSet<SurvivorPath> allPathsToldAbout = new ConcurrentSkipListSet<SurvivorPath>(new Comparator<SurvivorPath>() {
 			@Override
 			public int compare(SurvivorPath sp1, SurvivorPath sp2) {
@@ -407,6 +409,8 @@ public class Bot extends Rectangle2D.Double {
 			}
 		});
 
+		
+		//TODO if we set up the appropriate locks, we should be able to thread the while loop - just make sure to have a write lock for each list we need to add to
 		Message mes;
 		while(! messageBuffer.isEmpty()) {
 			mes = messageBuffer.remove(0);
@@ -598,14 +602,6 @@ public class Bot extends Rectangle2D.Double {
 				//***make sure we pass on copies of the current path
 				curPath = new SurvivorPath(curPath);
 
-				//TODO put this back in?
-				//				//if we are too far from the line defined by the survivor location and the end point, ignore this path
-				//				LineSegment surEndSeg = curPath.getSurEndSegment();
-				//				if(surEndSeg.ptSegDist(this.getCenterLocation()) > IGNORE_PARTIAL_PATH_DISTANCE) {
-				//					//we should ignore this partial path
-				//					continue;
-				//				}
-
 				//if we have a complete path to this survivor already
 				//and the complete path is shorter than this partial path
 				//then don't do anything more with it
@@ -614,13 +610,6 @@ public class Bot extends Rectangle2D.Double {
 					pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
 					continue;
 				}
-
-				//make our changes to it, and pass it on if we are not a path marker
-				//				if(botMode == PATH_MARKER) {
-				//					//in this case, just pass on the incomplete path
-				//					pathsToPassOn.add(curPath);
-				//					continue;
-				//				} 
 
 				//make sure we have not already contributed to this path
 				//if we have, we should not do anything more with it
