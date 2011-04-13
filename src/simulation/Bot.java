@@ -125,8 +125,6 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
-	//TODO only storing this timestep doesn't work - need to store at least 1
-	private List<Message> alreadyBroadcastedMessages;
 	private int botID;
 	// zones it is in
 	private Zone baseZone; // the home base zones.
@@ -177,7 +175,6 @@ public class Bot extends Rectangle2D.Double {
 
 		// set up other variables with default values
 		messageBuffer = new ArrayList<Message>();
-		alreadyBroadcastedMessages = new ArrayList<Message>();
 
 		heardShouts = new CopyOnWriteArrayList<Shout>();
 
@@ -324,45 +321,14 @@ public class Bot extends Rectangle2D.Double {
 	 * METHODS
 	 **************************************************************************/
 	public void recieveMessage(Message message) {
-		//don't add this message to our buffer if it is one we have already sent
-		//		boolean alreadyBroadcasted = false;
-		//		for(HashSet<Message> mesList : alreadyBroadcastedMessages) {
-		//			if(mesList.contains(message)) {
-		//				alreadyBroadcasted = true;
-		//			}
-		//		}
-		if(alreadyBroadcastedMessages.contains(message)) {
-			return;
-		}
 		messageBuffer.add(message);
 	}
 
 	@SuppressWarnings("unchecked")
 	private void broadcastMessage(Message mes) {
-
-		//really firstly, make sure we haven't broadcasted this message before
-		//if we have broadcastetd it before, don't do it again
-		//		boolean alreadyBroadcasted = false;
-		//		for(HashSet<Message> set : alreadyBroadcastedMessages) {
-		//			if(set.contains(mes)) {
-		//				alreadyBroadcasted = true;
-		//			}
-		//		}
-		//		if(alreadyBroadcasted) {
-		//			return;
-		//		}
-		if(alreadyBroadcastedMessages.contains(mes)) {
-			return;
-		}
-
-		//make sure we record that we are broadcasting this message
-		alreadyBroadcastedMessages.add(mes);
-
-		// first, get our broadcast range
-		Shape broadcastRange = getBroadcastArea();
-
-		// find any nearby bots
+		// find any nearby bots if we haven't already
 		if(botsWithinBroadcast.size() == 0) {
+			Shape broadcastRange = getBroadcastArea();
 			botsWithinBroadcast = (List<Bot>) Utilities.findAreaIntersectionsInList(broadcastRange, World.allBots);
 		}
 
@@ -1785,9 +1751,6 @@ public class Bot extends Rectangle2D.Double {
 		if(TIMESTEP_BOT_DEBUG) {
 			print("Deleting old messages");
 		}
-
-		alreadyBroadcastedMessages.clear();
-
 
 		// make sure we are still in the zones we think we are in
 		if (currentZone == null || (!currentZone.contains(getCenterLocation()))) {
