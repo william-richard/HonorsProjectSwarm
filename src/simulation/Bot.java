@@ -524,7 +524,6 @@ public class Bot extends Rectangle2D.Double {
 		//the way we're doing it now (removing each message) should do that, but just make sure.
 		messageBuffer.clear();
 
-
 		//now we can go through and process all the paths we got this timestep
 		Set<SurvivorPath> pathsToPassOn = new HashSet<SurvivorPath>();
 
@@ -538,8 +537,14 @@ public class Bot extends Rectangle2D.Double {
 		//go through each path of the ones we have been told about in order
 		SurvivorPath curPath;
 		while( (curPath = allPathsToldAbout.pollFirst()) != null) {
-			//see how it compares to what path we know of that is best for this survivor
+			
+			//first, see if we have an outdated complete path to this survivor
+			//a stored path is outdated if the path we were told about had it's path creation process started after our path
+			//basically, if the stored path had an earlier start creation time, it is outdated
+			boolean storedPathRelevant = bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getStartCreationTimestep() >= curPath.getStartCreationTimestep();
+						
 			if(curPath.isComplete()) {
+				//see how it compares to what path we know of that is best for this survivor
 				//since it is complete, no one will ever change it ever again
 				//we can reference it directly, i.e. we don't have to make a copy of it before we pass it on or store it
 
@@ -550,7 +555,7 @@ public class Bot extends Rectangle2D.Double {
 				//if it is complete, see if we have a complete path to this survivor already
 				SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(curPath.getSur());
 
-				if(knownPathToThisSurvivor != null) {
+				if(storedPathRelevant && knownPathToThisSurvivor != null) {
 					//see if the path we have is the same that we just got
 					if(knownPathToThisSurvivor.equals(curPath)) {
 						//we know about this path already, and it is the best we've heard - don't rebroadcast
@@ -567,9 +572,13 @@ public class Bot extends Rectangle2D.Double {
 						}
 					}
 				} else {
-					//we have not heard of this path before
+					//we have not heard of this path before, or the stored path is outdated
 					//add it to our list, and pass on info about it
 					//since it is complete, we dont' need to copy it
+					//this call should replace the old value
+					if(!storedPathRelevant) {
+						bestKnownCompletePaths.remove(curPath.getSur());
+					}
 					bestKnownCompletePaths.put(curPath.getSur(), curPath);
 					pathsToPassOn.add(curPath);
 				}
@@ -587,11 +596,11 @@ public class Bot extends Rectangle2D.Double {
 				//***make sure we pass on copies of the current path
 				curPath = new SurvivorPath(curPath);
 				
-				//if we have a complete path to this survivor already
+				//if we have a complete path to this survivor already that is not outdated
 				//and the complete path is shorter than this partial path
 				//then don't do anything more with it
 				//tell neighbors about better, complete path
-				if(bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getPathLength() < curPath.getPathLength()) {
+				if(storedPathRelevant && bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getPathLength() < curPath.getPathLength()) {
 					pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
 					continue;
 				}
@@ -614,7 +623,7 @@ public class Bot extends Rectangle2D.Double {
 					if(bestKnownCompletePaths.containsKey(curPath.getSur())) {
 						//we have a path to this survivor
 						SurvivorPath previouslyKnownPath = bestKnownCompletePaths.get(curPath.getSur());
-						if(previouslyKnownPath.getPathLength() < curPath.getPathLength()) {
+						if(storedPathRelevant && previouslyKnownPath.getPathLength() < curPath.getPathLength()) {
 							//the path we had is better
 							//don't pass on the new complete path
 							continue;
@@ -1273,7 +1282,7 @@ public class Bot extends Rectangle2D.Double {
 				List<BotInfo> pointList = new ArrayList<BotInfo>();
 				pointList.add(this.getBotInfo());
 
-				SurvivorPath initialPath = new SurvivorPath(mySurvivor, pointList, baseZone.getCenterLocation(), baseZone.contains(this.getCenterLocation()));
+				SurvivorPath initialPath = new SurvivorPath(mySurvivor, pointList, baseZone.getCenterLocation(), World.getCurrentTimestep(), baseZone.contains(this.getCenterLocation()));
 				broadcastMessage(Message.constructCreatePathsMessage(this, initialPath));
 
 				numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;

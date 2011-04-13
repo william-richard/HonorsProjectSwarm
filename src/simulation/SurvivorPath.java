@@ -24,16 +24,18 @@ public class SurvivorPath {
 	private Point2D endPoint;
 	private boolean complete;
 	private LineSegment surEndSeg;
+	private final int startCreationTimestep;
 
-	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, boolean _complete) {
-		this(_sur, _pathPoints, _endPoint, -1.0, _complete);
+	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, int _startCreationTimestep, boolean _complete) {
+		this(_sur, _pathPoints, _endPoint, -1.0, _startCreationTimestep, _complete);
 	}
 
-	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, double _pathLength, boolean _complete) {
+	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, double _pathLength, int _startCreationTimestep, boolean _complete) {
 		sur = _sur;
 		complete = _complete;
 		pathWaypoints = new ArrayList<BotInfo>();
 		endPoint = _endPoint;
+		startCreationTimestep = _startCreationTimestep;
 
 		surEndSeg = new LineSegment(sur.getCenterLocation(), endPoint);
 		
@@ -49,7 +51,7 @@ public class SurvivorPath {
 	}
 
 	public SurvivorPath(SurvivorPath _original) {
-		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.getPathLength(), _original.isComplete());
+		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.getPathLength(), _original.startCreationTimestep, _original.isComplete());
 	}
 
 	private void recalculatePathLength() {
@@ -179,6 +181,13 @@ public class SurvivorPath {
 	}
 	
 	
+	/**
+	 * @return the startCreationTimestep
+	 */
+	public int getStartCreationTimestep() {
+		return startCreationTimestep;
+	}
+
 	/**
 	 * @return the complete
 	 */
