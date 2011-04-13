@@ -7,6 +7,7 @@ import java.io.Serializable;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import util.Utilities;
 import zones.Zone;
 
 
@@ -115,6 +116,16 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 	public int hashCode() {
 		return this.getCenterLocation().hashCode();
 	}
+	
+	public boolean deepEquals(Survivor other) {
+		if(! this.equals(other)) 
+			return false;
+		if(! Utilities.shouldBeEqual(this.damage, other.damage)) 
+			return false;
+		return true;
+	}
+	
+	
 	
 	public void doOneTimestep() {
 		//each time, we want to try to shout

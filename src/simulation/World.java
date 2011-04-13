@@ -978,9 +978,9 @@ public class World extends JFrame implements WindowListener {
 		World world;
 
 		int numSur = 5;
-		for(int numBots = 100; numBots <= 800; numBots += 100) {
+		for(int numBots = 200; numBots <= 300; numBots += 10) {
 			//run each test 5 times, so that we get a good range of numbers
-			for(int i = 0; i < 5; i++) {
+			for(int i = 0; i < 2; i++) {
 				if(zoneDir != null) {
 					if(surDir != null) {
 						world = new World(numBots, surDir, zoneDir);

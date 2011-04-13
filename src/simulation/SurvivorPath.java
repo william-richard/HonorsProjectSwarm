@@ -25,6 +25,7 @@ public class SurvivorPath {
 	private ArrayList<BotInfo> pathWaypoints;
 	private Point2D endPoint;
 	private boolean complete;
+	private LineSegment surEndSeg;
 
 	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, boolean _complete) {
 		this(_sur, _pathPoints, _endPoint, -1.0, _complete);
@@ -36,6 +37,8 @@ public class SurvivorPath {
 		pathWaypoints = new ArrayList<BotInfo>();
 		endPoint = _endPoint;
 
+		surEndSeg = new LineSegment(sur.getCenterLocation(), endPoint);
+		
 		//want to clone the individual points, to make sure we don't have any wrong pointers - need to do a loop
 		pathWaypoints = new ArrayList<BotInfo>(_pathPoints);
 
@@ -174,7 +177,7 @@ public class SurvivorPath {
 	}
 
 	public LineSegment getSurEndSegment() {
-		return new LineSegment(pathWaypoints.get(0).getCenterLocation(), endPoint);
+		return surEndSeg;
 	}
 	
 	

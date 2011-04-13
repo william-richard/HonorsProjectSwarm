@@ -30,7 +30,7 @@ import zones.Zone;
 public class Bot extends Rectangle2D.Double {
 
 	private static final long serialVersionUID = -3272426964314356266L;
-
+	
 	/***************************************************************************
 	 * CONSTANTS
 	 **************************************************************************/
@@ -125,15 +125,16 @@ public class Bot extends Rectangle2D.Double {
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
 	// about all of the other Bots
 	private List<Message> messageBuffer; // keep a buffer of messages from other robots we have recieved in the last timestep
+	//TODO only storing this timestep doesn't work - need to store at least 1
 	private List<Message> alreadyBroadcastedMessages;
 	private int botID;
 	// zones it is in
 	private Zone baseZone; // the home base zones.
-	private HashSet<Survivor> knownSurvivors; // keep a list of survivors that have
+	private List<Survivor> knownSurvivors; // keep a list of survivors that have
 	// already been found, so can go
 	// claim them
 	// TODO handle reclaiming survivors in the case of robot death
-	private HashSet<Survivor> claimedSurvivors; // keep a list of survivors that
+	private List<Survivor> claimedSurvivors; // keep a list of survivors that
 	// have been claimed, so that we
 	// don't double up on one survivor
 	private Survivor mySurvivor; // the survivor I have claimed - don't know if
@@ -184,8 +185,8 @@ public class Bot extends Rectangle2D.Double {
 
 		baseZone = homeBase;
 
-		knownSurvivors = new HashSet<Survivor>();
-		claimedSurvivors = new HashSet<Survivor>();
+		knownSurvivors = new ArrayList<Survivor>();
+		claimedSurvivors = new ArrayList<Survivor>();
 
 		boundingBox = _bounds;
 
@@ -286,7 +287,7 @@ public class Bot extends Rectangle2D.Double {
 		return bestKnownCompletePaths;
 	}
 
-	public Set<Survivor> getClaimedSurvivors() {
+	public List<Survivor> getClaimedSurvivors() {
 		return claimedSurvivors;
 	}
 
@@ -455,7 +456,14 @@ public class Bot extends Rectangle2D.Double {
 				// figure out if we know about it already - update if we do, add
 				// to our records if we don't
 				if (knownSurvivors.contains(foundSurvivor)) {
-					// update it
+					// update it if it is different than what we have
+					Survivor knownSur = knownSurvivors.get(knownSurvivors.indexOf(foundSurvivor));
+					
+					if(knownSur.deepEquals(foundSurvivor)) {
+						//don't change anything, or rebroadcast
+						continue;
+					}
+					
 					knownSurvivors.remove(foundSurvivor);
 					knownSurvivors.add(foundSurvivor);
 				} else {
@@ -520,6 +528,11 @@ public class Bot extends Rectangle2D.Double {
 				} else {
 					// store/update the survivor that they have found
 					if (claimedSurvivors.contains(claimedSurvivor)) {
+						Survivor knownClaimedSur = claimedSurvivors.get(claimedSurvivors.indexOf(claimedSurvivor));
+						if(knownClaimedSur.deepEquals(claimedSurvivor)) {
+							//don't rebroadcast or update
+							continue;
+						}
 						claimedSurvivors.remove(claimedSurvivor);
 						claimedSurvivor.add(claimedSurvivor);
 					} else {
@@ -599,9 +612,19 @@ public class Bot extends Rectangle2D.Double {
 				}
 			} else {
 				//the path we just got is not complete
+				
+				//TODO maybe readd too-far-from-straight-line-so-ignore or maybe something along the lines of not-next-to-straight-line-off-one-end-so-ignore
+				//make the line from the survivor to the end point of the path
+				LineSegment surEndSeg = curPath.getSurEndSegment();
+				//if we are off one end of the surEndSeg, don't do anything with this path
+				//we can tell if we are off one end if your distance from the segment is different than our distance from the inifinitely extended line
+				if(! Utilities.shouldBeEqual(surEndSeg.ptLineDist(this.getCenterLocation()), surEndSeg.ptSegDist(this.getCenterLocation()))) {
+					continue;
+				}
+				
 				//***make sure we pass on copies of the current path
 				curPath = new SurvivorPath(curPath);
-
+				
 				//if we have a complete path to this survivor already
 				//and the complete path is shorter than this partial path
 				//then don't do anything more with it
