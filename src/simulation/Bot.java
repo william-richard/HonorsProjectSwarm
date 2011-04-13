@@ -50,7 +50,6 @@ public class Bot extends Rectangle2D.Double {
 
 	private final static Random NUM_GEN = new Random();
 
-	//TODO Scale force exerted on other bots based on how many neighobors each bot has - so bots with more neighbors will push more?
 	private final double NORMAL_SEPERATION_FACTOR = 									50;
 	private final double COHESION_FACTOR = 										.5; //cohesion factor should never me more than 1
 
@@ -118,8 +117,6 @@ public class Bot extends Rectangle2D.Double {
 	private Vector movementVector;
 	private BoundingBox boundingBox;
 	private List<Bot> botsWithinBroadcast; //bot's that are within broadcast radius this timestep
-
-	//TODO Add damage value - increase as bot spends more time in fire area
 
 	// private Bot previousBot;
 	private Set<BotInfo> otherBotInfo; // storage of what information we know
@@ -579,7 +576,6 @@ public class Bot extends Rectangle2D.Double {
 			} else {
 				//the path we just got is not complete
 				
-				//TODO maybe readd too-far-from-straight-line-so-ignore or maybe something along the lines of not-next-to-straight-line-off-one-end-so-ignore
 				//make the line from the survivor to the end point of the path
 				LineSegment surEndSeg = curPath.getSurEndSegment();
 				//if we are off one end of the surEndSeg, don't do anything with this path
@@ -1472,7 +1468,6 @@ public class Bot extends Rectangle2D.Double {
 	}
 
 	private void reevaluateBotMode() {	
-		//FIXME Path markers are not doing very well still
 		//first, adjust the probabilities
 		//if we're some sort of explorer, adjust the probability that we should become a path marker
 		SurvivorPath closestPath = null;

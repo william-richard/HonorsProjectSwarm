@@ -1,10 +1,12 @@
 package simulation;
+import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
+import java.awt.Robot;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.WindowEvent;
@@ -13,6 +15,7 @@ import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileFilter;
@@ -35,6 +38,7 @@ import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
 
+import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 
@@ -91,6 +95,7 @@ public class World extends JFrame implements WindowListener {
 
 
 	private static final String DATA_FILENAME = "data.txt";
+	private static final String SCREENSHOTS_DIR_NAME = "screenshots";
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM,dd,yy-HH;mm;ss");
 	private static final DecimalFormat DOUBLE_FORMAT = new DecimalFormat("#.####");
 
@@ -307,6 +312,8 @@ public class World extends JFrame implements WindowListener {
 		//make the directory for this run
 		dataDirectory = "data/" + allSurvivors.size() + "/" + allBots.size() + "/" + DATE_FORMAT.format(firstStartTime) + "/";
 		new File(dataDirectory).mkdirs();
+		//also make the directory for the screenshots
+		new File(dataDirectory + SCREENSHOTS_DIR_NAME).mkdir();
 		//create the information about number of bots, survivors etc
 		try {
 			//write an info file about the number of bots and survivors, to start
@@ -447,6 +454,16 @@ public class World extends JFrame implements WindowListener {
 			dataWriter.write(World.getCurrentTimestep() + "\t" + System.currentTimeMillis() + "\t" + DOUBLE_FORMAT.format(perSurFound) + '\t' + DOUBLE_FORMAT.format(pathQuality) + '\t' + DOUBLE_FORMAT.format(pathCoverage) + '\t' + DOUBLE_FORMAT.format(overallMetric));
 			dataWriter.newLine();
 			dataWriter.close();
+			
+			//also write a screenshot
+//			Robot screenCapRobot = new Robot();
+//			BufferedImage curTimestepShot = screenCapRobot.createScreenCapture(BOUNDING_BOX.getBounds());
+			
+			BufferedImage curTimestepShot = new BufferedImage(FRAME_WIDTH, FRAME_HEIGHT, BufferedImage.TYPE_INT_RGB);
+			this.update(curTimestepShot.createGraphics());
+			
+			File outputFile = new File(dataDirectory + SCREENSHOTS_DIR_NAME + "/" + getCurrentTimestep() + ".jpeg");
+			ImageIO.write(curTimestepShot, "jpeg", outputFile);
 		} catch (IOException e) {
 			System.out.println("IOException writing a datapoint");
 			e.printStackTrace();
@@ -717,7 +734,7 @@ public class World extends JFrame implements WindowListener {
 
 		System.out.println("Starting repaint");
 
-		g = this.getGraphics();
+//		g = this.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
 
 		//clear everything
@@ -999,8 +1016,7 @@ public class World extends JFrame implements WindowListener {
 				world.setVisible(true);
 				//do a gc to clean up?
 				System.gc();
-				//go for 1000 timesteps - should be enough time to settle down
-				//FIXME can't see what's going on
+				//go for 1200 timesteps = 20 min - should be enough time to settle down
 				world.go(1000);
 				world.dispose();
 			}
