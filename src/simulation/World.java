@@ -1,12 +1,10 @@
 package simulation;
-import java.awt.AWTException;
 import java.awt.BasicStroke;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Point;
-import java.awt.Robot;
 import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.event.WindowEvent;
