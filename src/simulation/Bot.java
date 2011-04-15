@@ -524,6 +524,7 @@ public class Bot extends Rectangle2D.Double {
 		//the way we're doing it now (removing each message) should do that, but just make sure.
 		messageBuffer.clear();
 
+
 		//now we can go through and process all the paths we got this timestep
 		Set<SurvivorPath> pathsToPassOn = new HashSet<SurvivorPath>();
 
@@ -544,7 +545,6 @@ public class Bot extends Rectangle2D.Double {
 			boolean storedPathRelevant = bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getStartCreationTimestep() >= curPath.getStartCreationTimestep();
 						
 			if(curPath.isComplete()) {
-				//see how it compares to what path we know of that is best for this survivor
 				//since it is complete, no one will ever change it ever again
 				//we can reference it directly, i.e. we don't have to make a copy of it before we pass it on or store it
 
@@ -651,7 +651,7 @@ public class Bot extends Rectangle2D.Double {
 
 	}
 
-	public void hearShout(Shout s) throws InterruptedException {
+	public void hearShout(Shout s) {
 		heardShouts.add(s);
 	}
 
