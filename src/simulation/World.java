@@ -60,13 +60,13 @@ public class World extends JFrame implements WindowListener {
 	 **************************************************************************/
 	public static final Random RANDOM_GENERATOR = new Random();
 	private static final int MENUBAR_HEIGHT = 21;
-	private static final int FRAME_HEIGHT = 500 + MENUBAR_HEIGHT;
-	private static final int FRAME_WIDTH = 500;
+	private static final int FRAME_HEIGHT = 400 + MENUBAR_HEIGHT;
+	private static final int FRAME_WIDTH = 400;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean WORLD_DEBUG = false;
 
-	private static final int ZONE_COMPLEXITY = 100; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
+	private static final int ZONE_COMPLEXITY = 200; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color EXPLORER_BOT_COLOR = Color.green;
@@ -248,8 +248,8 @@ public class World extends JFrame implements WindowListener {
 			//don't let survivors be in the basezone
 			do {
 				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
-				//make sure we don't have survivors in the base zone and we don't duplicate survivors
-			} while(homeBase.contains(curSurvivor.getCenterLocation()) && allSurvivors.contains(curSurvivor));
+				//make sure we don't have survivors too close to the base zone and we don't duplicate survivors
+			} while(homeBase.getCenterLocation().distance(curSurvivor.getCenterLocation()) < BASE_ZONE_BUFFER || allSurvivors.contains(curSurvivor));
 
 			allSurvivors.add(curSurvivor);
 		}
@@ -458,7 +458,7 @@ public class World extends JFrame implements WindowListener {
 			//			BufferedImage curTimestepShot = screenCapRobot.createScreenCapture(BOUNDING_BOX.getBounds());
 
 			BufferedImage curTimestepShot = new BufferedImage(FRAME_WIDTH, FRAME_HEIGHT, BufferedImage.TYPE_INT_RGB);
-			this.update(curTimestepShot.createGraphics());
+			this.paint(curTimestepShot.createGraphics());
 
 			File outputFile = new File(dataDirectory + SCREENSHOTS_DIR_NAME + "/" + getCurrentTimestep() + ".jpeg");
 			ImageIO.write(curTimestepShot, "jpeg", outputFile);
@@ -757,16 +757,18 @@ public class World extends JFrame implements WindowListener {
 		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 		//		}
 
-		//all bots should know about all shouts, so draw them all based on what the first bot knows
-		Bot firstBot = (Bot) allBotSnapshot.next().clone();
-		//go previous one, so that when we start to draw the bots, we'll start at the beginning
-		allBotSnapshot.previous();
+		if(allBotSnapshot.hasNext()) {
+			//all bots should know about all shouts, so draw them all based on what the first bot knows
+			Bot firstBot = allBotSnapshot.next();
+			//go previous one, so that when we start to draw the bots, we'll start at the beginning
+			allBotSnapshot.previous();
 
-		//now, drow all of the shouts
-		g2d.setColor(SHOUT_COLOR);
-		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
-		while(shoutIterator.hasNext()) {
-			g2d.draw(shoutIterator.next());
+			//now, drow all of the shouts
+			g2d.setColor(SHOUT_COLOR);
+			ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
+			while(shoutIterator.hasNext()) {
+				g2d.draw(shoutIterator.next());
+			}
 		}
 
 		//draw optimal paths to all survivors
@@ -992,7 +994,7 @@ public class World extends JFrame implements WindowListener {
 
 		World world;
 
-		for(int numSur = 0; numSur <= 10; numSur+=1) {
+		for(int numSur = 1; numSur <= 10; numSur+=1) {
 			for(int numBots = 25; numBots <= 225; numBots += 25) {
 				//run each test 5 times, so that we get a good range of numbers
 				for(int i = 0; i < 5; i++) {
