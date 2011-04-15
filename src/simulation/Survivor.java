@@ -20,7 +20,7 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 	private final int DIMENSION = 6; //survivors are squares really, so they only need 1 dimension.
 	private final double SHOUT_PROB = .75; //The probability that survivors will shout
 	private final Point2D CENTER_LOCATION;
-	
+
 	public static final FileNameExtensionFilter survivorFileExtensionFilter = new FileNameExtensionFilter("Serialized survivor file", "sur");
 
 	/***************************************************************************
@@ -48,7 +48,7 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 		//recreating the center location is taking up a lot of space
 		//calculate once and store
 		CENTER_LOCATION = new Point2D.Double(this.getCenterX(), this.getCenterY());
-		
+
 		//store the zones that we're in
 		currentZone = World.findZone(getCenterLocation());
 	}
@@ -68,7 +68,7 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 	 * METHODS
 	 **************************************************************************/
 
-	private synchronized void shout() {
+	private void shout() {
 		if(currentZone != null) {
 			//see if we're going to shout
 			if(World.RANDOM_GENERATOR.nextDouble() <= SHOUT_PROB) {
@@ -77,12 +77,7 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 
 				//send it off to all the bots - they'll determine if they can hear it or not
 				for(Bot b : World.allBots) {
-					try {
-						b.hearShout(ourShout);
-					} catch (InterruptedException e) {
-						//it didn't make it for some reason
-						//don't worry about it that much
-					}
+					b.hearShout(ourShout);
 				}
 
 			}
@@ -116,7 +111,7 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 	public int hashCode() {
 		return this.getCenterLocation().hashCode();
 	}
-	
+
 	public boolean deepEquals(Survivor other) {
 		if(! this.equals(other)) 
 			return false;
@@ -124,9 +119,9 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 			return false;
 		return true;
 	}
-	
-	
-	
+
+
+
 	public void doOneTimestep() {
 		//each time, we want to try to shout
 		shout();
@@ -134,7 +129,7 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 		//don't need to update what zones we're in because we can't move
 		//this fact may change later
 	}
-	
+
 	private void readObject(ObjectInputStream in) throws IOException {
 		try {
 			in.defaultReadObject();
@@ -142,11 +137,11 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 			System.out.println("Cannot find class while reading Survivor Object");
 			e.printStackTrace();
 		}
-		
+
 		//set up the zone correctly
 		World.findZone(this.getCenterLocation());
 	}
-	
-	
-	
+
+
+
 }

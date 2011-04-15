@@ -452,14 +452,14 @@ public class World extends JFrame implements WindowListener {
 			dataWriter.write(World.getCurrentTimestep() + "\t" + System.currentTimeMillis() + "\t" + DOUBLE_FORMAT.format(perSurFound) + '\t' + DOUBLE_FORMAT.format(pathQuality) + '\t' + DOUBLE_FORMAT.format(pathCoverage) + '\t' + DOUBLE_FORMAT.format(overallMetric));
 			dataWriter.newLine();
 			dataWriter.close();
-			
+
 			//also write a screenshot
-//			Robot screenCapRobot = new Robot();
-//			BufferedImage curTimestepShot = screenCapRobot.createScreenCapture(BOUNDING_BOX.getBounds());
-			
+			//			Robot screenCapRobot = new Robot();
+			//			BufferedImage curTimestepShot = screenCapRobot.createScreenCapture(BOUNDING_BOX.getBounds());
+
 			BufferedImage curTimestepShot = new BufferedImage(FRAME_WIDTH, FRAME_HEIGHT, BufferedImage.TYPE_INT_RGB);
 			this.update(curTimestepShot.createGraphics());
-			
+
 			File outputFile = new File(dataDirectory + SCREENSHOTS_DIR_NAME + "/" + getCurrentTimestep() + ".jpeg");
 			ImageIO.write(curTimestepShot, "jpeg", outputFile);
 		} catch (IOException e) {
@@ -732,7 +732,7 @@ public class World extends JFrame implements WindowListener {
 
 		System.out.println("Starting repaint");
 
-//		g = this.getGraphics();
+		//		g = this.getGraphics();
 		Graphics2D g2d = (Graphics2D) g;
 
 		//clear everything
@@ -861,15 +861,15 @@ public class World extends JFrame implements WindowListener {
 			Bot curBot = allBotSnapshot.next();
 
 			switch(curBot.getBotMode()) {
-				case(Bot.WAITING_FOR_ACTIVATION):
-					g2d.setColor(DEACTIVATED_BOT_COLOR);
-				break;
-				case(Bot.EXPLORER):
-					g2d.setColor(EXPLORER_BOT_COLOR);
-				break;
-				case(Bot.PATH_MARKER):
-					g2d.setColor(PATH_MARKER_BOT_COLOR);
-				break;
+			case(Bot.WAITING_FOR_ACTIVATION):
+				g2d.setColor(DEACTIVATED_BOT_COLOR);
+			break;
+			case(Bot.EXPLORER):
+				g2d.setColor(EXPLORER_BOT_COLOR);
+			break;
+			case(Bot.PATH_MARKER):
+				g2d.setColor(PATH_MARKER_BOT_COLOR);
+			break;
 			}
 			g2d.fill(curBot);
 
@@ -992,31 +992,32 @@ public class World extends JFrame implements WindowListener {
 
 		World world;
 
-		int numSur = 5;
-		for(int numBots = 200; numBots <= 300; numBots += 10) {
-			//run each test 5 times, so that we get a good range of numbers
-			for(int i = 0; i < 2; i++) {
-				if(zoneDir != null) {
-					if(surDir != null) {
-						world = new World(numBots, surDir, zoneDir);
+		for(int numSur = 5; numSur <= 10; numSur+=2) {
+			for(int numBots = 150; numBots <= 225; numBots += 25) {
+				//run each test 5 times, so that we get a good range of numbers
+				for(int i = 0; i < 3; i++) {
+					if(zoneDir != null) {
+						if(surDir != null) {
+							world = new World(numBots, surDir, zoneDir);
+						} else {
+							world = new World(numBots, numSur, zoneDir);
+						}
 					} else {
-						world = new World(numBots, numSur, zoneDir);
+						if(surDir != null) {
+							world = new World(numBots, surDir);
+						} else {
+							world = new World(numBots, numSur);
+						}
 					}
-				} else {
-					if(surDir != null) {
-						world = new World(numBots, surDir);
-					} else {
-						world = new World(numBots, numSur);
-					}
+					//TODO add a set location?
+					//world.setLocation(200, 200);
+					world.setVisible(true);
+					//do a gc to clean up?
+					System.gc();
+					//go for 1800 timesteps = 30 min - should be enough time to settle down
+					world.go(1800);
+					world.dispose();
 				}
-				//TODO add a set location?
-				//world.setLocation(200, 200);
-				world.setVisible(true);
-				//do a gc to clean up?
-				System.gc();
-				//go for 1200 timesteps = 20 min - should be enough time to settle down
-				world.go(1000);
-				world.dispose();
 			}
 		}
 	}
