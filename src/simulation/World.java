@@ -601,17 +601,18 @@ public class World extends JFrame implements WindowListener {
 
 	public synchronized void go() {
 		//a bit of a hack, but it will work
-		this.go(-1);
+		this.go(-1, Long.MAX_VALUE);
 	}
 
 
-	public synchronized void go(int numTimestepsToRun) {		
+	public synchronized void go(int numTimestepsToRun, long maxRunTimeMili) {		
 		repaint();
 
 		keepGoing = true;
 
 		long timestepStartTime, timestepStopTime, timestepDuration;
-
+		long overallStartTime = System.currentTimeMillis();
+		
 		if(firstStartTime == null) {
 			firstStartTime = new Date();
 			setupFiles();
@@ -624,7 +625,7 @@ public class World extends JFrame implements WindowListener {
 		} else {
 			endTimestep = currentTimestep + numTimestepsToRun;
 		}
-		for(; keepGoing && currentTimestep <= endTimestep; currentTimestep++) {			
+		for(; keepGoing && currentTimestep <= endTimestep && System.currentTimeMillis() - overallStartTime < maxRunTimeMili; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
 			System.out.println("Starting at " + new Date());
@@ -761,7 +762,9 @@ public class World extends JFrame implements WindowListener {
 			//all bots should know about all shouts, so draw them all based on what the first bot knows
 			Bot firstBot = allBotSnapshot.next();
 			//go previous one, so that when we start to draw the bots, we'll start at the beginning
-			allBotSnapshot.previous();
+			if(allBotSnapshot.hasPrevious()) {
+				allBotSnapshot.previous();
+			}
 
 			//now, drow all of the shouts
 			g2d.setColor(SHOUT_COLOR);
@@ -991,7 +994,13 @@ public class World extends JFrame implements WindowListener {
 		if(surDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
 			surDir = surDirChooser.getSelectedFile();
 		}
-
+		
+		//keep a max run time of about 15 minutes
+		//these are running in about 2, so 15 min is enough
+		//15 min = 900,000 miliseconds
+		final long maxRunTime = 900000;
+		
+		
 		World world;
 
 		for(int numSur = 1; numSur <= 10; numSur+=1) {
@@ -1017,7 +1026,7 @@ public class World extends JFrame implements WindowListener {
 					//do a gc to clean up?
 					System.gc();
 					//go for 1800 timesteps = 30 min - should be enough time to settle down
-					world.go(1800);
+					world.go(1800, maxRunTime);
 					world.dispose();
 				}
 			}
