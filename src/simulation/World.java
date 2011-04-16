@@ -60,8 +60,8 @@ public class World extends JFrame implements WindowListener {
 	 **************************************************************************/
 	public static final Random RANDOM_GENERATOR = new Random();
 	private static final int MENUBAR_HEIGHT = 21;
-	private static final int FRAME_HEIGHT = 400 + MENUBAR_HEIGHT;
-	private static final int FRAME_WIDTH = 400;
+	private static final int FRAME_HEIGHT = 300 + MENUBAR_HEIGHT;
+	private static final int FRAME_WIDTH = 300;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
 
 	private static final boolean WORLD_DEBUG = false;
@@ -1004,7 +1004,7 @@ public class World extends JFrame implements WindowListener {
 		World world;
 
 		for(int numSur = 1; numSur <= 10; numSur+=1) {
-			for(int numBots = 25; numBots <= 225; numBots += 25) {
+			for(int numBots = 10; numBots <= 150; numBots += 10) {
 				//run each test 5 times, so that we get a good range of numbers
 				for(int i = 0; i < 5; i++) {
 					if(zoneDir != null) {

@@ -39,6 +39,7 @@ public class Bot extends Rectangle2D.Double {
 	private static final double HEAR_SURVIVOR_PROB = .75;
 	private static final double ASSES_SURVIVOR_CORRECTLY_PROB = .9;
 
+	//TODO change scale back to 1 px = 1 m?
 	//1 px = 2 m
 	public static final double DEFAULT_BROADCAST_RADIUS = 40; //40 px = 80 m
 	public static final double DEFAULT_VISIBILITY_RADIUS = 12; //12 px = 24 m

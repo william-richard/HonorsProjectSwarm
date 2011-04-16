@@ -17,6 +17,8 @@ import zones.Zone;
 
 public class Utilities {
 
+	//TODO impliment standard way to convert m to px and back, so that it is easier to change scale
+	
 	public final static double SMALL_EPSILON = .00001;
 
 	//finds all shapes in the shapeList that intersect the base shape
