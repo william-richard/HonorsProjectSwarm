@@ -680,7 +680,6 @@ public class World extends JFrame implements WindowListener {
 			}
 
 			if(aZoneChanged) {
-				lastTimeAZoneChanged = currentTimestep;
 				//recalculate optimal paths to all points, so we know optimal paths to survivors
 				distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 			}

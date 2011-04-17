@@ -51,7 +51,12 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 		CENTER_LOCATION = new Point2D.Double(this.getCenterX(), this.getCenterY());
 
 		//store the zones that we're in
-		currentZone = World.findZone(getCenterLocation());
+		//do a bit of a cheat - if this survivor has been created, ask it which zone it is in
+		if(World.allSurvivors.contains(this)) {
+			currentZone = World.allSurvivors.get(World.allSurvivors.indexOf(this)).currentZone;
+		} else {
+			currentZone = World.findZone(getCenterLocation());
+		}
 	}
 
 	/***************************************************************************
