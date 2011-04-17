@@ -35,6 +35,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
+import java.util.Vector;
 
 import javax.imageio.ImageIO;
 import javax.swing.JFileChooser;
@@ -102,8 +103,8 @@ public class World extends JFrame implements WindowListener {
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static List<Survivor> allSurvivors; //The survivors
 
-	public ListIterator<Bot> allBotSnapshot;
-	public ListIterator<Survivor> allSurvivorSnapshot;
+	//	public ListIterator<Bot> allBotSnapshot;
+	//	public ListIterator<Survivor> allSurvivorSnapshot;
 	//	public Dijkstras dijkstrasSnapshot;
 
 	private BaseZone homeBase;
@@ -232,7 +233,7 @@ public class World extends JFrame implements WindowListener {
 
 	private void initBots(int numBots) {
 		//initialize the bots
-		allBots = new ArrayList<Bot>();
+		allBots = new Vector<Bot>();
 
 		for(int i = 0; i < numBots; i++) {
 			allBots.add(new Bot(this, homeBase.getCenterX(), homeBase.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
@@ -241,7 +242,7 @@ public class World extends JFrame implements WindowListener {
 
 	private void initSurvivors(int numSurvivors) {
 		//initialize the survivors
-		allSurvivors = new ArrayList<Survivor>();
+		allSurvivors = new Vector<Survivor>();
 		Survivor curSurvivor;
 
 		for(int i = 0; i < numSurvivors; i++) {
@@ -612,7 +613,7 @@ public class World extends JFrame implements WindowListener {
 
 		long timestepStartTime, timestepStopTime, timestepDuration;
 		long overallStartTime = System.currentTimeMillis();
-		
+
 		if(firstStartTime == null) {
 			firstStartTime = new Date();
 			setupFiles();
@@ -740,9 +741,9 @@ public class World extends JFrame implements WindowListener {
 		g2d.setColor(BACKGROUND_COLOR);
 		g2d.fill(BOUNDING_BOX);
 
-		//get a snapshot of the bots and survivors
-		allBotSnapshot = allBots.listIterator();
-		allSurvivorSnapshot = allSurvivors.listIterator();
+		////		get a snapshot of the bots and survivors
+		//		allBotSnapshot = allBots.listIterator();
+		//		allSurvivorSnapshot = allSurvivors.listIterator();
 		//		dijkstrasSnapshot = new Dijkstras(distancesToAllPoints);
 
 		//draw the zones
@@ -758,20 +759,24 @@ public class World extends JFrame implements WindowListener {
 		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 		//		}
 
-		if(allBotSnapshot.hasNext()) {
-			//all bots should know about all shouts, so draw them all based on what the first bot knows
-			Bot firstBot = allBotSnapshot.next();
-			//go previous one, so that when we start to draw the bots, we'll start at the beginning
-			if(allBotSnapshot.hasPrevious()) {
-				allBotSnapshot.previous();
-			}
+		//all bots should know about all shouts, so draw them all based on what the first bot knows
+		//			Bot firstBot = allBotSnapshot.next();
 
-			//now, drow all of the shouts
-			g2d.setColor(SHOUT_COLOR);
-			ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
-			while(shoutIterator.hasNext()) {
-				g2d.draw(shoutIterator.next());
-			}
+		//			//go previous one, so that when we start to draw the bots, we'll start at the beginning
+		//			if(allBotSnapshot.hasPrevious()) {
+		//				allBotSnapshot.previous();
+		//			}
+
+		Bot firstBot = allBots.get(0);
+		//now, drow all of the shouts
+		g2d.setColor(SHOUT_COLOR);
+//		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
+//		while(shoutIterator.hasNext()) {
+//			g2d.draw(shoutIterator.next());
+//		}
+		List<Shout> allShouts = firstBot.getShouts();
+		for(Shout s : allShouts) {
+			g2d.draw(s);
 		}
 
 		//draw optimal paths to all survivors
@@ -826,16 +831,20 @@ public class World extends JFrame implements WindowListener {
 
 		//draw all the survivors
 		g2d.setColor(SURVIVOR_COLOR);
-		while(allSurvivorSnapshot.hasNext()) {
-			Survivor curSur = allSurvivorSnapshot.next();
-
+//		while(allSurvivorSnapshot.hasNext()) {
+//			Survivor curSur = allSurvivorSnapshot.next();
+//
+//			g2d.fill(curSur);
+//		}
+		for(Survivor curSur : allSurvivors) {
 			g2d.fill(curSur);
 		}
 
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
-		while(allBotSnapshot.hasNext()) {
-			Bot curBot = allBotSnapshot.next();
+//		while(allBotSnapshot.hasNext()) {
+//			Bot curBot = allBotSnapshot.next();
+		for(Bot curBot : allBots) {
 
 			//			g2d.setColor(BOT_COLOR);
 			//			g2d.fill(curBot);
@@ -861,20 +870,21 @@ public class World extends JFrame implements WindowListener {
 			}
 		}
 
-		allBotSnapshot = allBots.listIterator();
-		while(allBotSnapshot.hasNext()) {
-			Bot curBot = allBotSnapshot.next();
+//		allBotSnapshot = allBots.listIterator();
+//		while(allBotSnapshot.hasNext()) {
+//			Bot curBot = allBotSnapshot.next();
+		for(Bot curBot : allBots) {
 
 			switch(curBot.getBotMode()) {
-			case(Bot.WAITING_FOR_ACTIVATION):
-				g2d.setColor(DEACTIVATED_BOT_COLOR);
-			break;
-			case(Bot.EXPLORER):
-				g2d.setColor(EXPLORER_BOT_COLOR);
-			break;
-			case(Bot.PATH_MARKER):
-				g2d.setColor(PATH_MARKER_BOT_COLOR);
-			break;
+				case(Bot.WAITING_FOR_ACTIVATION):
+					g2d.setColor(DEACTIVATED_BOT_COLOR);
+				break;
+				case(Bot.EXPLORER):
+					g2d.setColor(EXPLORER_BOT_COLOR);
+				break;
+				case(Bot.PATH_MARKER):
+					g2d.setColor(PATH_MARKER_BOT_COLOR);
+				break;
 			}
 			g2d.fill(curBot);
 
@@ -994,13 +1004,13 @@ public class World extends JFrame implements WindowListener {
 		if(surDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
 			surDir = surDirChooser.getSelectedFile();
 		}
-		
+
 		//keep a max run time of about 15 minutes
 		//these are running in about 2, so 15 min is enough
 		//15 min = 900,000 miliseconds
 		final long maxRunTime = 900000;
-		
-		
+
+
 		World world;
 
 		for(int numSur = 1; numSur <= 10; numSur+=1) {
