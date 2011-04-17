@@ -652,6 +652,7 @@ public class World extends JFrame implements WindowListener {
 		} else {
 			endTimestep = currentTimestep + numTimestepsToRun;
 		}
+		
 		for(; keepGoing && currentTimestep <= endTimestep && System.currentTimeMillis() - overallStartTime < maxRunTimeMili; currentTimestep++) {			
 			System.out.println("************************************");
 			System.out.println("On timestep " + currentTimestep);
@@ -679,6 +680,7 @@ public class World extends JFrame implements WindowListener {
 			}
 
 			if(aZoneChanged) {
+				lastTimeAZoneChanged = currentTimestep;
 				//recalculate optimal paths to all points, so we know optimal paths to survivors
 				distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 			}
