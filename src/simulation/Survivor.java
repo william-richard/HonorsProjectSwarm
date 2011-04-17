@@ -4,6 +4,7 @@ import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.Serializable;
+import java.util.Iterator;
 
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -75,9 +76,17 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 				//make and return a new shout
 				Shout ourShout = currentZone.getShout(this);
 
+				//add it to the global list
+				World.allShouts.add(ourShout);
+
 				//send it off to all the bots - they'll determine if they can hear it or not
-				for(Bot b : World.allBots) {
-					b.hearShout(ourShout);
+				synchronized (World.allBots) {
+					Bot b;
+					Iterator<Bot> i = World.allBots.iterator();
+					while(i.hasNext()) {
+						b = i.next();
+						b.hearShout(ourShout);
+					}
 				}
 
 			}

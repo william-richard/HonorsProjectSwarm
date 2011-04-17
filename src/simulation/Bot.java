@@ -232,6 +232,10 @@ public class Bot extends Rectangle2D.Double {
 	public ListIterator<Shout> getShoutIterator() {
 		return heardShouts.listIterator();
 	}
+	
+	public List<Shout> getShouts() {
+		return heardShouts;
+	}
 
 	public double getMaxVelocity() {
 		return DEFAULT_MAX_VELOCITY;
@@ -1093,9 +1097,7 @@ public class Bot extends Rectangle2D.Double {
 		Shape visibilityRange = getVisibleArea();
 
 		// see if the location of any of our survivors intersects this range
-		List<Survivor> visiblesurvivors = (List<Survivor>) Utilities
-		.findAreaIntersectionsInList((Shape) visibilityRange,
-				World.allSurvivors);
+		List<Survivor> visiblesurvivors = (List<Survivor>) Utilities.findAreaIntersectionsInList((Shape) visibilityRange, World.allSurvivors);
 
 		if (LOOK_BOT_DEBUG)
 			print("In perfect world, would have just seen "
@@ -1685,15 +1687,7 @@ public class Bot extends Rectangle2D.Double {
 		if(botMode != PATH_MARKER) {
 			myPathToMark = null;
 		}
-
-		// now, just some housekeeping
-		// we shouldn't hang onto any of these for more than 1 time step
-		heardShouts.clear();
-		// also don't want to hang on to bot info for too long
-		otherBotInfo.clear();
-		//and don't want to hang onto the list of bots within broadcast
-		botsWithinBroadcast = new ArrayList<Bot>();
-
+		
 		myBotInfo = null;
 
 
@@ -1766,5 +1760,13 @@ public class Bot extends Rectangle2D.Double {
 		if (MOVE_BOT_DEBUG) {
 			print("");
 		}
+		
+		// now, just some housekeeping
+		// we shouldn't hang onto any of these for more than 1 time step
+		heardShouts.clear();
+		// also don't want to hang on to bot info for too long
+		otherBotInfo.clear();
+		//and don't want to hang onto the list of bots within broadcast
+		botsWithinBroadcast = new ArrayList<Bot>();
 	}
 }

@@ -9,6 +9,7 @@ import java.awt.geom.PathIterator;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 
 import util.shapes.Circle2D;
@@ -18,7 +19,7 @@ import zones.Zone;
 public class Utilities {
 
 	//TODO impliment standard way to convert m to px and back, so that it is easier to change scale
-	
+
 	public final static double SMALL_EPSILON = .00001;
 
 	//finds all shapes in the shapeList that intersect the base shape
@@ -44,16 +45,21 @@ public class Utilities {
 		List<Shape> intersectingShapes = new ArrayList<Shape>();
 
 		//Then, we'll go through all the shapes in the list, and see if any of them intersect the base area
-		for(Shape testShape : shapeList) {
-			//make an area out of testShape
-			Area testArea = new Area(testShape);
-			//find the intersection
-			testArea.intersect(baseArea);
-			//now, test area is the area of intersection
-			//see if that area is empty.
-			//if it is not, we have an intersection and we should add it to the list
-			if(! testArea.isEmpty()) {
-				intersectingShapes.add(testShape);
+		synchronized (shapeList) {
+			Iterator<? extends Shape> i = shapeList.iterator();
+			Shape testShape;
+			while(i.hasNext()) {
+				testShape = i.next();
+				//make an area out of testShape
+				Area testArea = new Area(testShape);
+				//find the intersection
+				testArea.intersect(baseArea);
+				//now, test area is the area of intersection
+				//see if that area is empty.
+				//if it is not, we have an intersection and we should add it to the list
+				if(! testArea.isEmpty()) {
+					intersectingShapes.add(testShape);
+				}
 			}
 		}
 
@@ -71,19 +77,24 @@ public class Utilities {
 		//test if each shape intesects the circle
 		//keep a list of the shapes that do
 		List<Shape> intersectingShapes = new ArrayList<Shape>();
-		for(Shape curShape : shapeList) {
-			//test if each shape intersects the base
-			if(base.intesectsShape(curShape)) {
-				intersectingShapes.add(curShape);
+		synchronized (shapeList) {
+			Iterator<? extends Shape> iter = shapeList.iterator();
+			Shape curShape;
+			while(iter.hasNext()) {
+				curShape = iter.next();
+				//test if each shape intersects the base
+				if(base.intesectsShape(curShape)) {
+					intersectingShapes.add(curShape);
+				}
 			}
 		}
 
 		return intersectingShapes;
 	}
-	
+
 	public static List<? extends Shape> findSegIntersectionInList(LineSegment line, Collection<? extends Shape> shapeList) {
 		ArrayList<Shape> resultList = new ArrayList<Shape>();
-		
+
 		for(Shape s : shapeList) {
 			//get all of this shape's sides
 			List<LineSegment> shapeSides = Utilities.getSides(s);
@@ -94,10 +105,10 @@ public class Utilities {
 				}
 			}
 		}
-		
+
 		return resultList;
 	}
-	
+
 	/*can figure out if the edges of these 2 intersect if
 	 * 1) Their intersection (defined mathematically as the area shared by both of the shapes) is non empty.  If this is the case, they are not touching at all.
 	 * 2) they intersection is not equal to the total area of either of the shapes.  In this case, one is completely within the other.
@@ -305,7 +316,7 @@ public class Utilities {
 	public static boolean shouldEqualsZero(double d) {
 		return equalsWithin(d, 0.0, SMALL_EPSILON);
 	}
-	
+
 	public static boolean shouldBeEqual(double d1, double d2) {
 		return equalsWithin(d1, d2, SMALL_EPSILON);
 	}

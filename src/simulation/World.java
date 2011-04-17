@@ -28,10 +28,12 @@ import java.text.DecimalFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.ListIterator;
 import java.util.Random;
@@ -102,6 +104,8 @@ public class World extends JFrame implements WindowListener {
 	public static Hashtable<Integer, Zone> allZones; //The zones in the world - should be non-overlapping
 	public static List<Bot> allBots; //List of the Bots, so we can do stuff with them
 	public static List<Survivor> allSurvivors; //The survivors
+
+	public static List<Shout> allShouts;
 
 	//	public ListIterator<Bot> allBotSnapshot;
 	//	public ListIterator<Survivor> allSurvivorSnapshot;
@@ -233,7 +237,7 @@ public class World extends JFrame implements WindowListener {
 
 	private void initBots(int numBots) {
 		//initialize the bots
-		allBots = new Vector<Bot>();
+		allBots = Collections.synchronizedList(new ArrayList<Bot>());
 
 		for(int i = 0; i < numBots; i++) {
 			allBots.add(new Bot(this, homeBase.getCenterX(), homeBase.getCenterY(), numBots, i, homeBase, BOUNDING_BOX));
@@ -242,7 +246,7 @@ public class World extends JFrame implements WindowListener {
 
 	private void initSurvivors(int numSurvivors) {
 		//initialize the survivors
-		allSurvivors = new Vector<Survivor>();
+		allSurvivors = Collections.synchronizedList(new ArrayList<Survivor>());
 		Survivor curSurvivor;
 
 		for(int i = 0; i < numSurvivors; i++) {
@@ -263,7 +267,7 @@ public class World extends JFrame implements WindowListener {
 			throw new IllegalArgumentException("Passed File is not a directory");
 		}
 
-		allSurvivors = new ArrayList<Survivor>();
+		allSurvivors = Collections.synchronizedList(new ArrayList<Survivor>());
 		//for each file in the directory with the correct extension, create a survivor and add it to the list
 		File[] survivorFileList = surDir.listFiles(new FileFilter() {
 
@@ -303,6 +307,8 @@ public class World extends JFrame implements WindowListener {
 		//		debugSeperationVectors = new ArrayList<Shape>();
 		//		debugRepulsionVectors = new ArrayList<Shape>();
 
+		allShouts = new Vector<Shout>();
+
 		currentTimestep = 0;
 	}
 
@@ -340,11 +346,15 @@ public class World extends JFrame implements WindowListener {
 			String surDirString = dataDirectory + "/survivors/";
 			File surDirFile = new File(surDirString);
 			surDirFile.mkdir();
-			for(int i = 0; i < allSurvivors.size(); i++) {
-				Survivor curSur = allSurvivors.get(i);
-				ObjectOutputStream surOut = new ObjectOutputStream(new FileOutputStream(surDirString + i + "." + Survivor.survivorFileExtensionFilter.getExtensions()[0]));
-				surOut.writeObject(curSur);
-				surOut.close();
+			synchronized (allSurvivors) {
+				Iterator<Survivor> iter = allSurvivors.iterator();
+
+				for(int i = 0; iter.hasNext(); i++) {
+					Survivor curSur = iter.next();
+					ObjectOutputStream surOut = new ObjectOutputStream(new FileOutputStream(surDirString + i + "." + Survivor.survivorFileExtensionFilter.getExtensions()[0]));
+					surOut.writeObject(curSur);
+					surOut.close();
+				}
 			}
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -353,24 +363,34 @@ public class World extends JFrame implements WindowListener {
 
 	private double calcPercentSurFound() {
 		HashSet<Survivor> allClaimedSurvivors = new HashSet<Survivor>();
-		for(Bot b : allBots) {
-			allClaimedSurvivors.addAll(b.getClaimedSurvivors());
+		synchronized (allBots) {
+			Iterator<Bot> i = allBots.iterator();
+			Bot b;
+			while(i.hasNext()) {
+				b = i.next();
+				allClaimedSurvivors.addAll(b.getClaimedSurvivors());
+			}
 		}
 		return ((double)allClaimedSurvivors.size()) / allSurvivors.size();
 	}
 
 	private double calcAvgPathQuality() {
 		HashMap<Survivor, SurvivorPath> bestCompletePaths = new HashMap<Survivor, SurvivorPath>();
-		for(Bot b : allBots) {
-			HashMap<Survivor, SurvivorPath> thisBotsPaths = b.getBestKnownCompletePaths();
-			for(Survivor sur : thisBotsPaths.keySet()) {
-				if(bestCompletePaths.containsKey(sur)) {
-					//take the path that is better
-					if(bestCompletePaths.get(sur).getPathLength() > thisBotsPaths.get(sur).getPathLength()) {
+		synchronized (allBots) {
+			Iterator<Bot> i = allBots.iterator();
+			Bot b;
+			while(i.hasNext()) {
+				b = i.next();
+				HashMap<Survivor, SurvivorPath> thisBotsPaths = b.getBestKnownCompletePaths();
+				for(Survivor sur : thisBotsPaths.keySet()) {
+					if(bestCompletePaths.containsKey(sur)) {
+						//take the path that is better
+						if(bestCompletePaths.get(sur).getPathLength() > thisBotsPaths.get(sur).getPathLength()) {
+							bestCompletePaths.put(sur, thisBotsPaths.get(sur));
+						}
+					} else {
 						bestCompletePaths.put(sur, thisBotsPaths.get(sur));
 					}
-				} else {
-					bestCompletePaths.put(sur, thisBotsPaths.get(sur));
 				}
 			}
 		}
@@ -408,11 +428,17 @@ public class World extends JFrame implements WindowListener {
 	private double calcPathCoverageMetric() {
 		int coverageMetricSum = 0;
 		int numPathMarkers = 0;
-		for(Bot b : allBots) {
-			if(b.getBotMode() == Bot.PATH_MARKER) {
-				//bad is high, good is low
-				coverageMetricSum += b.isPathDensityAcceptable() ? 0 : 1;
-				numPathMarkers++;
+
+		synchronized (allBots) {
+			Iterator<Bot> i = allBots.iterator();
+			Bot b;
+			while(i.hasNext()) {
+				b = i.next();
+				if(b.getBotMode() == Bot.PATH_MARKER) {
+					//bad is high, good is low
+					coverageMetricSum += b.isPathDensityAcceptable() ? 0 : 1;
+					numPathMarkers++;
+				}
 			}
 		}
 
@@ -659,9 +685,17 @@ public class World extends JFrame implements WindowListener {
 
 			System.out.println("Done with zones");
 
+			//clean up the list of shouts before the survivors might shout again
+			allShouts.clear();
+
 			//do all the survivors
-			for(Survivor s : allSurvivors) {
-				s.doOneTimestep();
+			synchronized (allSurvivors) {
+				Iterator<Survivor> iter = allSurvivors.iterator();
+				Survivor s;
+				while(iter.hasNext()) {
+					s = iter.next();
+					s.doOneTimestep();
+				}
 			}
 			System.out.println("Done with survivors");
 
@@ -681,12 +715,17 @@ public class World extends JFrame implements WindowListener {
 			Bot.timestepNumBotOnPaths = 0;
 
 
-			for(Bot b : allBots) {
-				b.doOneTimestep();
-				if( (b.getID() * 100.0 / allBots.size()) > (lastPercentCheckpoint + 5)) {
-					//need to do another checkpoint
-					lastPercentCheckpoint += 5;
-					System.out.print(lastPercentCheckpoint + "% ");
+			synchronized (allBots) {
+				Iterator<Bot> i = allBots.iterator();
+				Bot b;
+				while(i.hasNext()) {
+					b = i.next();
+					b.doOneTimestep();
+					if( (b.getID() * 100.0 / allBots.size()) > (lastPercentCheckpoint + 5)) {
+						//need to do another checkpoint
+						lastPercentCheckpoint += 5;
+						System.out.print(lastPercentCheckpoint + "% ");
+					}
 				}
 			}
 			System.out.println("");
@@ -770,34 +809,43 @@ public class World extends JFrame implements WindowListener {
 		Bot firstBot = allBots.get(0);
 		//now, drow all of the shouts
 		g2d.setColor(SHOUT_COLOR);
-//		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
-//		while(shoutIterator.hasNext()) {
-//			g2d.draw(shoutIterator.next());
-//		}
-		List<Shout> allShouts = firstBot.getShouts();
-		for(Shout s : allShouts) {
-			g2d.draw(s);
+		//		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
+		//		while(shoutIterator.hasNext()) {
+		//			g2d.draw(shoutIterator.next());
+		//		}
+		synchronized (allShouts) {
+			Iterator<Shout> i = allShouts.iterator();
+			Shout s;
+			while(i.hasNext()) {
+				s = i.next();
+				g2d.draw(s);
+			}
 		}
 
 		//draw optimal paths to all survivors
 		g2d.setColor(OPTIMAL_SURVIVOR_PATH_COLOR);
 		g2d.setStroke(SURVIVOR_PATH_STROKE);
-		for(Survivor curSur : allSurvivors) {
-			//get the DPixel for this survivor
-			DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
-			//draw the first line and it's endpoints
-			g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
-			//make a rectangle for each endpoint
-			double ptWidth = 4, ptHeight = 4;
-			Rectangle2D endpt = new Rectangle2D.Double(curSur.getCenterX() - (ptWidth/2), curSur.getCenterY() - (ptHeight/2), ptWidth, ptHeight);
-			g2d.fill(endpt);
-			while(curSurPix.getPrevious() != null) {
-				//draw subsequent lines and the endpoint
-				//need only draw 1 endpoint, because we'll draw the other endpoint in the next iteration
-				g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
-				endpt.setRect(curSurPix.getX() - (ptWidth / 2), curSurPix.getY() - (ptHeight/2), ptWidth, ptHeight);
+		synchronized (allSurvivors) {
+			Iterator<Survivor> i = allSurvivors.iterator();
+			Survivor curSur;
+			while(i.hasNext()) {
+				curSur = i.next();
+				//get the DPixel for this survivor
+				DPixel curSurPix = distancesToAllPoints.getClosestPixel(curSur.getCenterLocation());
+				//draw the first line and it's endpoints
+				g2d.drawLine((int)curSur.getCenterX(), (int)curSur.getCenterY(), curSurPix.getX(), curSurPix.getY());
+				//make a rectangle for each endpoint
+				double ptWidth = 4, ptHeight = 4;
+				Rectangle2D endpt = new Rectangle2D.Double(curSur.getCenterX() - (ptWidth/2), curSur.getCenterY() - (ptHeight/2), ptWidth, ptHeight);
 				g2d.fill(endpt);
-				curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
+				while(curSurPix.getPrevious() != null) {
+					//draw subsequent lines and the endpoint
+					//need only draw 1 endpoint, because we'll draw the other endpoint in the next iteration
+					g2d.draw(new Line2D.Double(curSurPix.getX(), curSurPix.getY(), curSurPix.getPrevious().getX(), curSurPix.getPrevious().getY()));
+					endpt.setRect(curSurPix.getX() - (ptWidth / 2), curSurPix.getY() - (ptHeight/2), ptWidth, ptHeight);
+					g2d.fill(endpt);
+					curSurPix = distancesToAllPoints.getPixel(curSurPix.getPrevious());
+				}
 			}
 		}
 
@@ -808,20 +856,25 @@ public class World extends JFrame implements WindowListener {
 		//go through each of the bots, looking at their known complete paths
 		//keep a list of one's we've drawn, so we don't draw more than once
 		List<SurvivorPath> pathsDrawn = new ArrayList<SurvivorPath>();
-		for(Bot b : allBots) {
-			//draw all of it's paths
-			Collection<SurvivorPath> survivorPaths = b.getBestKnownCompletePaths().values();
+		synchronized (allBots) {
+			Iterator<Bot> iter = allBots.iterator();
+			Bot b;
+			while(iter.hasNext()) {
+				b = iter.next();
+				//draw all of it's paths
+				Collection<SurvivorPath> survivorPaths = b.getBestKnownCompletePaths().values();
 
-			for(SurvivorPath sp : survivorPaths) {
-				if(! pathsDrawn.contains(sp)) {
-					//draw each segment in the path
-					if(sp.getPoints().size() > 1) {
-						for(int i = 1; i < sp.getPoints().size(); i++) {
-							g2d.draw(new Line2D.Double(sp.getPoints().get(i-1).getCenterLocation(), sp.getPoints().get(i).getCenterLocation()));
+				for(SurvivorPath sp : survivorPaths) {
+					if(! pathsDrawn.contains(sp)) {
+						//draw each segment in the path
+						if(sp.getPoints().size() > 1) {
+							for(int i = 1; i < sp.getPoints().size(); i++) {
+								g2d.draw(new Line2D.Double(sp.getPoints().get(i-1).getCenterLocation(), sp.getPoints().get(i).getCenterLocation()));
+							}
 						}
+						g2d.draw(new Line2D.Double(sp.getPoints().get(sp.getPoints().size() - 1).getCenterLocation(), sp.getEndPoint()));
+						pathsDrawn.add(sp);
 					}
-					g2d.draw(new Line2D.Double(sp.getPoints().get(sp.getPoints().size() - 1).getCenterLocation(), sp.getEndPoint()));
-					pathsDrawn.add(sp);
 				}
 			}
 		}
@@ -831,65 +884,80 @@ public class World extends JFrame implements WindowListener {
 
 		//draw all the survivors
 		g2d.setColor(SURVIVOR_COLOR);
-//		while(allSurvivorSnapshot.hasNext()) {
-//			Survivor curSur = allSurvivorSnapshot.next();
-//
-//			g2d.fill(curSur);
-//		}
-		for(Survivor curSur : allSurvivors) {
-			g2d.fill(curSur);
+		//		while(allSurvivorSnapshot.hasNext()) {
+		//			Survivor curSur = allSurvivorSnapshot.next();
+		//
+		//			g2d.fill(curSur);
+		//		}
+		synchronized (allSurvivors) {
+			Iterator<Survivor> i = allSurvivors.iterator();
+			Survivor curSur;
+			while(i.hasNext()) {
+				curSur = i.next();
+				g2d.fill(curSur);
+			}
 		}
 
 		//draw all the bots and their radii and their labels
 		g2d.setFont(BOT_LABEL_FONT);
-//		while(allBotSnapshot.hasNext()) {
-//			Bot curBot = allBotSnapshot.next();
-		for(Bot curBot : allBots) {
+		//		while(allBotSnapshot.hasNext()) {
+		//			Bot curBot = allBotSnapshot.next();
+		synchronized (allBots) {
+			Iterator<Bot> iter = allBots.iterator();
+			Bot curBot;
+			while(iter.hasNext()) {
+				curBot = iter.next();
 
-			//			g2d.setColor(BOT_COLOR);
-			//			g2d.fill(curBot);
+				//			g2d.setColor(BOT_COLOR);
+				//			g2d.fill(curBot);
 
-			if(drawBotRadii) {
-				g2d.setColor(AUDIO_RANGE_COLOR);
-				g2d.draw(curBot.getAuditbleArea());
+				if(drawBotRadii) {
+					g2d.setColor(AUDIO_RANGE_COLOR);
+					g2d.draw(curBot.getAuditbleArea());
 
-				g2d.setColor(VISIBLE_RANGE_COLOR);
-				g2d.draw(curBot.getVisibleArea());
+					g2d.setColor(VISIBLE_RANGE_COLOR);
+					g2d.draw(curBot.getVisibleArea());
 
-				g2d.setColor(BROADCAST_RANGE_COLOR);
-				g2d.draw(curBot.getBroadcastArea());
-			}
+					g2d.setColor(BROADCAST_RANGE_COLOR);
+					g2d.draw(curBot.getBroadcastArea());
+				}
 
-			//			g2d.setColor(LABEL_COLOR);
-			//			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
+				//			g2d.setColor(LABEL_COLOR);
+				//			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 
-			g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
-			//only draw it if it has non-zero length
-			if(! Utilities.shouldEqualsZero(curBot.getMovementVector().getMagnitude())) {
-				g2d.draw(curBot.getMovementVector().rescale(-5.0));
+				g2d.setColor(BOT_MOVEMENT_VECTOR_COLOR);
+				//only draw it if it has non-zero length
+				if(! Utilities.shouldEqualsZero(curBot.getMovementVector().getMagnitude())) {
+					g2d.draw(curBot.getMovementVector().rescale(-5.0));
+				}
 			}
 		}
 
-//		allBotSnapshot = allBots.listIterator();
-//		while(allBotSnapshot.hasNext()) {
-//			Bot curBot = allBotSnapshot.next();
-		for(Bot curBot : allBots) {
+		//		allBotSnapshot = allBots.listIterator();
+		//		while(allBotSnapshot.hasNext()) {
+		//			Bot curBot = allBotSnapshot.next();
+		synchronized (allBots) {
+			Iterator<Bot> iter = allBots.iterator();
+			Bot curBot;
+			while(iter.hasNext()) {
+				curBot = iter.next();
 
-			switch(curBot.getBotMode()) {
-				case(Bot.WAITING_FOR_ACTIVATION):
-					g2d.setColor(DEACTIVATED_BOT_COLOR);
-				break;
-				case(Bot.EXPLORER):
-					g2d.setColor(EXPLORER_BOT_COLOR);
-				break;
-				case(Bot.PATH_MARKER):
-					g2d.setColor(PATH_MARKER_BOT_COLOR);
-				break;
+				switch(curBot.getBotMode()) {
+					case(Bot.WAITING_FOR_ACTIVATION):
+						g2d.setColor(DEACTIVATED_BOT_COLOR);
+					break;
+					case(Bot.EXPLORER):
+						g2d.setColor(EXPLORER_BOT_COLOR);
+					break;
+					case(Bot.PATH_MARKER):
+						g2d.setColor(PATH_MARKER_BOT_COLOR);
+					break;
+				}
+				g2d.fill(curBot);
+
+				g2d.setColor(LABEL_COLOR);
+				g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 			}
-			g2d.fill(curBot);
-
-			g2d.setColor(LABEL_COLOR);
-			g2d.drawString("" + curBot.getID(), (float) (curBot.getX()), (float) (curBot.getY() + curBot.getHeight()));
 		}
 
 
