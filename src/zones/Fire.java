@@ -10,7 +10,7 @@ import simulation.Bot;
 
 public class Fire extends DangerZone {
 
-	//TODO: Make file destroy bots
+	//TODO: Make fire destroy bots
 	
 	private static final long serialVersionUID = 1L;
 	private static final Color FireColor = new Color(255,140,0);
@@ -57,6 +57,6 @@ public class Fire extends DangerZone {
 	
 	@Override
 	public double getPathWeightPerPixel() {
-		return 5;
+		return 7;
 	}
 }

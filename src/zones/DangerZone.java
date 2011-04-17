@@ -60,7 +60,7 @@ public class DangerZone extends Zone {
 
 	@Override
 	public boolean causesRepulsion() {
-		return true;
+		return false;
 	}
 
 	@Override
@@ -90,6 +90,6 @@ public class DangerZone extends Zone {
 
 	@Override
 	public double getPathWeightPerPixel() {
-		return 3;
+		return 2;
 	}
 }

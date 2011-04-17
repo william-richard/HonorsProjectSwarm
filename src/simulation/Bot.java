@@ -1218,7 +1218,6 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
-		//FIXME bots are reclaiming survivors away from already claimed survivors
 		// we now know what survivors we have found
 		// evaluate each of them in turn
 		for (Survivor s : foundSurvivors) {
