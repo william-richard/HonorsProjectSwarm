@@ -39,7 +39,7 @@ public abstract class Zone extends Polygon {
 	private final int LEFT_EDGE = 2;
 	private final int RIGHT_EDGE = 3;
 
-	public final static double CHANGE_PROBABILITY = .002;	
+	public final static double CHANGE_PROBABILITY = .001;	
 
 	public Zone(List<GraphEdge> _graphSides, int _zoneID, final Point2D _center, BoundingBox bbox) {
 		super();
