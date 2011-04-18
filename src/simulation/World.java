@@ -487,6 +487,7 @@ public class World extends JFrame implements WindowListener {
 			BufferedImage curTimestepShot = new BufferedImage(FRAME_WIDTH, FRAME_HEIGHT, BufferedImage.TYPE_INT_RGB);
 			this.paint(curTimestepShot.createGraphics());
 
+			//TODO replace this with video output? Xuggle?
 			File outputFile = new File(dataDirectory + SCREENSHOTS_DIR_NAME + "/" + getCurrentTimestep() + ".jpeg");
 			ImageIO.write(curTimestepShot, "jpeg", outputFile);
 		} catch (IOException e) {
