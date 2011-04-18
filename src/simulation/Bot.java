@@ -658,9 +658,9 @@ public class Bot extends Rectangle2D.Double {
 			broadcastMessage(Message.constructCreatePathsMessage(this, pathsToPassOn));
 		}
 
-//		if(MESSAGE_BOT_DEBUG) {
+		if(MESSAGE_BOT_DEBUG) {
 			print("Message totals: loc = "+ locNum + " found = " + surFound + " claim = " + surClaim + " path = " + createPath);
-//		}
+		}
 
 	}
 
