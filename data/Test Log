@@ -52,4 +52,13 @@ sur from 2 to 10, inc = 1
 bot from 10 to 100, inc = 10
 5 test each
 
+4/18 @ 13:50
+Prev test ran out of memory
+Running test with fewer bots
+Search area - 300 px x 300 px
+sur from 1 to 10, inc = 1
+bot from 10 to 70, inc = 10
+5 test each
+
+
 
