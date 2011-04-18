@@ -378,16 +378,25 @@ public class Bot extends Rectangle2D.Double {
 			}
 		});
 
+		//keep a set of messages we have received, so we don't waste time computing for duplicates
+		Set<Message> recievedMessages = new HashSet<Message>();
 		
 		//TODO if we set up the appropriate locks, we should be able to thread the while loop - just make sure to have a write lock for each list we need to add to
 		Message mes;
 		while(! messageBuffer.isEmpty()) {
 			mes = messageBuffer.remove(0);
 
+			if(recievedMessages.contains(mes)) {
+				//we've already looked at it this timestep - ignore
+				continue;
+			} else {
+				recievedMessages.add(mes);
+			}
+			
 			s = new Scanner(mes.getText());
 
 			String messageType = mes.getType();
-
+			
 			BotInfo newBotInfo;
 			if (messageType.equals(Message.BOT_LOCATION_MESSAGE)) {
 
@@ -432,8 +441,7 @@ public class Bot extends Rectangle2D.Double {
 						continue;
 					}
 					
-					knownSurvivors.remove(foundSurvivor);
-					knownSurvivors.add(foundSurvivor);
+					knownSurvivors.set(knownSurvivors.indexOf(foundSurvivor), foundSurvivor);
 				} else {
 					// add it
 					knownSurvivors.add(foundSurvivor);
@@ -650,9 +658,9 @@ public class Bot extends Rectangle2D.Double {
 			broadcastMessage(Message.constructCreatePathsMessage(this, pathsToPassOn));
 		}
 
-		if(MESSAGE_BOT_DEBUG) {
+//		if(MESSAGE_BOT_DEBUG) {
 			print("Message totals: loc = "+ locNum + " found = " + surFound + " claim = " + surClaim + " path = " + createPath);
-		}
+//		}
 
 	}
 
@@ -1687,6 +1695,12 @@ public class Bot extends Rectangle2D.Double {
 		if(botMode != PATH_MARKER) {
 			myPathToMark = null;
 		}
+
+		//THIS NEEDS TO STAY HERE, otherwise measuring path density will not work
+		// also don't want to hang on to bot info for too long
+		otherBotInfo.clear();
+
+		
 		
 		myBotInfo = null;
 
@@ -1764,8 +1778,6 @@ public class Bot extends Rectangle2D.Double {
 		// now, just some housekeeping
 		// we shouldn't hang onto any of these for more than 1 time step
 		heardShouts.clear();
-		// also don't want to hang on to bot info for too long
-		otherBotInfo.clear();
 		//and don't want to hang onto the list of bots within broadcast
 		botsWithinBroadcast = new ArrayList<Bot>();
 	}
