@@ -1052,28 +1052,37 @@ public class World extends JFrame implements WindowListener {
 	public void windowOpened(WindowEvent e) {}
 
 	public static void main(String[] args) {
-		//ask for a specific zone and survivor combination
-		File zoneDir = null, surDir = null;
-		JFileChooser zoneDirChooser = new JFileChooser();
-		zoneDirChooser.setCurrentDirectory(new File("."));
-		zoneDirChooser.setDialogTitle("Choose a zone directory, or cancel for random creation");
-		zoneDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		zoneDirChooser.setAcceptAllFileFilterUsed(false);
+//		//ask for a specific zone and survivor combination
+//		File zoneDir = null, surDir = null;
+//		JFileChooser zoneDirChooser = new JFileChooser();
+//		zoneDirChooser.setCurrentDirectory(new File("."));
+//		zoneDirChooser.setDialogTitle("Choose a zone directory, or cancel for random creation");
+//		zoneDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+//		zoneDirChooser.setAcceptAllFileFilterUsed(false);
+//
+//		if(zoneDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+//			zoneDir = zoneDirChooser.getSelectedFile();
+//		} 
+//
+//		JFileChooser surDirChooser = new JFileChooser();
+//		surDirChooser.setCurrentDirectory(new File("."));
+//		surDirChooser.setDialogTitle("Choose a survivor directory, or cancel to place them randomly");
+//		surDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+//		surDirChooser.setAcceptAllFileFilterUsed(false);
+//
+//		if(surDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+//			surDir = surDirChooser.getSelectedFile();
+//		}
 
-		if(zoneDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-			zoneDir = zoneDirChooser.getSelectedFile();
-		} 
-
-		JFileChooser surDirChooser = new JFileChooser();
-		surDirChooser.setCurrentDirectory(new File("."));
-		surDirChooser.setDialogTitle("Choose a survivor directory, or cancel to place them randomly");
-		surDirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-		surDirChooser.setAcceptAllFileFilterUsed(false);
-
-		if(surDirChooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-			surDir = surDirChooser.getSelectedFile();
+		//get zones dir from args
+		if(args.length != 1) {
+			System.out.println("Incorrect number of arguments passed");
+			System.exit(0);
 		}
-
+		
+		File zoneDir = new File(args[0]);
+		File surDir = null;
+		
 		//keep a max run time of about 15 minutes
 		//these are running in about 2, so 15 min is enough
 		//15 min = 900,000 miliseconds
