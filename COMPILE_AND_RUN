@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd ~/Documents/Swarm
+./COMPILE
+java ./bin/simulation/World
