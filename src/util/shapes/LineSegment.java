@@ -12,6 +12,8 @@ import util.Utilities;
 
 public class LineSegment extends Line2D implements Serializable {
 
+	private static final long serialVersionUID = 1032095923764472352L;
+
 	private Point2D p1;
 	private Point2D p2;
 

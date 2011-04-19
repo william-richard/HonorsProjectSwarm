@@ -343,6 +343,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 	}
 
+	@SuppressWarnings("unchecked")
 	private void readMessages() {
 		//TODO Thread this?
 		// go through all the messages
