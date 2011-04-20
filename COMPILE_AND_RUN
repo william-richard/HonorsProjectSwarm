@@ -2,4 +2,4 @@
 
 cd ~/Documents/Swarm
 ./COMPILE
-java -cp ./bin/ simulation.World $1
+java -Djava.awt.headless=true -cp ./bin/ simulation.World $1
