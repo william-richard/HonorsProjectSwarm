@@ -26,6 +26,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private static final long serialVersionUID = 2089545078800743566L;
 
 	// the world we're simulating
+	private JFrame worldFrame;
 	private World world;
 
 	// initial values for fields
@@ -241,7 +242,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private void makeTheWorld(File zoneDir, File surDir) {
 		if(world != null) {
 			world.stopSimulation();
-			world.dispose();
+			worldFrame.dispose();
 		}
 
 		//if they want to, choose a zone directory or survivor directory
@@ -287,8 +288,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		world.setDrawBotRadii(drawBotRadiiCheckBox.isSelected());
 		world.setTimeBetweenTimesteps((long) timeBetweenTimestepsInSeconds * 1000);
 		//		world.pack();
-		world.setLocation(this.getX(), this.getY() + this.getHeight());
-		world.setVisible(true);
+		worldFrame = World.createAndShowGUI(world);
+		worldFrame.setLocation(this.getX(), this.getY() + this.getHeight());
+		worldFrame.setVisible(true);
 	}
 
 	@Override

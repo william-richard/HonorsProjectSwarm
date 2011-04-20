@@ -1,5 +1,6 @@
 package simulation;
 import java.awt.BasicStroke;
+import java.awt.Canvas;
 import java.awt.Color;
 import java.awt.Font;
 import java.awt.Graphics;
@@ -7,8 +8,6 @@ import java.awt.Graphics2D;
 import java.awt.Point;
 import java.awt.Shape;
 import java.awt.Stroke;
-import java.awt.event.WindowEvent;
-import java.awt.event.WindowListener;
 import java.awt.geom.Area;
 import java.awt.geom.Line2D;
 import java.awt.geom.Point2D;
@@ -39,7 +38,6 @@ import java.util.Random;
 import java.util.Vector;
 
 import javax.imageio.ImageIO;
-import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 
 import main.java.be.humphreys.voronoi.GraphEdge;
@@ -53,7 +51,7 @@ import zones.DummyZone;
 import zones.Zone;
 
 
-public class World extends JFrame implements WindowListener {
+public class World extends Canvas {
 
 	private static final long serialVersionUID = -2526080354915012922L;
 
@@ -62,13 +60,13 @@ public class World extends JFrame implements WindowListener {
 	 **************************************************************************/
 	public static final Random RANDOM_GENERATOR = new Random();
 	private static final int MENUBAR_HEIGHT = 21;
-	private static final int FRAME_HEIGHT = 300 + MENUBAR_HEIGHT;
-	private static final int FRAME_WIDTH = 300;
-	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, MENUBAR_HEIGHT, FRAME_WIDTH, FRAME_HEIGHT - MENUBAR_HEIGHT);
+	private static final int SEARCH_HEIGHT = 300;// + MENUBAR_HEIGHT;
+	private static final int SEARCH_WIDTH = 300;
+	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, 0, SEARCH_WIDTH, SEARCH_HEIGHT);
 
 	private static final boolean WORLD_DEBUG = false;
 
-	private static final int ZONE_COMPLEXITY = 200; //should be btwn ~ (Min(FRAME_HEIGHT, FRAME_WIDTH) / 10) and (FRAME_HEIGHT * FRAME_WIDTH)
+	private static final int ZONE_COMPLEXITY = 200; //should be btwn ~ (Min(SEARCH_HEIGHT, SEARCH_WIDTH) / 10) and (SEARCH_HEIGHT * SEARCH_WIDTH)
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color EXPLORER_BOT_COLOR = Color.green;
@@ -131,7 +129,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	public World(int numBots, File surDir) {
-		super("Swarm Simulation");
+		super();
 
 		setupFrame();
 		initZones();
@@ -141,7 +139,7 @@ public class World extends JFrame implements WindowListener {
 	}	
 
 	public World(int numBots, int numSurvivors, File zoneDir) {
-		super("Swarm Simualtion");
+		super();
 
 		setupFrame();
 		initZones(zoneDir);
@@ -153,7 +151,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	public World(int numBots, File surDir, File zoneDir) {
-		super("Swarm Simulation");
+		super();
 
 		setupFrame();
 		initZones(zoneDir);
@@ -163,7 +161,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	public World(int numBots, int numSurvivors) {
-		super("Swarm Simulation");
+		super();
 		//start with the frame.
 		setupFrame();
 
@@ -174,9 +172,9 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private void setupFrame() {
-		setSize(FRAME_WIDTH, FRAME_HEIGHT);
-		setResizable(false);
-		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		setSize(SEARCH_WIDTH, SEARCH_HEIGHT);
+//		setResizable(false);
+//		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setBackground(BACKGROUND_COLOR);
 	}
 
@@ -251,7 +249,7 @@ public class World extends JFrame implements WindowListener {
 		for(int i = 0; i < numSurvivors; i++) {
 			//don't let survivors be in the basezone
 			do {
-				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*FRAME_WIDTH, RANDOM_GENERATOR.nextDouble()*(FRAME_HEIGHT-MENUBAR_HEIGHT) + MENUBAR_HEIGHT, RANDOM_GENERATOR.nextDouble());
+				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*SEARCH_WIDTH, RANDOM_GENERATOR.nextDouble()*(SEARCH_HEIGHT), RANDOM_GENERATOR.nextDouble());
 				//make sure we don't have survivors too close to the base zone and we don't duplicate survivors
 			} while(homeBase.getCenterLocation().distance(curSurvivor.getCenterLocation()) < BASE_ZONE_BUFFER || allSurvivors.contains(curSurvivor));
 
@@ -299,7 +297,7 @@ public class World extends JFrame implements WindowListener {
 	}
 
 	private void initMisc() {		
-		distancesToAllPoints = new Dijkstras(0, FRAME_WIDTH, MENUBAR_HEIGHT, FRAME_HEIGHT);		
+		distancesToAllPoints = new Dijkstras(0, SEARCH_WIDTH, 0, SEARCH_HEIGHT);		
 		distancesToAllPoints.dijkstras(BASE_ZONE_LOC);
 
 		//		debugShapesToDraw = new ArrayList<Shape>();
@@ -483,7 +481,7 @@ public class World extends JFrame implements WindowListener {
 			//			Robot screenCapRobot = new Robot();
 			//			BufferedImage curTimestepShot = screenCapRobot.createScreenCapture(BOUNDING_BOX.getBounds());
 
-			BufferedImage curTimestepShot = new BufferedImage(FRAME_WIDTH, FRAME_HEIGHT, BufferedImage.TYPE_INT_RGB);
+			BufferedImage curTimestepShot = new BufferedImage(SEARCH_WIDTH, SEARCH_HEIGHT, BufferedImage.TYPE_INT_RGB);
 			this.paint(curTimestepShot.createGraphics());
 
 			//TODO replace this with video output? Xuggle?
@@ -1015,41 +1013,21 @@ public class World extends JFrame implements WindowListener {
 		return closestZone;
 	}
 
-	public static void createAndShowGUI() {
-		//create a new World
-		World w = new World();
-		w.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+	public static JFrame createAndShowGUI(World w) {
+		//create a new World Frame
+//		World w = new World();		
+		JFrame frame = new JFrame("Swarm Simulation");
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		frame.setSize(w.getWidth(), w.getHeight() + MENUBAR_HEIGHT);
+//		frame.setResizable(false);
+		frame.add(w);
+		w.setLocation(0, 0);
 
-		w.pack();
-		w.setVisible(true);		
+		frame.pack();
+//		frame.setVisible(true);		
+		return frame;
 	}
-
-	@Override
-	public void windowActivated(WindowEvent e) {
-		repaint();
-	}
-
-	@Override
-	public void windowClosed(WindowEvent e) {}
-
-	@Override
-	public void windowClosing(WindowEvent e) {
-		stopSimulation();
-		setVisible(false);
-	}
-	@Override
-	public void windowDeactivated(WindowEvent e) {
-		repaint();
-	}
-
-	@Override
-	public void windowDeiconified(WindowEvent e) {}
-
-	@Override
-	public void windowIconified(WindowEvent e) {}
-
-	@Override
-	public void windowOpened(WindowEvent e) {}
 
 	public static void main(String[] args) {
 		//		//ask for a specific zone and survivor combination
@@ -1110,12 +1088,12 @@ public class World extends JFrame implements WindowListener {
 					}
 					//TODO add a set location?
 					//world.setLocation(200, 200);
-					world.setVisible(true);
+//					world.setVisible(true);
 					//do a gc to clean up?
 					System.gc();
 					//go for 1800 timesteps = 30 min - should be enough time to settle down
 					world.go(1800, maxRunTime);
-					world.dispose();
+//					world.dispose();
 				}
 			}
 		}
