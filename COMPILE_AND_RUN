@@ -2,4 +2,4 @@
 
 cd ~/Documents/Swarm
 ./COMPILE
-java -Djava.awt.headless=true -cp ./bin/ simulation.World $1
+java -Djava.awt.headless=true -Xmx16G -cp ./bin/:./lib/jgrapht-0.8.2/jgrapht-jdk1.6.jar simulation.World $1
