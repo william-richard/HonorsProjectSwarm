@@ -2,4 +2,4 @@
 
 cd ~/Documents/Swarm
 ./COMPILE
-java ./bin/simulation/World $1
+java -cp ./bin/ simulation.World $1
