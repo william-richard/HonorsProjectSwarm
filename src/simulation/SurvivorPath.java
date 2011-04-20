@@ -137,7 +137,7 @@ public class SurvivorPath {
 							//there are exactly 2 points
 							if(intersectionPoints.size() != 2) {
 								System.out.println("Weird situation - got 3 intersection points. NON CONVEXLY SHAPED ZONE!!!!");
-								System.exit(0);
+//								System.exit(0);
 							}
 							//need to make a segment from each intersection point to the other
 							//and add it's weighed length to the total
