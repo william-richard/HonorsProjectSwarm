@@ -1110,7 +1110,7 @@ public class World extends JFrame implements WindowListener {
 					}
 					//TODO add a set location?
 					//world.setLocation(200, 200);
-					world.setVisible(true);
+//					world.setVisible(true);
 					//do a gc to clean up?
 					System.gc();
 					//go for 1800 timesteps = 30 min - should be enough time to settle down
