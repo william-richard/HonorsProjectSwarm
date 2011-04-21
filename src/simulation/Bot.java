@@ -1701,10 +1701,7 @@ public class Bot extends Rectangle2D.Double {
 		// also don't want to hang on to bot info for too long
 		otherBotInfo.clear();
 
-		
-		
 		myBotInfo = null;
-
 
 		// first, read any messages that have come in, and take care of them
 		if(TIMESTEP_BOT_DEBUG) {
