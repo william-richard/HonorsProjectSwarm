@@ -72,7 +72,7 @@ public class SurvivorPath {
 			}
 		}
 		//add the distance from the last point to the end point
-		pathLength += prevWaypoint.getZoneMultiplier() * prevWaypoint.getCenterLocation().distance(endPoint);
+		pathLength += prevWaypoint.getCenterLocation().distance(endPoint);
 
 		//round to 5 decimal places
 		pathLength = Double.parseDouble(df.format(pathLength));

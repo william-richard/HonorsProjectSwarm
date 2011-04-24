@@ -90,3 +90,5 @@ Running with more bots on Majercik Comp
 sur from 1 to 10 inc 1
 bots from 110 to 150 inc 10
 5 tests each
+
+NEED TO RERUN ALL TESTS, AS SURVIVOR PATH LENGTH ESTIMATES WERE NOT ADMISSABLE BEFORE
