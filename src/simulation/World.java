@@ -82,6 +82,7 @@ public class World extends Canvas {
 	private static final Color SURVIVOR_PATH_COLOR = new Color(0,154,205);
 	private static final Color BOT_MOVEMENT_VECTOR_COLOR = Color.white;
 	private static final Color OPTIMAL_SURVIVOR_PATH_COLOR = new Color(255,105,180);
+	private static final Color TIMESTEP_COLOR = Color.white;
 
 	private static final Point BASE_ZONE_LOC = new Point((int)BOUNDING_BOX.getCenterX(), (int)BOUNDING_BOX.getCenterY());
 	private static final double BASE_ZONE_BUFFER = 35;
@@ -90,7 +91,7 @@ public class World extends Canvas {
 
 	private static final Font BOT_LABEL_FONT = new Font("Serif", Font.BOLD, 10);
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
-
+	private static final Font TIMESTEP_FONT = new Font("Serif", Font.PLAIN, 15);
 
 	private static final String DATA_FILENAME = "data.txt";
 	private static final String SCREENSHOTS_DIR_NAME = "screenshots";
@@ -959,7 +960,12 @@ public class World extends Canvas {
 			}
 		}
 
+		//finally, write the current timestep in the bottom left corner
+		g2d.setColor(TIMESTEP_COLOR);
+		g2d.setFont(TIMESTEP_FONT);
+		g2d.drawString(Integer.toString(getCurrentTimestep()), 5, SEARCH_HEIGHT - 5);
 
+		
 		//		if(WORLD_DEBUG) {
 		//			//draw the shapes in the debug arraylist
 		//			g2d.setColor(Color.cyan);
