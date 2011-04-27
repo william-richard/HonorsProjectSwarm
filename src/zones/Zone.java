@@ -401,9 +401,6 @@ public abstract class Zone extends Polygon {
 		return 'z';
 	}
 
-
-
-
 	public abstract Shout getShout(Survivor shouter);
 	public abstract double getBroadcastRange();
 	public abstract double getVisiblityRange();

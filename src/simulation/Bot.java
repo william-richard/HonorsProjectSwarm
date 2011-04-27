@@ -51,8 +51,8 @@ public class Bot extends Rectangle2D.Double {
 
 	private final static Random NUM_GEN = new Random();
 
-	private final double NORMAL_SEPERATION_FACTOR = 									50;
-	private final double COHESION_FACTOR = 										.5; //cohesion factor should never me more than 1
+	private final double NORMAL_SEPERATION_FACTOR = 						50;
+	private final double COHESION_FACTOR = 									.5; //cohesion factor should never me more than 1
 
 	private final double SEPERATION_MIN_DIST = 5;
 	private final double SEPERATION_MAX_DIST = DEFAULT_BROADCAST_RADIUS*2;
