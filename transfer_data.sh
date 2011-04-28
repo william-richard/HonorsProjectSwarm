@@ -8,13 +8,8 @@ cd ./data
 for sur in $(find . -type d -depth 1)
 do
 
-#tarFile=$(basename $sur).tar
-
-#echo ./$tarFile
-
-#tar -cf tarFile $sur
 echo $sur
 
-scp -r $sur Will@krishna.student.bowdoin.edu:/Users/Will/Documents/workspace/Swarm/data/
+scp -r $sur Will@krishna.student.bowdoin.edu:/Users/Will/Documents/workspace/Swarm/data2/
 
 done
