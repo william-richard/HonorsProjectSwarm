@@ -417,7 +417,8 @@ public class World extends Canvas {
 		//average the percentages
 		double avgPercent = pathPercentagesSum / bestCompletePaths.size();
 		if(Double.isInfinite(avgPercent) || Double.isNaN(avgPercent)) {
-			return 0.0;
+			//This is 3 because we would be in VERY bad shape if it was a 3, based on what I've seen
+			return 3.0;
 		} else {
 			return avgPercent;
 		}
@@ -449,7 +450,8 @@ public class World extends Canvas {
 		pathCoverage *= .5;
 		pathCoverage += 1.0;
 		if(Double.isInfinite(pathCoverage) || Double.isNaN(pathCoverage)) {
-			return 0.0;
+			//CORRECT ME IF SCALING CHANGES
+			return 1.5;
 		} else {
 			return pathCoverage;
 		}
