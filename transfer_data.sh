@@ -15,6 +15,6 @@ do
 #tar -cf tarFile $sur
 echo $sur
 
-scp -r $sur Will@krishna.student.bowdoin.edu:/Users/Will/Documents/workspace/Swarm/data2/
+scp -r $sur Will@krishna.student.bowdoin.edu:/Users/Will/Documents/workspace/Swarm/data/
 
 done
