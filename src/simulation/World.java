@@ -1100,7 +1100,7 @@ public class World extends Canvas {
 					//do a gc to clean up?
 					System.gc();
 					//go for 1800 timesteps = 30 min - should be enough time to settle down
-					world.go(1800, maxRunTime);
+					world.go(1800, Long.MAX_VALUE);
 //					world.dispose();
 				}
 			}
