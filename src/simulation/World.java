@@ -1077,16 +1077,36 @@ public class World extends Canvas {
 
 		World world;
 
-		int numSur = 6;
-		int numBots = 200;
-		for(int i = 0; i < 5; i++) {
-			world = new World(numBots, numSur, zoneDir);
-			world.go(1800, Long.MAX_VALUE);
+		int numSur = 7;
+		for(int numBots = 140; numBots <= 200; numBots += 20) {
+			//run each test 5 times, so that we get a good range of numbers
+			for(int i = 0; i < 5; i++) {
+				if(zoneDir != null) {
+					if(surDir != null) {
+						world = new World(numBots, surDir, zoneDir);
+					} else {
+						world = new World(numBots, numSur, zoneDir);
+					}
+				} else {
+					if(surDir != null) {
+						world = new World(numBots, surDir);
+					} else {
+						world = new World(numBots, numSur);
+					}
+				}
+				//TODO add a set location?
+				//world.setLocation(200, 200);
+				//					world.setVisible(true);
+				//do a gc to clean up?
+				System.gc();
+				//go for 1800 timesteps = 30 min - should be enough time to settle down
+				world.go(1800, Long.MAX_VALUE);
+				//					world.dispose();
+			}
 		}
 
-
-		for(numSur = 7; numSur <= 10; numSur+=1) {
-			for(numBots = 60; numBots <= 200; numBots += 20) {
+		for(numSur = 8; numSur <= 10; numSur+=1) {
+			for(int numBots = 60; numBots <= 200; numBots += 20) {
 				//run each test 5 times, so that we get a good range of numbers
 				for(int i = 0; i < 5; i++) {
 					if(zoneDir != null) {
