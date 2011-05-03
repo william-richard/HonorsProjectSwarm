@@ -21,6 +21,10 @@ do
 	cd ..
 	#done with bot loop
     done
+    
+    #now make the graph comparing how different number of bots did for a fixed number of survivors
+    gnuplot ../../fixedSurVarBot_graphs.plt
+
     cd ..
     #done with sur loop
 done

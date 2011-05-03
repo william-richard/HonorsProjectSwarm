@@ -1079,8 +1079,8 @@ public class World extends Canvas {
 
 		int numSur = 6;
 		int numBots = 200;
-		world = new World(numBots, numSur, zoneDir);
 		for(int i = 0; i < 5; i++) {
+			world = new World(numBots, numSur, zoneDir);
 			world.go(1800, Long.MAX_VALUE);
 		}
 

@@ -6,7 +6,6 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.RandomAccessFile;
-import java.util.Arrays;
 import java.util.List;
 
 public class Run {
@@ -30,7 +29,12 @@ public class Run {
 	}
 
 	public double getValue(int r, int c) {
-		return data[r][c];
+		try {
+			return data[r][c];
+		} catch(ArrayIndexOutOfBoundsException e) {
+			System.out.println("Got out of bounds exception");
+			return -1;
+		}
 	}
 
 
@@ -85,8 +89,8 @@ public class Run {
 			//lastLine should now be the complete last line of the file
 			//read the relevant data, and make our Run
 			String[] splitLastLine = lastLine.split("\t");
-			System.out.println(file.getAbsolutePath());
-			System.out.println("'" + lastLine + "'");
+//			System.out.println(file.getAbsolutePath());
+//			System.out.println("'" + lastLine + "'");
 			//if we get to timestep 100, there are actually 101 timesteps, because we need to count 0
 			int numTimesteps = Integer.parseInt(splitLastLine[0]) + 1;
 
@@ -142,5 +146,24 @@ public class Run {
 
 		return avgVal;
 	}
+
+	/**
+	 * Get the average value of all values in the specified column for rows between start row and end row
+	 * @param runs
+	 * @param startRow
+	 * @param endRow
+	 * @param col
+	 * @return
+	 */
+	public static double getAvg(List<Run> runs, int startRow, int endRow, int col) {
+		//basically, get the average for all rows in the range
+		//and average them together
+		double avgSum = 0.0;
+		for(int i = startRow; i <= endRow; i++) {
+			avgSum += Run.getAvg(runs, i, col);
+		}
+		return avgSum / (endRow - startRow);
+	}
+
 
 }

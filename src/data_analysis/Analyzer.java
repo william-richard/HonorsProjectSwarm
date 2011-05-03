@@ -37,6 +37,12 @@ public class Analyzer {
 
 		for(File curSurDir : surDirs) {
 			int curNumSur = Integer.parseInt(curSurDir.getName());
+			
+			//create the avgOverall file
+			File avgOverall = new File(curSurDir, "avgOverall.dat");
+			//delete it so we're sure we're starting with a clean slate
+			avgOverall.delete();
+			
 			//get their Bot sub directories
 			File[] botDirs = curSurDir.listFiles(numFileFilter);
 			
@@ -82,30 +88,39 @@ public class Analyzer {
 					 * 3 : high value
 					 */
 					
-					BufferedWriter surFoundOut = new BufferedWriter(new FileWriter(new File(curBotDir, "surFound.dat"), false));
-					BufferedWriter pathQualOut = new BufferedWriter(new FileWriter(new File(curBotDir, "pathQal.dat"), false));
-					BufferedWriter pathMarkOut = new BufferedWriter(new FileWriter(new File(curBotDir, "pathMark.dat"), false));
-					BufferedWriter overallOut  = new BufferedWriter(new FileWriter(new File(curBotDir, "overall.dat"), false));
+					BufferedWriter surFoundRunOut = new BufferedWriter(new FileWriter(new File(curBotDir, "surFound.dat"), false));
+					BufferedWriter pathQualRunOut = new BufferedWriter(new FileWriter(new File(curBotDir, "pathQal.dat"), false));
+					BufferedWriter pathMarkRunOut = new BufferedWriter(new FileWriter(new File(curBotDir, "pathMark.dat"), false));
+					BufferedWriter overallRunOut  = new BufferedWriter(new FileWriter(new File(curBotDir, "overall.dat"), false));
+					
 					
 					for(int timestep = 0; timestep < runs.get(0).getNumRows(); timestep++) {
-						surFoundOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 2) + "\t" + Run.getMin(runs,timestep, 2) + "\t" + Run.getMax(runs, timestep, 2));
-						surFoundOut.newLine();
+						surFoundRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 2) + "\t" + Run.getMin(runs,timestep, 2) + "\t" + Run.getMax(runs, timestep, 2));
+						surFoundRunOut.newLine();
 						
-						pathQualOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 3) + "\t" + Run.getMin(runs,timestep, 3) + "\t" + Run.getMax(runs, timestep, 3));
-						pathQualOut.newLine();
+						pathQualRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 3) + "\t" + Run.getMin(runs,timestep, 3) + "\t" + Run.getMax(runs, timestep, 3));
+						pathQualRunOut.newLine();
 						
-						pathMarkOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 4) + "\t" + Run.getMin(runs,timestep, 4) + "\t" + Run.getMax(runs, timestep, 4));
-						pathMarkOut.newLine();
+						pathMarkRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 4) + "\t" + Run.getMin(runs,timestep, 4) + "\t" + Run.getMax(runs, timestep, 4));
+						pathMarkRunOut.newLine();
 						
-						overallOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 5) + "\t" + Run.getMin(runs,timestep, 5) + "\t" + Run.getMax(runs, timestep, 5));
-						overallOut.newLine();
+						overallRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 5) + "\t" + Run.getMin(runs,timestep, 5) + "\t" + Run.getMax(runs, timestep, 5));
+						overallRunOut.newLine();
 					}
 					
 					//close up the files
-					surFoundOut.close();
-					pathQualOut.close();
-					pathMarkOut.close();
-					overallOut.close();
+					surFoundRunOut.close();
+					pathQualRunOut.close();
+					pathMarkRunOut.close();
+					overallRunOut.close();
+					
+					//now write to the average overall file
+					//make sure to append to the end
+					BufferedWriter avgOverallSurOut = new BufferedWriter(new FileWriter(avgOverall, true));
+					//write our number of bots and the avg Overall metric value for all of this bot number's runs
+					avgOverallSurOut.write(curNumBots + "\t" + Run.getAvg(runs, 200, 1800, 5));
+					avgOverallSurOut.newLine();
+					avgOverallSurOut.close();
 					
 				} catch (IOException e) {
 					e.printStackTrace();
