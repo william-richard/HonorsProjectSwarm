@@ -174,8 +174,8 @@ public class World extends Canvas {
 
 	private void setupFrame() {
 		setSize(SEARCH_WIDTH, SEARCH_HEIGHT);
-//		setResizable(false);
-//		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+		//		setResizable(false);
+		//		setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		setBackground(BACKGROUND_COLOR);
 	}
 
@@ -967,7 +967,7 @@ public class World extends Canvas {
 		g2d.setFont(TIMESTEP_FONT);
 		g2d.drawString(Integer.toString(getCurrentTimestep()), 5, SEARCH_HEIGHT - 5);
 
-		
+
 		//		if(WORLD_DEBUG) {
 		//			//draw the shapes in the debug arraylist
 		//			g2d.setColor(Color.cyan);
@@ -1023,17 +1023,17 @@ public class World extends Canvas {
 
 	public static JFrame createAndShowGUI(World w) {
 		//create a new World Frame
-//		World w = new World();		
+		//		World w = new World();		
 		JFrame frame = new JFrame("Swarm Simulation");
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		
+
 		frame.setSize(w.getWidth(), w.getHeight() + MENUBAR_HEIGHT);
-//		frame.setResizable(false);
+		//		frame.setResizable(false);
 		frame.add(w);
 		w.setLocation(0, 0);
 
 		frame.pack();
-//		frame.setVisible(true);		
+		//		frame.setVisible(true);		
 		return frame;
 	}
 
@@ -1077,8 +1077,16 @@ public class World extends Canvas {
 
 		World world;
 
-		for(int numSur = 1; numSur <= 10; numSur+=1) {
-			for(int numBots = 10; numBots <= 50; numBots += 10) {
+		int numSur = 6;
+		int numBots = 200;
+		world = new World(numBots, numSur, zoneDir);
+		for(int i = 0; i < 5; i++) {
+			world.go(1800, Long.MAX_VALUE);
+		}
+
+
+		for(numSur = 7; numSur <= 10; numSur+=1) {
+			for(numBots = 60; numBots <= 200; numBots += 20) {
 				//run each test 5 times, so that we get a good range of numbers
 				for(int i = 0; i < 5; i++) {
 					if(zoneDir != null) {
@@ -1096,12 +1104,12 @@ public class World extends Canvas {
 					}
 					//TODO add a set location?
 					//world.setLocation(200, 200);
-//					world.setVisible(true);
+					//					world.setVisible(true);
 					//do a gc to clean up?
 					System.gc();
 					//go for 1800 timesteps = 30 min - should be enough time to settle down
 					world.go(1800, Long.MAX_VALUE);
-//					world.dispose();
+					//					world.dispose();
 				}
 			}
 		}
