@@ -61,6 +61,8 @@ public class Analyzer {
 					runs.add(Run.readFromFile(new File(curRunDir,"data.txt"), curNumSur, curNumBots));
 				}
 				
+				System.out.println("sur = " + curSurDir.getName() + "\tbot = " + curBotDir.getName());
+				
 				//we should now have all runs for the given number of bots and survivors
 				//start creating our averages file
 				try {		

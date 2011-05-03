@@ -87,7 +87,6 @@ public class Run {
 			String[] splitLastLine = lastLine.split("\t");
 			System.out.println(file.getAbsolutePath());
 			System.out.println("'" + lastLine + "'");
-			System.out.println(Arrays.toString(splitLastLine));
 			//if we get to timestep 100, there are actually 101 timesteps, because we need to count 0
 			int numTimesteps = Integer.parseInt(splitLastLine[0]) + 1;
 
