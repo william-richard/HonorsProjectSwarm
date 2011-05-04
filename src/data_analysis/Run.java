@@ -89,8 +89,8 @@ public class Run {
 			//lastLine should now be the complete last line of the file
 			//read the relevant data, and make our Run
 			String[] splitLastLine = lastLine.split("\t");
-//			System.out.println(file.getAbsolutePath());
-//			System.out.println("'" + lastLine + "'");
+			//			System.out.println(file.getAbsolutePath());
+			//			System.out.println("'" + lastLine + "'");
 			//if we get to timestep 100, there are actually 101 timesteps, because we need to count 0
 			int numTimesteps = Integer.parseInt(splitLastLine[0]) + 1;
 
@@ -147,6 +147,19 @@ public class Run {
 		return avgVal;
 	}
 
+	public static double getStdDev(List<Run> runs, int row, int col) {
+		double average = getAvg(runs, row, col);
+
+		double squaredDiffSum = 0.0;
+		for(Run run : runs) {
+			squaredDiffSum += Math.pow(run.getValue(row, col) - average, 2);
+		}
+
+		double variance = squaredDiffSum / runs.size();
+
+		return Math.sqrt(variance);
+	}
+
 	/**
 	 * Get the average value of all values in the specified column for rows between start row and end row
 	 * @param runs
@@ -159,10 +172,12 @@ public class Run {
 		//basically, get the average for all rows in the range
 		//and average them together
 		double avgSum = 0.0;
-		for(int i = startRow; i <= endRow; i++) {
-			avgSum += Run.getAvg(runs, i, col);
+		for(Run run : runs) {
+			for(int i = startRow; i <= endRow; i++) {
+				avgSum += run.getValue(i, col);
+			}
 		}
-		return avgSum / (endRow - startRow);
+		return avgSum / (runs.size()*(endRow - startRow));
 	}
 
 

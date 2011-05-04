@@ -86,6 +86,7 @@ public class Analyzer {
 					 * 1 : average value
 					 * 2 : low value
 					 * 3 : high value
+					 * 4 : standard deviation
 					 */
 					
 					BufferedWriter surFoundRunOut = new BufferedWriter(new FileWriter(new File(curBotDir, "surFound.dat"), false));
@@ -95,16 +96,16 @@ public class Analyzer {
 					
 					
 					for(int timestep = 0; timestep < runs.get(0).getNumRows(); timestep++) {
-						surFoundRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 2) + "\t" + Run.getMin(runs,timestep, 2) + "\t" + Run.getMax(runs, timestep, 2));
+						surFoundRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 2) + "\t" + Run.getMin(runs,timestep, 2) + "\t" + Run.getMax(runs, timestep, 2) + "\t" + Run.getStdDev(runs, timestep, 2));
 						surFoundRunOut.newLine();
 						
-						pathQualRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 3) + "\t" + Run.getMin(runs,timestep, 3) + "\t" + Run.getMax(runs, timestep, 3));
+						pathQualRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 3) + "\t" + Run.getMin(runs,timestep, 3) + "\t" + Run.getMax(runs, timestep, 3) + "\t" + Run.getStdDev(runs, timestep, 3));
 						pathQualRunOut.newLine();
 						
-						pathMarkRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 4) + "\t" + Run.getMin(runs,timestep, 4) + "\t" + Run.getMax(runs, timestep, 4));
+						pathMarkRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 4) + "\t" + Run.getMin(runs,timestep, 4) + "\t" + Run.getMax(runs, timestep, 4) + "\t" + Run.getStdDev(runs, timestep, 4));
 						pathMarkRunOut.newLine();
 						
-						overallRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 5) + "\t" + Run.getMin(runs,timestep, 5) + "\t" + Run.getMax(runs, timestep, 5));
+						overallRunOut.write(timestep + "\t" + Run.getAvg(runs, timestep, 5) + "\t" + Run.getMin(runs,timestep, 5) + "\t" + Run.getMax(runs, timestep, 5) + "\t" + Run.getStdDev(runs, timestep, 5));
 						overallRunOut.newLine();
 					}
 					

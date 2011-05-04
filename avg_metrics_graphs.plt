@@ -18,8 +18,10 @@ set yrange [-.05:1.05]
 
 set output "./surFound.pdf"
 plot curFile u 1:2 with lines ls 1 t "Average", \
-curFile u 1:3 with lines ls 2 t  "Worst", \
-curFile u 1:4 with lines ls 3 t "Best"
+curFile u 1:($2+$5) with lines ls 2 t "Average + 1 standard deviation", \
+curFile u 1:($2-$5) with lines ls 3 t "Average - 1 standard deviation"#, \
+#curFile u 1:3 with lines ls 2 t  "Worst", \
+#curFile u 1:4 with lines ls 3 t "Best"
 
 
 curFile = "pathQal.dat"
@@ -28,8 +30,10 @@ set yrange [.95:3.05]
 
 set output "./pathPlotting.pdf"
 plot curFile u 1:2 with lines ls 1 t "Average", \
-curFile u 1:3 with lines ls 3 t "Best", \
-curFile u 1:4 with lines ls 2 t "Worst"
+curFile u 1:($2+$5) with lines ls 2 t "Average + 1 standard deviation", \
+curFile u 1:($2-$5) with lines ls 3 t "Average - 1 standard deviation"#, \
+#curFile u 1:3 with lines ls 3 t "Best", \
+#curFile u 1:4 with lines ls 2 t "Worst"
 
 
 curFile = "pathMark.dat"
@@ -37,9 +41,11 @@ set ylabel "Path Marking Metric"
 set yrange [.99:1.55]
 
 set output "./pathMarking.pdf"
-plot curFile u 1:2 with lines ls 1t "Average", \
-curFile u 1:3 with lines ls 3 t "Best", \
-curFile u 1:4 with lines ls 2 t "Worst"
+plot curFile u 1:2 with lines ls 1 t "Average", \
+curFile u 1:($2+$5) with lines ls 2 t "Average + 1 standard deviation", \
+curFile u 1:($2-$5) with lines ls 3 t "Average - 1 standard deviation"#, \
+#curFile u 1:3 with lines ls 3 t "Best", \
+#curFile u 1:4 with lines ls 2 t "Worst"
 
 
 curFile = "overall.dat"
@@ -48,5 +54,7 @@ set yrange [-.05:1.05]
 
 set output "./overall.pdf"
 plot curFile u 1:2 with lines ls 1 t "Average", \
-curFile u 1:3 with lines ls 2 t "Worst", \
-curFile u 1:4 with lines ls 3 t "Best"
+curFile u 1:($2+$5) with lines ls 2 t "Average + 1 standard deviation", \
+curFile u 1:($2-$5) with lines ls 3 t "Average - 1 standard deviation"#, \
+#curFile u 1:3 with lines ls 2 t "Worst", \
+#curFile u 1:4 with lines ls 3 t "Best"
