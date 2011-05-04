@@ -1078,7 +1078,7 @@ public class World extends Canvas {
 		World world;
 
 		int numSur = 7;
-		for(int numBots = 140; numBots <= 200; numBots += 20) {
+		for(int numBots = 180; numBots <= 200; numBots += 20) {
 			//run each test 5 times, so that we get a good range of numbers
 			for(int i = 0; i < 5; i++) {
 				if(zoneDir != null) {
