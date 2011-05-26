@@ -172,13 +172,21 @@ public class Run {
 		//basically, get the average for all rows in the range
 		//and average them together
 		double avgSum = 0.0;
-		for(Run run : runs) {
-			for(int i = startRow; i <= endRow; i++) {
-				avgSum += run.getValue(i, col);
-			}
+		for(int row = startRow; row <= endRow; row++) {
+			avgSum += Run.getAvg(runs, row, col);
 		}
-		return avgSum / (runs.size()*(endRow - startRow));
+		return avgSum / (endRow - startRow);
 	}
 
-
+	public static double getStdDev(List<Run> runs, int startRow, int endRow, int col) {
+		//calculate the standard deviation of the overall average for the range of rows vs the average for each row
+		double overallAvg = Run.getAvg(runs, startRow, endRow, col);
+		double squareDiffSum = 0.0;
+		for(int row = startRow; row <= endRow; row++) {
+			squareDiffSum += Math.pow(Run.getAvg(runs, row, col) - overallAvg, 2);
+		}
+		double variance = squareDiffSum / (endRow - startRow);
+		
+		return Math.sqrt(variance);
+	}
 }

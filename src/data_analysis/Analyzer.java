@@ -66,9 +66,7 @@ public class Analyzer {
 				for(File curRunDir : runDirs) {
 					runs.add(Run.readFromFile(new File(curRunDir,"data.txt"), curNumSur, curNumBots));
 				}
-				
-				System.out.println("sur = " + curSurDir.getName() + "\tbot = " + curBotDir.getName());
-				
+								
 				//we should now have all runs for the given number of bots and survivors
 				//start creating our averages file
 				try {		
@@ -119,7 +117,8 @@ public class Analyzer {
 					//make sure to append to the end
 					BufferedWriter avgOverallSurOut = new BufferedWriter(new FileWriter(avgOverall, true));
 					//write our number of bots and the avg Overall metric value for all of this bot number's runs
-					avgOverallSurOut.write(curNumBots + "\t" + Run.getAvg(runs, 200, 1800, 5));
+					//also write the variance in the averages
+					avgOverallSurOut.write(curNumBots + "\t" + Run.getAvg(runs, 200, 1800, 5) + "\t" + Run.getStdDev(runs, 200, 1800, 5));
 					avgOverallSurOut.newLine();
 					avgOverallSurOut.close();
 					

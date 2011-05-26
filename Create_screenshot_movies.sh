@@ -19,10 +19,13 @@ do
 
 	    #see if the screenshot folder exists
 	    if [ -d "screenshots" ]; then
-		#if it does, create the movie
-		ffmpeg -f image2 -r 2 -i ./screenshots/%d.jpeg -b 600k ./replay.mp4
+		#if the replay file does not already exist, create it
+		if [ ! -f "replay.mp4" ]; then
+		    #if it does, create the movie
+		    ffmpeg -f image2 -r 2 -i ./screenshots/%d.jpeg -b 600k ./replay.mp4
+		fi
 		#remove the screenshots folder
-		rm -r ./screenshots
+		rm -r ./screenshots	    
 	    fi
 
 	    cd ..
