@@ -1638,8 +1638,6 @@ public class Bot extends Rectangle2D.Double {
 			}
 		}
 
-		int oldMode = botMode;
-
 		//first, do the probability check for activation
 		if(botMode == WAITING_FOR_ACTIVATION) {
 			if(NUM_GEN.nextDouble() <= roleChangeProbabilites[EXPLORER]) {

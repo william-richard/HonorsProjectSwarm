@@ -36,6 +36,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private static final boolean DRAW_BOT_RADII_INIT_VALUE = false;
 	private static final boolean CHOOSE_ZONE_DIR_INIT_VALUE = false;
 	private static final boolean CHOOSE_SUR_DIR_INIT_VALUE = false;
+	private static final boolean CLUMP_SURVIVORS_INIT_VALUE = true;
 
 	// buttons to control the simulation
 	private JButton runSimulationButton;;
@@ -46,6 +47,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private JCheckBox drawBotRadiiCheckBox;
 	private JCheckBox chooseZoneDirCheckBox;
 	private JCheckBox chooseSurDirCheckBox;
+	private JCheckBox clumpSurvivorsCheckBox;
 
 	// feilds for variable entry
 	private JFormattedTextField numBotsField;
@@ -64,6 +66,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private JLabel drawBotRadiiLabel;
 	private JLabel chooseZoneDirLabel;
 	private JLabel chooseSurDirLabel;
+	private JLabel clumpSurvivorsLabel;
 
 	// Label strings
 	private final String runSimulationString = "Run";
@@ -76,7 +79,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private final String drawBotRadiiString = "Draw bot radii: ";	
 	private final String chooseZoneDirString = "Choose saved zones";
 	private final String chooseSurDirString = "Choose saved survivor locations";
-	private final String runTestsString = "Run tests";
+	private final String clumpSurvivorsString = "Clump Survivors if their choosing their locations randomly";
 
 	//TODO add a field that highlights a certain bot num
 
@@ -111,6 +114,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		drawBotRadiiLabel = new JLabel(drawBotRadiiString);
 		chooseSurDirLabel = new JLabel(chooseSurDirString);
 		chooseZoneDirLabel = new JLabel(chooseZoneDirString);
+		clumpSurvivorsLabel = new JLabel(clumpSurvivorsString);
 	}
 
 	private void setUpFormats() {
@@ -170,6 +174,10 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 		chooseZoneDirCheckBox = new JCheckBox();
 		chooseZoneDirCheckBox.setSelected(CHOOSE_ZONE_DIR_INIT_VALUE);
 		chooseZoneDirCheckBox.addItemListener(this);
+		 
+		clumpSurvivorsCheckBox = new JCheckBox();
+		clumpSurvivorsCheckBox.setSelected(CLUMP_SURVIVORS_INIT_VALUE);
+		clumpSurvivorsCheckBox.addItemListener(this);
 	}
 
 
@@ -183,6 +191,9 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 
 		panel.add(numSurvivorsLabel);
 		panel.add(numSurvivorsField);
+		
+		panel.add(clumpSurvivorsLabel);
+		panel.add(clumpSurvivorsCheckBox);
 
 		panel.add(chooseZoneDirLabel);
 		panel.add(chooseZoneDirCheckBox);
@@ -275,13 +286,13 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 			if(surDir != null) {
 				world = new World(numBots, surDir, zoneDir);
 			} else {
-				world = new World(numBots, numSurvivors, zoneDir);
+				world = new World(numBots, numSurvivors, clumpSurvivorsCheckBox.isSelected(), zoneDir);
 			}
 		} else {
 			if(surDir != null) {
 				world = new World(numBots, surDir);
 			} else {
-				world = new World(numBots, numSurvivors);
+				world = new World(numBots, numSurvivors, clumpSurvivorsCheckBox.isSelected());
 			}
 		}
 

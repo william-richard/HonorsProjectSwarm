@@ -67,6 +67,9 @@ public class World extends Canvas {
 	private static final boolean WORLD_DEBUG = false;
 
 	private static final int ZONE_COMPLEXITY = 200; //should be btwn ~ (Min(SEARCH_HEIGHT, SEARCH_WIDTH) / 10) and (SEARCH_HEIGHT * SEARCH_WIDTH)
+	
+	private static final int MAX_NUM_SUR_IN_A_CLUMP = 10;
+	private static final double MAX_CLUMP_DISTANCE_FROM_CLUMP_CENTER = 1.5 * Bot.DEFAULT_VISIBILITY_RADIUS;
 
 	private static final Color BACKGROUND_COLOR = Color.white;
 	private static final Color EXPLORER_BOT_COLOR = Color.green;
@@ -126,7 +129,7 @@ public class World extends Canvas {
 	private String dataDirectory;
 
 	public World() {
-		this(40, 2);
+		this(40, 2, false);
 	}
 
 	public World(int numBots, File surDir) {
@@ -139,14 +142,14 @@ public class World extends Canvas {
 		initMisc();
 	}	
 
-	public World(int numBots, int numSurvivors, File zoneDir) {
+	public World(int numBots, int numSurvivors, boolean clumpSurvivors, File zoneDir) {
 		super();
 
 		setupFrame();
 		initZones(zoneDir);
 		//TODO lots of repetition here - not so good, but unavoidable because zones need to be made before anything else
 		initBots(numBots);
-		initSurvivors(numSurvivors);
+		initSurvivors(numSurvivors, clumpSurvivors);
 		initMisc();
 
 	}
@@ -161,14 +164,14 @@ public class World extends Canvas {
 		initMisc();
 	}
 
-	public World(int numBots, int numSurvivors) {
+	public World(int numBots, int numSurvivors, boolean clumpSurvivors) {
 		super();
 		//start with the frame.
 		setupFrame();
 
 		initZones();
 		initBots(numBots);
-		initSurvivors(numSurvivors);
+		initSurvivors(numSurvivors, clumpSurvivors);
 		initMisc();
 	}
 
@@ -242,19 +245,59 @@ public class World extends Canvas {
 		}
 	}
 
-	private void initSurvivors(int numSurvivors) {
+	private void initSurvivors(int numSurvivors, boolean clumpSurvivors) {
 		//initialize the survivors
 		allSurvivors = Collections.synchronizedList(new ArrayList<Survivor>());
 		Survivor curSurvivor;
 
-		for(int i = 0; i < numSurvivors; i++) {
-			//don't let survivors be in the basezone
-			do {
-				curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*SEARCH_WIDTH, RANDOM_GENERATOR.nextDouble()*(SEARCH_HEIGHT), RANDOM_GENERATOR.nextDouble());
-				//make sure we don't have survivors too close to the base zone and we don't duplicate survivors
-			} while(homeBase.getCenterLocation().distance(curSurvivor.getCenterLocation()) < BASE_ZONE_BUFFER || allSurvivors.contains(curSurvivor));
+		if(clumpSurvivors) {
+			/* clump the survivors
+			 * First, choose a location for that clump
+			 * Then, randomly determine how big the clump will be
+			 * Finally, choose random locations near that clump to place the survivors
+			 */
+			int numSurvivorsToBePlaced = numSurvivors;
+			while(numSurvivorsToBePlaced > 0) {
+				//choose the clump location
+				Point2D clumpLocation = new Point2D.Double(RANDOM_GENERATOR.nextDouble()*SEARCH_WIDTH, RANDOM_GENERATOR.nextDouble()*(SEARCH_HEIGHT));
+				
+				//choose a clump size
+				//nextInt(int n) gives a random number from 0 (inclusive) to n (exclusive)
+				//so if we add 1, we get a range from 1 (inclusive) to n (inclusive)
+				System.out.println(numSurvivorsToBePlaced + " survivors still must be placed");
+				int clumpSize = RANDOM_GENERATOR.nextInt(Math.min(MAX_NUM_SUR_IN_A_CLUMP, numSurvivorsToBePlaced)) + 1;
+				//update the number of survivors that still need to be placed
+				numSurvivorsToBePlaced -= clumpSize;
+				
+				for(int i = 0; i < clumpSize; i++) {
+					//don't let survivors be in the basezone
+					do {
+						//make a vector from the clump location, rotate it by a random angle and scale it by a random amount to get a random point within a certain distance of the clump location
+						util.Vector surVect = util.Vector.getHorizontalUnitVector(clumpLocation);
+						surVect = surVect.rotate(RANDOM_GENERATOR.nextDouble() * 2 * Math.PI);
+						//use 1.5 * robot's visibility radius, so all the survivors in a clump can be seen by 1 or 2 robots
+						surVect = surVect.rescale(RANDOM_GENERATOR.nextDouble() * MAX_CLUMP_DISTANCE_FROM_CLUMP_CENTER);
+						
+						curSurvivor = new Survivor(surVect.getP2(), RANDOM_GENERATOR.nextDouble());
+						//make sure we don't have survivors out of bounds, too close to the base zone or duplicates
+					} while( (!BOUNDING_BOX.contains(curSurvivor.getCenterLocation())) || homeBase.getCenterLocation().distance(curSurvivor.getCenterLocation()) < BASE_ZONE_BUFFER || allSurvivors.contains(curSurvivor));
 
-			allSurvivors.add(curSurvivor);
+					allSurvivors.add(curSurvivor);
+				}
+				
+			}
+			
+		} else {
+			//don't clump - place randomly
+			for(int i = 0; i < numSurvivors; i++) {
+				//don't let survivors be in the basezone
+				do {
+					curSurvivor = new Survivor(RANDOM_GENERATOR.nextDouble()*SEARCH_WIDTH, RANDOM_GENERATOR.nextDouble()*(SEARCH_HEIGHT), RANDOM_GENERATOR.nextDouble());
+					//make sure we don't have survivors too close to the base zone and we don't duplicate survivors
+				} while(homeBase.getCenterLocation().distance(curSurvivor.getCenterLocation()) < BASE_ZONE_BUFFER || allSurvivors.contains(curSurvivor));
+
+				allSurvivors.add(curSurvivor);
+			}
 		}
 	}
 
@@ -800,21 +843,8 @@ public class World extends Canvas {
 		//			g2d.drawString("" + z.getID(), (int)z.getCenterX(), (int)z.getCenterY());
 		//		}
 
-		//all bots should know about all shouts, so draw them all based on what the first bot knows
-		//			Bot firstBot = allBotSnapshot.next();
-
-		//			//go previous one, so that when we start to draw the bots, we'll start at the beginning
-		//			if(allBotSnapshot.hasPrevious()) {
-		//				allBotSnapshot.previous();
-		//			}
-
-		Bot firstBot = allBots.get(0);
 		//now, drow all of the shouts
 		g2d.setColor(SHOUT_COLOR);
-		//		ListIterator<Shout> shoutIterator = firstBot.getShoutIterator();
-		//		while(shoutIterator.hasNext()) {
-		//			g2d.draw(shoutIterator.next());
-		//		}
 		synchronized (allShouts) {
 			Iterator<Shout> i = allShouts.iterator();
 			Shout s;
@@ -1068,44 +1098,16 @@ public class World extends Canvas {
 
 		File zoneDir = new File(args[0]);
 		File surDir = null;
-
-		//keep a max run time of about 15 minutes
-		//these are running in about 2, so 15 min is enough
-		//15 min = 900,000 miliseconds
-		final long maxRunTime = 900000;
-
+		
+		
+		/*******************************
+		 * SET ME TO SET EXPIRIMENT BEHVIOR
+		 *******************************/
+		boolean clumpSurvivors = true;
 
 		World world;
 
-		int numSur = 7;
-		for(int numBots = 180; numBots <= 200; numBots += 20) {
-			//run each test 5 times, so that we get a good range of numbers
-			for(int i = 0; i < 5; i++) {
-				if(zoneDir != null) {
-					if(surDir != null) {
-						world = new World(numBots, surDir, zoneDir);
-					} else {
-						world = new World(numBots, numSur, zoneDir);
-					}
-				} else {
-					if(surDir != null) {
-						world = new World(numBots, surDir);
-					} else {
-						world = new World(numBots, numSur);
-					}
-				}
-				//TODO add a set location?
-				//world.setLocation(200, 200);
-				//					world.setVisible(true);
-				//do a gc to clean up?
-				System.gc();
-				//go for 1800 timesteps = 30 min - should be enough time to settle down
-				world.go(1800, Long.MAX_VALUE);
-				//					world.dispose();
-			}
-		}
-
-		for(numSur = 8; numSur <= 10; numSur+=1) {
+		for(int numSur = 8; numSur <= 10; numSur+=1) {
 			for(int numBots = 60; numBots <= 200; numBots += 20) {
 				//run each test 5 times, so that we get a good range of numbers
 				for(int i = 0; i < 5; i++) {
@@ -1113,13 +1115,13 @@ public class World extends Canvas {
 						if(surDir != null) {
 							world = new World(numBots, surDir, zoneDir);
 						} else {
-							world = new World(numBots, numSur, zoneDir);
+							world = new World(numBots, numSur, clumpSurvivors, zoneDir);
 						}
 					} else {
 						if(surDir != null) {
 							world = new World(numBots, surDir);
 						} else {
-							world = new World(numBots, numSur);
+							world = new World(numBots, numSur, clumpSurvivors);
 						}
 					}
 					//TODO add a set location?

@@ -58,6 +58,10 @@ public class Survivor extends Rectangle2D.Double implements Serializable {
 			currentZone = World.findZone(getCenterLocation());
 		}
 	}
+	
+	public Survivor(Point2D location, double _damage) {
+		this(location.getX(), location.getY(), _damage);
+	}
 
 	/***************************************************************************
 	 * GETTERS
