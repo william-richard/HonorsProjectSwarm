@@ -264,7 +264,6 @@ public class World extends Canvas {
 				//choose a clump size
 				//nextInt(int n) gives a random number from 0 (inclusive) to n (exclusive)
 				//so if we add 1, we get a range from 1 (inclusive) to n (inclusive)
-				System.out.println(numSurvivorsToBePlaced + " survivors still must be placed");
 				int clumpSize = RANDOM_GENERATOR.nextInt(Math.min(MAX_NUM_SUR_IN_A_CLUMP, numSurvivorsToBePlaced)) + 1;
 				//update the number of survivors that still need to be placed
 				numSurvivorsToBePlaced -= clumpSize;
@@ -416,21 +415,21 @@ public class World extends Canvas {
 	}
 
 	private double calcAvgPathQuality() {
-		HashMap<Survivor, SurvivorPath> bestCompletePaths = new HashMap<Survivor, SurvivorPath>();
+		HashMap<BotInfo, SurvivorPath> bestCompletePaths = new HashMap<BotInfo, SurvivorPath>();
 		synchronized (allBots) {
 			Iterator<Bot> i = allBots.iterator();
 			Bot b;
 			while(i.hasNext()) {
 				b = i.next();
-				HashMap<Survivor, SurvivorPath> thisBotsPaths = b.getBestKnownCompletePaths();
-				for(Survivor sur : thisBotsPaths.keySet()) {
-					if(bestCompletePaths.containsKey(sur)) {
+				HashMap<BotInfo, SurvivorPath> thisBotsPaths = b.getBestKnownCompletePaths();
+				for(BotInfo bot : thisBotsPaths.keySet()) {
+					if(bestCompletePaths.containsKey(bot)) {
 						//take the path that is better
-						if(bestCompletePaths.get(sur).getPathLength() > thisBotsPaths.get(sur).getPathLength()) {
-							bestCompletePaths.put(sur, thisBotsPaths.get(sur));
+						if(bestCompletePaths.get(bot).getPathLength() > thisBotsPaths.get(bot).getPathLength()) {
+							bestCompletePaths.put(bot, thisBotsPaths.get(bot));
 						}
 					} else {
-						bestCompletePaths.put(sur, thisBotsPaths.get(sur));
+						bestCompletePaths.put(bot, thisBotsPaths.get(bot));
 					}
 				}
 			}
@@ -438,22 +437,22 @@ public class World extends Canvas {
 
 		//now we should have all the best paths known by any bot to each survivor
 		//get the length of each of these paths, and compare them to the optimal lengths computed by Dijkstra's
-		HashMap<Survivor, Double> realPathLengths = new HashMap<Survivor, Double>(bestCompletePaths.size());
-		for(Survivor sur : bestCompletePaths.keySet()) {
+		HashMap<BotInfo, Double> realPathLengths = new HashMap<BotInfo, Double>(bestCompletePaths.size());
+		for(BotInfo bot : bestCompletePaths.keySet()) {
 			//get the path that the bots thing is best
-			SurvivorPath botsBest = bestCompletePaths.get(sur);
+			SurvivorPath botsBest = bestCompletePaths.get(bot);
 			//calculate it's real length
 			Double realLength = new Double(botsBest.getRealPathLength());
 			//put it into the real length hash
-			realPathLengths.put(sur, realLength);
+			realPathLengths.put(bot, realLength);
 		}
 
 		//use the real lengths in these percentages
 		double pathPercentagesSum = 0.0;
-		for(Survivor sur : bestCompletePaths.keySet()) {
+		for(BotInfo sur : bestCompletePaths.keySet()) {
 			SurvivorPath botPath = bestCompletePaths.get(sur);
 			Double realLength = realPathLengths.get(sur);
-			double optimalLength = distancesToAllPoints.getDistanceTo(botPath.getSur().getCenterLocation());
+			double optimalLength = distancesToAllPoints.getDistanceTo(botPath.getBotInfo().getCenterLocation());
 			//			System.out.println("Bots think path has length " + botPath.getPathLength() + " real bot path length = " + realLength + " optimal path has length " + optimalLength);	
 			pathPercentagesSum += (realLength.doubleValue() / optimalLength);
 		}

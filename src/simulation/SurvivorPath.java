@@ -19,25 +19,27 @@ public class SurvivorPath {
 	private static final DecimalFormat df = new DecimalFormat("#.###");
 
 	private double pathLength;
-	private Survivor sur;
+	private BotInfo bot;
 	private ArrayList<BotInfo> pathWaypoints;
 	private Point2D endPoint;
 	private boolean complete;
 	private LineSegment surEndSeg;
 	private final int startCreationTimestep;
 
-	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, int _startCreationTimestep, boolean _complete) {
-		this(_sur, _pathPoints, _endPoint, -1.0, _startCreationTimestep, _complete);
+	public SurvivorPath(BotInfo _claimingBot, List<BotInfo> _pathPoints, Point2D _endPoint, int _startCreationTimestep, boolean _complete) {
+		this(_claimingBot, _pathPoints, _endPoint, -1.0, _startCreationTimestep, _complete);
 	}
 
-	public SurvivorPath(Survivor _sur, List<BotInfo> _pathPoints, Point2D _endPoint, double _pathLength, int _startCreationTimestep, boolean _complete) {
-		sur = _sur;
+	public SurvivorPath(BotInfo _claimingBot, List<BotInfo> _pathPoints, Point2D _endPoint, double _pathLength, int _startCreationTimestep, boolean _complete) {
+		//just to be double safe, make sure we have a new copy of the bot info
+		//maybe remove this later if it isn't necessary
+		bot = new BotInfo(_claimingBot);
 		complete = _complete;
 		pathWaypoints = new ArrayList<BotInfo>();
 		endPoint = _endPoint;
 		startCreationTimestep = _startCreationTimestep;
 
-		surEndSeg = new LineSegment(sur.getCenterLocation(), endPoint);
+		surEndSeg = new LineSegment(bot.getCenterLocation(), endPoint);
 		
 		//want to clone the individual points, to make sure we don't have any wrong pointers - need to do a loop
 		pathWaypoints = new ArrayList<BotInfo>(_pathPoints);
@@ -51,7 +53,7 @@ public class SurvivorPath {
 	}
 
 	public SurvivorPath(SurvivorPath _original) {
-		this(_original.getSur(), _original.getPoints(), _original.getEndPoint(), _original.getPathLength(), _original.startCreationTimestep, _original.isComplete());
+		this(_original.getBotInfo(), _original.getPoints(), _original.getEndPoint(), _original.getPathLength(), _original.startCreationTimestep, _original.isComplete());
 	}
 
 	private void recalculatePathLength() {
@@ -158,8 +160,8 @@ public class SurvivorPath {
 		return pathLength;
 	}
 
-	public Survivor getSur() {
-		return sur;
+	public BotInfo getBotInfo() {
+		return bot;
 	}
 
 	/**
@@ -276,7 +278,7 @@ public class SurvivorPath {
 		temp = Double.doubleToLongBits(pathLength);
 		result = prime * result + (int) (temp ^ (temp >>> 32));
 		result = prime * result + ((pathWaypoints == null) ? 0 : pathWaypoints.hashCode());
-		result = prime * result + ((sur == null) ? 0 : sur.hashCode());
+		result = prime * result + ((bot == null) ? 0 : bot.hashCode());
 		return result;
 	}
 
@@ -306,16 +308,16 @@ public class SurvivorPath {
 				return false;
 		} else if (!pathWaypoints.equals(other.pathWaypoints))
 			return false;
-		if (sur == null) {
-			if (other.sur != null)
+		if (bot == null) {
+			if (other.bot != null)
 				return false;
-		} else if (!sur.equals(other.sur))
+		} else if (!bot.equals(other.bot))
 			return false;
 		return true;
 	}
 
 	@Override
 	public String toString() {
-		return sur + " : " + pathWaypoints + " : " + endPoint + " : length = " + pathLength + " : " + (complete ? " complete" : "NOT complete");
+		return bot + " : " + pathWaypoints + " : " + endPoint + " : length = " + pathLength + " : " + (complete ? " complete" : "NOT complete");
 	}
 }

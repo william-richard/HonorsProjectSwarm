@@ -3,6 +3,7 @@ package simulation;
 import java.awt.Shape;
 import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
+import java.awt.geom.Point2D.Double;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -17,6 +18,8 @@ import java.util.Scanner;
 import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListSet;
 import java.util.concurrent.CopyOnWriteArrayList;
+
+import org.jgrapht.traverse.BreadthFirstIterator;
 
 import util.Utilities;
 import util.Vector;
@@ -133,8 +136,8 @@ public class Bot extends Rectangle2D.Double {
 	private List<Survivor> claimedSurvivors; // keep a list of survivors that
 	// have been claimed, so that we
 	// don't double up on one survivor
-	private Survivor mySurvivor; // the survivor I have claimed - don't know if
-	// this is useful, but it might be
+	private List<Survivor> mySurvivors;
+	private Point2D mySurvivorsAverageLocation;
 	private int mySurvivorClaimTime;
 	private World world;
 	private int botMode;
@@ -142,7 +145,7 @@ public class Bot extends Rectangle2D.Double {
 	private boolean startedCreatingMyPath = false;
 	private int numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
 
-	private HashMap<Survivor, SurvivorPath> bestKnownCompletePaths;
+	private HashMap<BotInfo, SurvivorPath> bestKnownCompletePaths;
 
 	private SurvivorPath myPathToMark;
 
@@ -195,9 +198,10 @@ public class Bot extends Rectangle2D.Double {
 		Arrays.fill(roleChangeProbabilites, 0.0);
 		roleChangeProbabilites[EXPLORER] = TURNED_ON_THIS_TIMESTEP_PROB;
 
-		mySurvivor = null;
+		mySurvivors = new ArrayList<Survivor>();
+		mySurvivorsAverageLocation = null;
 
-		bestKnownCompletePaths = new HashMap<Survivor, SurvivorPath>();
+		bestKnownCompletePaths = new HashMap<BotInfo, SurvivorPath>();
 
 		// find out what zones we start in, and try to determine how safe it is
 		updateZoneInfo();		
@@ -275,14 +279,14 @@ public class Bot extends Rectangle2D.Double {
 	/**
 	 * @return the mySurvivor
 	 */
-	public Survivor getMySurvivor() {
-		return mySurvivor;
+	public List<Survivor> getMySurvivors() {
+		return mySurvivors;
 	}
 
 	/**
 	 * @return the bestKnownCompletePaths
 	 */
-	public HashMap<Survivor, SurvivorPath> getBestKnownCompletePaths() {
+	public HashMap<BotInfo, SurvivorPath> getBestKnownCompletePaths() {
 		return bestKnownCompletePaths;
 	}
 
@@ -477,13 +481,14 @@ public class Bot extends Rectangle2D.Double {
 				int claimTime = s.nextInt();
 
 				Survivor claimedSurvivor = new Survivor(survivorX, survivorY, 0);
-				if (claimedSurvivor.equals(mySurvivor)) {
+				if (mySurvivors.contains(claimedSurvivor)) {
 					// someone else is claiming my survivor
 					// is this valid?
 					if (claimTime < mySurvivorClaimTime) {
 						// the other guy made the claim first
 						// give it to them
-						mySurvivor = null;
+						mySurvivors.remove(claimedSurvivor);
+						recomputeMySurvivorsAverageLocation();
 						// rebroadcast his message
 						broadcastMessage(mes);
 					} else if (claimTime == mySurvivorClaimTime) {
@@ -491,13 +496,14 @@ public class Bot extends Rectangle2D.Double {
 						if (getID() < claimerID) {
 							// I get it
 							// rebroadcast my claim message
-							Message myClaimMessage = Message.constructClaimMessage(this);
+							Message myClaimMessage = Message.constructClaimMessage(this, claimedSurvivor);
 							if(myClaimMessage != null) {
 								broadcastMessage(myClaimMessage);
 							}
 						} else {
 							// he gets it
-							mySurvivor = null;
+							mySurvivors.remove(claimedSurvivor);
+							recomputeMySurvivorsAverageLocation();
 							// rebroadcast his message
 							broadcastMessage(mes);
 						}
@@ -553,10 +559,10 @@ public class Bot extends Rectangle2D.Double {
 		SurvivorPath curPath;
 		while( (curPath = allPathsToldAbout.pollFirst()) != null) {
 			
-			//first, see if we have an outdated complete path to this survivor
+			//first, see if we have an outdated complete path to this bot
 			//a stored path is outdated if the path we were told about had it's path creation process started after our path
 			//basically, if the stored path had an earlier start creation time, it is outdated
-			boolean storedPathRelevant = bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getStartCreationTimestep() >= curPath.getStartCreationTimestep();
+			boolean storedPathRelevant = bestKnownCompletePaths.containsKey(curPath.getBotInfo()) && bestKnownCompletePaths.get(curPath.getBotInfo()).getStartCreationTimestep() >= curPath.getStartCreationTimestep();
 						
 			if(curPath.isComplete()) {
 				//since it is complete, no one will ever change it ever again
@@ -566,8 +572,8 @@ public class Bot extends Rectangle2D.Double {
 				//thus, we should only be passing on the best complete path to a survivor we were either told about this timestep or we knew before this timestep
 				//in other words, we should never ever pass on 2 paths to the same survivor
 
-				//if it is complete, see if we have a complete path to this survivor already
-				SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(curPath.getSur());
+				//if it is complete, see if we have a complete path to this bot already
+				SurvivorPath knownPathToThisSurvivor = bestKnownCompletePaths.get(curPath.getBotInfo());
 
 				if(storedPathRelevant && knownPathToThisSurvivor != null) {
 					//see if the path we have is the same that we just got
@@ -578,11 +584,11 @@ public class Bot extends Rectangle2D.Double {
 						if(knownPathToThisSurvivor.getPathLength() > curPath.getPathLength()) {
 							//the new one is better is better
 							pathsToPassOn.add(curPath);
-							bestKnownCompletePaths.put(curPath.getSur(), curPath);
+							bestKnownCompletePaths.put(curPath.getBotInfo(), curPath);
 						} else {
 							//our's is better
 							//tell our neighbors about it
-							pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
+							pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getBotInfo()));
 						}
 					}
 				} else {
@@ -591,9 +597,9 @@ public class Bot extends Rectangle2D.Double {
 					//since it is complete, we dont' need to copy it
 					//this call should replace the old value
 					if(!storedPathRelevant) {
-						bestKnownCompletePaths.remove(curPath.getSur());
+						bestKnownCompletePaths.remove(curPath.getBotInfo());
 					}
-					bestKnownCompletePaths.put(curPath.getSur(), curPath);
+					bestKnownCompletePaths.put(curPath.getBotInfo(), curPath);
 					pathsToPassOn.add(curPath);
 				}
 			} else {
@@ -610,12 +616,12 @@ public class Bot extends Rectangle2D.Double {
 				//***make sure we pass on copies of the current path
 				curPath = new SurvivorPath(curPath);
 				
-				//if we have a complete path to this survivor already that is not outdated
+				//if we have a complete path to this bot already that is not outdated
 				//and the complete path is shorter than this partial path
 				//then don't do anything more with it
 				//tell neighbors about better, complete path
-				if(storedPathRelevant && bestKnownCompletePaths.containsKey(curPath.getSur()) && bestKnownCompletePaths.get(curPath.getSur()).getPathLength() < curPath.getPathLength()) {
-					pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getSur()));
+				if(storedPathRelevant && bestKnownCompletePaths.containsKey(curPath.getBotInfo()) && bestKnownCompletePaths.get(curPath.getBotInfo()).getPathLength() < curPath.getPathLength()) {
+					pathsToPassOn.add(bestKnownCompletePaths.get(curPath.getBotInfo()));
 					continue;
 				}
 
@@ -632,18 +638,18 @@ public class Bot extends Rectangle2D.Double {
 				//see if we are in the baseZone, i.e. if it should be complete
 				if(baseZone.contains(this.getCenterLocation())) {
 					curPath.setNowComplete();
-					//see how it compares to the complete path we have stored for this survivor - if it is worse, don't pass it on
+					//see how it compares to the complete path we have stored for this bot - if it is worse, don't pass it on
 					//if it is better, store it and pass it on
-					if(bestKnownCompletePaths.containsKey(curPath.getSur())) {
-						//we have a path to this survivor
-						SurvivorPath previouslyKnownPath = bestKnownCompletePaths.get(curPath.getSur());
+					if(bestKnownCompletePaths.containsKey(curPath.getBotInfo())) {
+						//we have a path to this bot
+						SurvivorPath previouslyKnownPath = bestKnownCompletePaths.get(curPath.getBotInfo());
 						if(storedPathRelevant && previouslyKnownPath.getPathLength() < curPath.getPathLength()) {
 							//the path we had is better
 							//don't pass on the new complete path
 							continue;
 						} else {
 							//the new path is better - store it
-							bestKnownCompletePaths.put(curPath.getSur(), curPath);
+							bestKnownCompletePaths.put(curPath.getBotInfo(), curPath);
 						}
 					}
 				}
@@ -696,10 +702,10 @@ public class Bot extends Rectangle2D.Double {
 		// set to true
 
 		// 0) If we have claimed a survivor, move towards them
-		if (!haveMoved && mySurvivor != null) {
+		// if we have claimed more than one survivor, move towards their average location
+		if (!haveMoved && mySurvivors.size() > 0) {
 			// make a vector towards them
-			Vector surVect = new Vector(this.getCenterLocation(), mySurvivor
-					.getCenterLocation());
+			Vector surVect = new Vector(this.getCenterLocation(), mySurvivorsAverageLocation);
 			actuallyMoveAlong(surVect);
 			haveMoved = true;
 		}
@@ -1254,46 +1260,80 @@ public class Bot extends Rectangle2D.Double {
 				foundSurvivors);
 		claimableSurvivors.removeAll(claimedSurvivors);
 
-		if (claimableSurvivors.size() > 0) {
-			// figure out which one is closets
-			Survivor closestSurvivor = claimableSurvivors.get(0);
-			double closestSurvivorDist = getCenterLocation().distance(
-					closestSurvivor.getCenterLocation());
-			for (Survivor curSur : claimableSurvivors) {
-				double curDist = getCenterLocation().distance(
-						curSur.getCenterLocation());
-				if (curDist < closestSurvivorDist) {
-					closestSurvivor = curSur;
-					closestSurvivorDist = curDist;
-				}
-			}
-
-			// claim the closest one
-			mySurvivor = closestSurvivor;
-			Message message = Message.constructClaimMessage(this);
-			mySurvivorClaimTime = World.getCurrentTimestep();
-			if(message != null) {
-				broadcastMessage(message);
+		//claim all the nearby unclaimed survivors
+		mySurvivors.addAll(claimableSurvivors);
+		
+		//let everyone else know which survivors we have claimed
+		Message claimMessage;
+		for(Survivor newlyClaimed : claimableSurvivors) {
+			claimMessage = Message.constructClaimMessage(this, newlyClaimed);
+			if(claimMessage != null) {
+				broadcastMessage(claimMessage);
 			}
 		}
+		
+		mySurvivorClaimTime = World.getCurrentTimestep();
+		
+		//recompute the average location of the survivors
+		recomputeMySurvivorsAverageLocation();
+		
+//		if (claimableSurvivors.size() > 0) {
+//			// figure out which one is closets
+//			Survivor closestSurvivor = claimableSurvivors.get(0);
+//			double closestSurvivorDist = getCenterLocation().distance(
+//					closestSurvivor.getCenterLocation());
+//			for (Survivor curSur : claimableSurvivors) {
+//				double curDist = getCenterLocation().distance(
+//						curSur.getCenterLocation());
+//				if (curDist < closestSurvivorDist) {
+//					closestSurvivor = curSur;
+//					closestSurvivorDist = curDist;
+//				}
+//			}
+//
+//			// claim the closest one
+//			mySurvivor = closestSurvivor;
+//			Message message = Message.constructClaimMessage(this);
+//			mySurvivorClaimTime = World.getCurrentTimestep();
+//			if(message != null) {
+//				broadcastMessage(message);
+//			}
+//		}
+	}
+	
+	private void recomputeMySurvivorsAverageLocation() {
+		if(mySurvivors.size() == 0) {
+			mySurvivorsAverageLocation = null;
+		}
+		double xSum = 0.0, ySum = 0.0;
+		for(Survivor curSur : mySurvivors) {
+			xSum += curSur.getCenterX();
+			ySum += curSur.getCenterY();
+		}
+		
+		double avgX = xSum / mySurvivors.size();
+		double avgY = ySum / mySurvivors.size();
+		
+		mySurvivorsAverageLocation = new Point2D.Double(avgX, avgY);
 	}
 
 	private void handlePathToMySurvivor() {
-		//double check that we have a survivior
-		if(mySurvivor == null) return;
+		//double check that we have at least one survivior
+		if(mySurvivors.size() == 0) return;
 
 		//what we do depends on if we've already initiated creating our survivor's path
 		if(! startedCreatingMyPath || numTimestepsToNextPathCreation == 0) {
-			//see if we are close to them
-			if(this.getCenterLocation().distance(mySurvivor.getCenterLocation()) <= DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH) {
+			//see if we are close to them or their average location
+			if(this.getCenterLocation().distance(mySurvivorsAverageLocation) <= DISTANCE_FROM_SURVIVIOR_TO_START_MAKING_PATH) {
 				print("Starting to make a path to my survivor");
 				//start making the path
+				//make the path to me, rather than to any one of my survivors
 				startedCreatingMyPath = true;
 
 				List<BotInfo> pointList = new ArrayList<BotInfo>();
 				pointList.add(this.getBotInfo());
 
-				SurvivorPath initialPath = new SurvivorPath(mySurvivor, pointList, baseZone.getCenterLocation(), World.getCurrentTimestep(), baseZone.contains(this.getCenterLocation()));
+				SurvivorPath initialPath = new SurvivorPath(this.getBotInfo(), pointList, baseZone.getCenterLocation(), World.getCurrentTimestep(), baseZone.contains(this.getCenterLocation()));
 				broadcastMessage(Message.constructCreatePathsMessage(this, initialPath));
 
 				numTimestepsToNextPathCreation = NUM_TIMESTEPS_BTWN_PATH_CREATION;
@@ -1646,7 +1686,7 @@ public class Bot extends Rectangle2D.Double {
 		}
 		//if we have been activated already, see whether or not we should become/stay a path marker
 		//also don't become a path marker if we have claimed a survivor
-		else if(closestPath != null && mySurvivor == null && NUM_GEN.nextDouble() <= roleChangeProbabilites[PATH_MARKER]) {
+		else if(closestPath != null && mySurvivors.size() == 0 && NUM_GEN.nextDouble() <= roleChangeProbabilites[PATH_MARKER]) {
 			//we should become /stay a path marker
 			myPathToMark = closestPath;
 			//			if(botMode != PATH_MARKER) {
@@ -1728,9 +1768,12 @@ public class Bot extends Rectangle2D.Double {
 			if(TIMESTEP_BOT_DEBUG) {
 				print("Starting to do survivor stuff");
 			}
-			if (mySurvivor == null) {
-				findAndAssesSurvivor();
-			} else {
+			
+			//always look around for more survivors
+			findAndAssesSurvivor();
+				
+			//if we have claimed survivors, handle the paths to them if necessary	
+			if(mySurvivors.size() > 0) {
 				//if we are close enough to them, we should start creating a path to the survivor
 				handlePathToMySurvivor();
 			}

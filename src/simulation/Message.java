@@ -115,8 +115,8 @@ public class Message {
 				FOUND_SURVIVOR_MESSAGE, sender.getID() + " " + World.getCurrentTimestep() + " " + surDamageAssessment + " " + foundSurvivor.getCenterX() + " " + foundSurvivor.getCenterY() + "\n");
 	}
 
-	public static Message constructClaimMessage(Bot sender) {
-		Survivor senderSurvivior = sender.getMySurvivor();
+	public static Message constructClaimMessage(Bot sender, Survivor senderSurvivior) {
+//		Survivor senderSurvivior = sender.getMySurvivor();
 		if (senderSurvivior == null) {
 			// can't do it - no survivor to claim
 			return null;
