@@ -1,0 +1,82 @@
+Swarm Search and Rescue Simulation README
+
+RUNNING THE CONTROLLER
+
+The SimulationController allows the user to run basic simulations one at a time.  As you run the controller, you set the parameters (number of robots, number of survivors, etc) for each test.
+
+To start the controller, run the COMPILE_AND_RUN_CONTROLLER.sh script.
+
+This will bring up a window with the various options for the test.
+
+
+Settings and Explanations:
+
+
+Number of Bots -----> Set the number of robots to use in this test
+
+Choose saved survivor locations -----> Allows the user to select pre-generated survivor locations, and use them for this test.
+
+Number of Survivors -----> If a saved set of survivors is not used, this allows the user to set how many survivors to place randomly
+
+Clump Survivors if choosing their locations randomly -----> If survivors are being placed randomly, they will be placed in small groups of a random size less than 10.
+
+Choose saved zones -----> This allows you to choose a previously generated zone layout, rather than creating that layout randomly
+
+Time between timesteps (seconds) -----> Changes the speed at which the simulation is displayed.  This setting may be changed while the simulation is running.
+
+Draw bot Radii -----> Displays the different ranges that affect robot behavior (visible distance, audible distance and broadcast distance). This may be changed as the simulation is running.
+
+If you choose to use saved survivor locations or saved zone layout, when you start to run the simulation (as explained in 2 paragraphs) it will display a file choosing dialog.  Choose the appropriate directory with the saved information - the location of that directory is revealed later in this document.
+
+Once all of these setting are chosen, there are 3 buttons to press.
+
+Reset will create a new test with the requested settings, but will not start running the test.  This is useful when using randomly generated zones as, occasionally, the library that does the voronoi diagram that makes the zone boundaries will glitch and not create a valid zone layout.  If this happens you'll be able to see it - it doesn't look good.
+
+Stop will stop a running test. It may be restarted by pressing Run.
+
+Run will start a stopped test.  It will also create a new test and immediately begin running it if there is not already one running.
+
+RUNNING TESTS
+
+In order to run a test, the main method of simulation/World.java must be modified.  This method should be written such that, one at a time, a world object is constructed (using the appropriate constructer for the layout of survivors, number of robots, layout of zones etc) and then world.go(<number of timesteps to run>, <max real time to run>) is called.  One timestep corresponds to 1 second of simulation time, so 1800 timesteps = 1800/60 = 30 minutes.  The max real time to run was implemented to deal with stuck simulations - if the simulation runs for too long, it will get cut off if it tries to start a new timestep and the time limit has been reached.  This is usually set to Long.MAX_VALUE, as having results with different numbers of timesteps is difficult to deal with.
+
+OTHER SETTINGS
+
+There are many other constants/settings that can be varied.  Most of them are in World.j ava and Bot.java.  They are fairly well commented, and if you are wondering about any of them, let me know and I'll try to answer your question.
+
+DATA FILES
+
+Any test that is run, either from the controller or part of a test regimin, will create a directory of data files.
+
+All of these files are located in the data directory, found in the main swarm code directory.  If this directory does not exist when a test is run, it will be created.
+
+The first set of subdirectories organizes runs by the number of survivors.
+
+Within each folder with the same number of survivors, there is a subdirectory for each set of runs with the same number of robots.
+
+Within that is a directory for each run, named based on the date and time at which that run was started.
+
+For each run, there are several files created.
+
+data.txt has all the statistics that we calculate for each timestep.
+
+info.txt just has the number of survivors and number of robots, in case the directory gets moved.
+
+The screenshots directory will hold an image displaying what is going on for each timestep.  If you have ffmpeg installed on your computer, and you run the Create_screenshot_movies.sh script found in the main directory, it will convert any of those screenshot folders into movies, saving hard drive space.  Each image, or each frame of the movie, has the timestep of that image displayed in the corner.
+
+The survivors directory holds the serialized data for the survivors at the beginning of the simulation.  This can be used to place survivors in the same location in a later test - just point the appropriate setting to this directory.
+
+The zones directory is much like the survivors directory, but with zone information.  If you want to reuse the same zone layout again, just point the appropriate setting at this directory.
+
+CREATING GRAPHS
+There are 2 files that set up the graphs of data.  They are avg_metrics_graphs.plt and fixedSurVarBot_graphs.plt.  Both rely on your having gnuplot installed.  If you want to change the layout or data displayed of any of the graphs, these are the files to adjust.
+
+avg_metrics_graphs.plt will generate the graphs for each bot-survivor pair in the data directory.  The graphs in Figure 6 of my thesis were generated using this script.
+
+fixedSurVarBot_graphs.plt will generate graphs for the overall performance of the swarm vs the number of robots for a fixed number of survivors.  The graphs in Figure 7 of my thesis were created using this script.
+
+The create_all_graphs.sh script will run both of these scripts in the appropriate directories.  You should only be calling create_all_graphs.sh - not the other 2 files.
+
+
+I think that's everything - please let em know if I've left anything out.
+-Will Richard
