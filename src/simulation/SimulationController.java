@@ -79,7 +79,7 @@ public class SimulationController extends JFrame implements PropertyChangeListen
 	private final String drawBotRadiiString = "Draw bot radii: ";	
 	private final String chooseZoneDirString = "Choose saved zones";
 	private final String chooseSurDirString = "Choose saved survivor locations";
-	private final String clumpSurvivorsString = "Clump Survivors if their choosing their locations randomly";
+	private final String clumpSurvivorsString = "Clump Survivors if choosing their locations randomly";
 
 	//TODO add a field that highlights a certain bot num
 

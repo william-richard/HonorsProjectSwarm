@@ -60,14 +60,17 @@ public class World extends Canvas {
 	 **************************************************************************/
 	public static final Random RANDOM_GENERATOR = new Random();
 	private static final int MENUBAR_HEIGHT = 21;
+	//set the size of the search area is pixels
 	private static final int SEARCH_HEIGHT = 300;// + MENUBAR_HEIGHT;
 	private static final int SEARCH_WIDTH = 300;
 	public static final BoundingBox BOUNDING_BOX = new BoundingBox(0, 0, SEARCH_WIDTH, SEARCH_HEIGHT);
 
 	private static final boolean WORLD_DEBUG = false;
 
+	//sets how many zones should be created.  The reccomendations for this setting are to avoid the Voronoi library from crashing.
 	private static final int ZONE_COMPLEXITY = 200; //should be btwn ~ (Min(SEARCH_HEIGHT, SEARCH_WIDTH) / 10) and (SEARCH_HEIGHT * SEARCH_WIDTH)
 	
+	//Setting the values for survivor clumps
 	private static final int MAX_NUM_SUR_IN_A_CLUMP = 10;
 	private static final double MAX_CLUMP_DISTANCE_FROM_CLUMP_CENTER = 1.5 * Bot.DEFAULT_VISIBILITY_RADIUS;
 
@@ -87,7 +90,9 @@ public class World extends Canvas {
 	private static final Color OPTIMAL_SURVIVOR_PATH_COLOR = new Color(255,105,180);
 	private static final Color TIMESTEP_COLOR = Color.white;
 
+	
 	private static final Point BASE_ZONE_LOC = new Point((int)BOUNDING_BOX.getCenterX(), (int)BOUNDING_BOX.getCenterY());
+	//the distance around the base zone for other zones - this ensures that the base zone is not too small
 	private static final double BASE_ZONE_BUFFER = 35;
 
 	private static final Stroke SURVIVOR_PATH_STROKE = new BasicStroke((float) 2.0);
@@ -96,6 +101,7 @@ public class World extends Canvas {
 	private static final Font ZONE_LABEL_FONT = new Font("Serif", Font.BOLD, 12);
 	private static final Font TIMESTEP_FONT = new Font("Serif", Font.PLAIN, 15);
 
+	
 	private static final String DATA_FILENAME = "data.txt";
 	private static final String SCREENSHOTS_DIR_NAME = "screenshots";
 	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("MM,dd,yy-HH;mm;ss");
